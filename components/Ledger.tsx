@@ -12,11 +12,12 @@ interface LedgerProps {
   onAddTransaction: (data: Omit<Transaction, 'id' | 'created_at'>) => Promise<void>;
   onEditTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   onDeleteTransaction: (id: string) => Promise<void>;
+  onSendSMS?: (phone: string, message: string) => Promise<{success: boolean, message: string}>;
 }
 
 const Ledger: React.FC<LedgerProps> = ({ 
   parties, selectedParty, transactions, user, 
-  onAddTransaction, onEditTransaction, onDeleteTransaction 
+  onAddTransaction, onEditTransaction, onDeleteTransaction, onSendSMS
 }) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [billNo, setBillNo] = useState('');
@@ -25,11 +26,13 @@ const Ledger: React.FC<LedgerProps> = ({
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isSendingSMS, setIsSendingSMS] = useState(false);
   const [showDownloadSuccess, setShowDownloadSuccess] = useState(false);
   
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [editBillNo, setEditBillNo] = useState<string>('');
+  const [showQuickEntry, setShowQuickEntry] = useState(false);
 
   const ledgerRef = useRef<HTMLDivElement>(null);
 
@@ -141,56 +144,53 @@ const Ledger: React.FC<LedgerProps> = ({
 
   const { entries, tCredit, tPayment, finalBalance } = calculateLedger();
 
+  const handleSendAlert = async () => {
+    if (!selectedParty || !selectedParty.phone || isSendingSMS || !onSendSMS) {
+      if (selectedParty && !selectedParty.phone) {
+        alert("Please add a phone number for this party to send SMS.");
+      }
+      return;
+    }
+    setIsSendingSMS(true);
+    const message = `Hello ${selectedParty.name},\nYour current due balance is ৳${finalBalance.toLocaleString('en-IN')}.\nPlease clear the dues as soon as possible.\n- ${user?.business_name || 'Business'}`;
+    const res = await onSendSMS(selectedParty.phone, message);
+    alert(res.message);
+    setIsSendingSMS(false);
+  };
+
+  const handleExportCSV = () => {
+    if (!selectedParty || entries.length === 0) return;
+    
+    const headers = ['Date', 'Bill No', 'Details', 'Credit', 'Payment', 'Balance'];
+    const csvContent = [
+      headers.join(','),
+      ...entries.map(entry => {
+        const d = new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
+        const details = entry.details ? `"${entry.details.replace(/"/g, '""')}"` : '';
+        return `${d},"${entry.bill_no}",${details},${entry.credit},${entry.payment},${entry.running_balance}`;
+      }),
+      `"Statement Summary",,,,${finalBalance}`
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${selectedParty.name}_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="flex flex-col xl:flex-row gap-6 pb-20">
       
-      {/* Forms Area */}
-      <div className="w-full xl:w-[320px] space-y-4 no-print order-2 xl:order-1">
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-lg">
-          <div className="flex items-center gap-2 mb-4">
-            <ReceiptText className="w-4 h-4 text-primary-600" />
-            <h3 className="font-black uppercase text-[10px] tracking-widest text-slate-900 dark:text-white">Quick Entry</h3>
-          </div>
-          
-          {!selectedParty ? (
-            <div className="py-8 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2">Select party from sidebar</p>
-            </div>
-          ) : (
-            <form onSubmit={handleTxSubmit} className="space-y-3">
-              <div className="flex gap-1.5 p-1 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                <button type="button" onClick={() => setEntryType('work')} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${entryType === 'work' ? 'bg-white dark:bg-slate-700 shadow-sm text-primary-600' : 'text-slate-50'}`}>Work</button>
-                <button type="button" onClick={() => setEntryType('payment')} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${entryType === 'payment' ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-600' : 'text-slate-500'}`}>Payment</button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-lg p-2.5 text-[11px] font-bold w-full outline-none focus:ring-1 ring-primary-500" />
-                <input type="text" placeholder="Bill No" value={billNo} onChange={e => setBillNo(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-lg p-2.5 text-[11px] font-bold w-full outline-none focus:ring-1 ring-primary-500" />
-              </div>
-
-              <input 
-                type="number" 
-                placeholder="Amount (৳)" 
-                required
-                value={amount} 
-                onChange={e => setAmount(e.target.value)} 
-                className={`w-full ${entryType === 'work' ? 'bg-primary-50/50 text-primary-700' : 'bg-emerald-50/50 text-emerald-700'} dark:bg-slate-800 border-none rounded-lg p-3 text-lg font-black outline-none focus:ring-1`} 
-              />
-
-              <button type="submit" disabled={isSubmitting} className={`w-full font-black py-4 rounded-xl shadow-lg transition-all active:scale-95 uppercase text-[10px] tracking-widest ${entryType === 'work' ? 'bg-primary-600' : 'bg-emerald-600'} text-white`}>
-                {isSubmitting ? (
-                  <span className="flex items-center justify-center gap-2 animate-pulse">
-                    <Loader2 className="w-4 h-4 animate-spin" /> SAVING...
-                  </span>
-                ) : `Save ${entryType}`}
-              </button>
-            </form>
-          )}
-        </div>
-
-        {/* Transaction History */}
+            {/* Forms Area / Transaction History Wrapper */}
+      <div className="w-full xl:w-[300px] space-y-4 no-print order-2 xl:order-2 xl:sticky xl:top-4 self-start">
+        
+{/* Transaction History */}
         {selectedParty && (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm">
              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Recent Transactions</h3>
              <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 scrollbar-thin">
                {entries.slice().reverse().map(e => (
@@ -230,7 +230,7 @@ const Ledger: React.FC<LedgerProps> = ({
       </div>
 
       {/* Memo Display Area */}
-      <div className="flex-1 order-1 xl:order-2">
+      <div className="flex-1 order-1 xl:order-1">
         {!selectedParty ? (
           <div className="h-40 bg-white dark:bg-slate-900 rounded-[2rem] flex flex-col items-center justify-center p-6 text-center border border-slate-200 dark:border-slate-800">
             <Landmark className="w-8 h-8 text-slate-200 mb-2" />
@@ -243,96 +243,129 @@ const Ledger: React.FC<LedgerProps> = ({
                 <h2 className="text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white truncate">{selectedParty.name}</h2>
                 <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Statement View</p>
               </div>
-              <button 
-                onClick={handleDownloadHD} 
-                disabled={isDownloading}
-                className="flex items-center gap-2 bg-slate-900 dark:bg-primary-600 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 disabled:opacity-50 transition-all"
-              >
-                {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                Save Statement
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowQuickEntry(true)}
+                  className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+                >
+                  <Plus className="w-4 h-4" /> Quick Entry
+                </button>
+
+                <button 
+                  onClick={handleSendAlert} 
+                  disabled={isSendingSMS || !selectedParty.phone}
+                  className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all"
+                >
+                  {isSendingSMS ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Phone className="w-3.5 h-3.5" />}
+                  Alert
+                </button>
+                <button 
+                  onClick={handleExportCSV} 
+                  className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  CSV
+                </button>
+                <button 
+                  onClick={handleDownloadHD} 
+                  disabled={isDownloading}
+                  className="flex items-center gap-2 bg-slate-900 dark:bg-primary-600 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 disabled:opacity-50 transition-all"
+                >
+                  {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                  Save Statement
+                </button>
+              </div>
             </div>
 
             <div className="w-full no-print bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden overflow-x-auto">
               <div 
                 ref={ledgerRef}
-                className="bg-white text-slate-950 p-6 md:p-12 min-h-[700px] w-full max-w-[800px] mx-auto"
+                className="bg-white text-slate-800 p-8 md:p-12 min-h-[700px] w-full mx-auto font-sans"
               >
                 <div className="min-w-[400px]">
-                  <div className="flex justify-between items-start border-b-[4px] border-slate-950 pb-5 mb-8">
+                  {/* Header */}
+                  <div className="flex justify-between items-start border-b border-slate-200 pb-6 mb-8">
                     <div>
-                      <h1 className="text-xl md:text-2xl font-black uppercase tracking-tighter leading-tight">{user?.business_name || 'Business'}</h1>
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-1">Hisab Statement Memo</p>
+                      <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 leading-tight">
+                        {user?.business_name || 'Business'}
+                      </h1>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-1">Hisab Statement Memo</p>
                     </div>
                     <div className="text-right">
-                      <div className="bg-slate-950 text-white px-3 py-1.5 rounded text-[11px] font-black uppercase tracking-widest">
+                      <p className="text-sm font-medium text-slate-500 mb-1">Date</p>
+                      <p className="text-base font-semibold text-slate-800">
                         {new Date().toLocaleDateString('en-GB')}
-                      </div>
+                      </p>
                     </div>
                   </div>
 
+                  {/* Customer Info & Summary */}
                   <div className="grid grid-cols-2 gap-8 mb-10">
-                    <div className="bg-slate-50 p-5 rounded-2xl border-l-[8px] border-slate-950">
-                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Customer Details</p>
-                      <h3 className="text-lg md:text-xl font-black uppercase leading-tight mb-1">{selectedParty.name}</h3>
-                      <p className="text-[10px] text-slate-600 font-mono font-black">{selectedParty.phone || 'N/A'}</p>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Billed To</p>
+                      <h3 className="text-lg font-bold text-slate-800 mb-1">{selectedParty.name}</h3>
+                      <p className="text-sm text-slate-600 font-medium">{selectedParty.phone || 'N/A'}</p>
                     </div>
                     <div className="flex flex-col justify-center items-end text-right">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Due Balance</p>
-                      <div className={`text-4xl font-black tracking-tighter leading-none ${finalBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Amount Due</p>
+                      <div className={`text-3xl font-bold tracking-tight leading-none ${finalBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                         ৳{finalBalance.toLocaleString('en-IN')}
                       </div>
                     </div>
                   </div>
 
-                  <table className="w-full border-collapse border-slate-950">
+                  {/* Table */}
+                  <table className="w-full">
                     <thead>
-                      <tr className="border-y-[3px] border-slate-950 text-slate-950 text-[12px]">
-                        <th className="py-3 px-2 text-left font-black uppercase border-r-[2px] border-slate-950 w-24">Date</th>
-                        <th className="py-3 px-2 text-center font-black uppercase border-r-[2px] border-slate-950 w-20">Bill</th>
-                        <th className="py-3 px-2 text-right font-black uppercase border-r-[2px] border-slate-950">Credit</th>
-                        <th className="py-3 px-2 text-right font-black uppercase border-r-[2px] border-slate-950">Payment</th>
-                        <th className="py-3 px-2 text-right font-black uppercase">Balance</th>
+                      <tr className="border-y border-slate-200 bg-slate-50/50">
+                        <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                        <th className="py-3 px-4 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Bill</th>
+                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Credit</th>
+                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Payment</th>
+                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Balance</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y-[1px] divide-slate-200">
+                    <tbody className="divide-y divide-slate-100">
                       {entries.length === 0 ? (
-                        <tr><td colSpan={5} className="py-24 text-center text-slate-300 font-black uppercase text-xs tracking-widest border border-slate-100">No transactions found</td></tr>
+                        <tr>
+                          <td colSpan={5} className="py-16 text-center text-slate-400 font-medium text-sm">No transactions found</td>
+                        </tr>
                       ) : entries.map(entry => (
-                        <tr key={entry.id} className="text-slate-950 text-[12px]">
-                          <td className="py-4 px-2 font-bold border-r-[2px] border-slate-950">{new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
-                          <td className="py-4 px-2 font-black text-center border-r-[2px] border-slate-950">{entry.bill_no}</td>
-                          <td className="py-4 px-2 text-right font-black border-r-[2px] border-slate-950">{entry.credit > 0 ? entry.credit.toLocaleString() : '-'}</td>
-                          <td className="py-4 px-2 text-right font-black border-r-[2px] border-slate-950">{entry.payment > 0 ? entry.payment.toLocaleString() : '-'}</td>
-                          <td className={`py-4 px-2 text-right font-black ${entry.running_balance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        <tr key={entry.id} className="text-sm">
+                          <td className="py-4 px-4 font-medium text-slate-700">{new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+                          <td className="py-4 px-4 font-medium text-slate-700 text-center">{entry.bill_no}</td>
+                          <td className="py-4 px-4 text-right font-medium text-slate-700">{entry.credit > 0 ? entry.credit.toLocaleString() : '-'}</td>
+                          <td className="py-4 px-4 text-right font-medium text-slate-700">{entry.payment > 0 ? entry.payment.toLocaleString() : '-'}</td>
+                          <td className={`py-4 px-4 text-right font-semibold ${entry.running_balance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                             {entry.running_balance.toLocaleString()}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr className="border-t-[3px] border-slate-950 font-black text-slate-950 text-[12px] bg-slate-50">
-                        <td colSpan={2} className="py-6 px-3 uppercase font-black border-r-[2px] border-slate-950">Statement Summary</td>
-                        <td className="py-6 px-3 text-right border-r-[2px] border-slate-950">{tCredit.toLocaleString()}</td>
-                        <td className="py-6 px-3 text-right border-r-[2px] border-slate-950">{tPayment.toLocaleString()}</td>
-                        <td className={`py-6 px-3 text-right text-2xl font-black ${finalBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      <tr className="border-t border-slate-200 bg-slate-50">
+                        <td colSpan={2} className="py-4 px-4 text-sm font-semibold text-slate-700">Statement Summary</td>
+                        <td className="py-4 px-4 text-right font-semibold text-slate-700">{tCredit.toLocaleString()}</td>
+                        <td className="py-4 px-4 text-right font-semibold text-slate-700">{tPayment.toLocaleString()}</td>
+                        <td className={`py-4 px-4 text-right text-lg font-bold ${finalBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                           ৳{finalBalance.toLocaleString()}
                         </td>
                       </tr>
                     </tfoot>
                   </table>
 
-                  <div className="mt-24 flex justify-between gap-12">
-                    <div className="flex-1 border-t-[2px] border-slate-950 pt-3 text-center">
-                      <p className="text-[11px] font-black uppercase tracking-widest">Customer Signature</p>
+                  {/* Signatures */}
+                  <div className="mt-24 flex justify-between gap-12 px-8">
+                    <div className="flex-1 border-t border-slate-300 pt-3 text-center">
+                      <p className="text-xs font-semibold text-slate-500">Customer Signature</p>
                     </div>
-                    <div className="flex-1 border-t-[2px] border-slate-950 pt-3 text-center">
-                      <p className="text-[11px] font-black uppercase tracking-widest">Authorized Signature</p>
+                    <div className="flex-1 border-t border-slate-300 pt-3 text-center">
+                      <p className="text-xs font-semibold text-slate-500">Authorized Signature</p>
                     </div>
                   </div>
 
                   <div className="mt-16 pt-8 border-t border-slate-100 text-center">
-                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.5em]">DIGITAL HISAB STATEMENT • SECURE & VERIFIED</p>
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Generated by Hisaab Khata Engine</p>
                   </div>
                 </div>
               </div>
@@ -345,6 +378,55 @@ const Ledger: React.FC<LedgerProps> = ({
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-6">
           <CheckCircle2 className="w-5 h-5 text-emerald-500" />
           <span className="text-[10px] font-black uppercase tracking-widest">Statement Saved to Gallery</span>
+        </div>
+      )}
+
+      {showQuickEntry && selectedParty && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-sm animate-in zoom-in-95 relative">
+            <button onClick={() => setShowQuickEntry(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all">
+              <X className="w-5 h-5" />
+            </button>
+            
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-primary-50 dark:bg-primary-900/30 rounded-xl text-primary-600">
+                <ReceiptText className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-black text-lg text-slate-900 dark:text-white uppercase tracking-tight">Quick Entry</h3>
+                <p className="text-xs font-bold text-slate-500">{selectedParty.name}</p>
+              </div>
+            </div>
+            
+            <form onSubmit={(e) => {
+              handleTxSubmit(e);
+              setShowQuickEntry(false);
+            }} className="space-y-4">
+              <div className="flex gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+                <button type="button" onClick={() => setEntryType('work')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${entryType === 'work' ? 'bg-white dark:bg-slate-700 shadow-md text-primary-600' : 'text-slate-500'}`}>Work</button>
+                <button type="button" onClick={() => setEntryType('payment')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${entryType === 'payment' ? 'bg-white dark:bg-slate-700 shadow-md text-emerald-600' : 'text-slate-500'}`}>Payment</button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3.5 text-xs font-bold w-full outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
+                <input type="text" placeholder="Bill No" value={billNo} onChange={e => setBillNo(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3.5 text-xs font-bold w-full outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
+              </div>
+              <input 
+                type="number" 
+                placeholder="Amount (৳)" 
+                required
+                value={amount} 
+                onChange={e => setAmount(e.target.value)} 
+                className={`w-full ${entryType === 'work' ? 'bg-primary-50 text-primary-700' : 'bg-emerald-50 text-emerald-700'} dark:bg-slate-800 border-none rounded-xl p-4 text-2xl text-center font-black outline-none focus:ring-2 focus:ring-primary-500 transition-all`} 
+              />
+              <button type="submit" disabled={isSubmitting} className={`w-full font-black py-4 rounded-xl shadow-lg transition-all active:scale-95 uppercase text-xs tracking-widest ${entryType === 'work' ? 'bg-primary-600 hover:bg-primary-700 shadow-primary-500/20' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'} text-white`}>
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2 animate-pulse">
+                    <Loader2 className="w-5 h-5 animate-spin" /> SAVING...
+                  </span>
+                ) : `Save ${entryType}`}
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>

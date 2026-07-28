@@ -26,33 +26,14 @@ export interface Transaction {
   created_at: string;
 }
 
-export interface Product {
-  id: string;
-  name: string;
-  sku: string;
-  buying_price: number;
-  selling_price: number;
-  stock: number;
-}
 
-export interface Expense {
-  id: string;
-  date: string;
-  category: string;
-  amount: number;
-  description: string;
-}
 
-export interface Sale {
-  id: string;
-  date: string;
-  customer_name: string;
-  total_amount: number;
-  paid_amount: number;
-}
+
+
+
 
 export interface LedgerEntry extends Transaction {
   running_balance: number;
 }
 
-export type TabType = 'dashboard' | 'ledger' | 'inventory' | 'sales' | 'expenses' | 'parties' | 'settings';
+export type TabType = 'dashboard' | 'ledger' | 'parties' | 'settings';

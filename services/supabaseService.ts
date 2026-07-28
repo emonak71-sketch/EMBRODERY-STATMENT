@@ -32,7 +32,7 @@ export const dbService = {
     if (!isConfigured()) return { success: false, message: 'Supabase configuration is missing.' };
     const { data, error } = await supabase.auth.signUp({ email, password: pass, options: { data: { business_name: businessName } } });
     if (error) return { success: false, message: error.message };
-    return { success: true, user: { id: data.user!.id, email: data.user!.email!, business_name: businessName }, message: data.session ? null : 'Signup successful! Please verify email.' };
+    return { success: true, user: { id: data.user!.id, email: data.user!.email!, business_name: businessName }, message: data.session ? null : 'অ্যাকাউন্ট তৈরি সফল হয়েছে! দয়া করে লগ-ইন করুন।' };
   },
 
   updateProfile: async (email: string, businessName: string) => {

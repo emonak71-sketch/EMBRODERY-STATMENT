@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Landmark, FileText, Package, ShoppingCart, Receipt, Search, Sun, Moon, LogOut, Menu, X, MoreVertical, Edit2, Trash2, Settings, Plus, RotateCcw } from 'lucide-react';
+import { Landmark, FileText, Package, ShoppingCart, Receipt, Search, Users, Sun, Moon, LogOut, Menu, X, MoreVertical, Edit2, Trash2, Settings, Plus, RotateCcw } from 'lucide-react';
 import { Party, TabType } from '../types';
 
 interface SidebarProps {
@@ -95,10 +95,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           <nav className="flex-shrink-0 space-y-1 mb-6">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: <Landmark className="w-5 h-5" /> },
+              { id: 'parties', label: 'Parties', icon: <Users className="w-5 h-5" /> },
               { id: 'ledger', label: 'Ledger', icon: <FileText className="w-5 h-5" /> },
-              { id: 'inventory', label: 'Inventory', icon: <Package className="w-5 h-5" /> },
-              { id: 'sales', label: 'Sales', icon: <ShoppingCart className="w-5 h-5" /> },
-              { id: 'expenses', label: 'Expenses', icon: <Receipt className="w-5 h-5" /> },
               { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
             ].map((item) => (
               <button
@@ -133,26 +131,34 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
             
             {showAddParty && (
-              <form onSubmit={handleAddParty} className="mx-2 mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-2 animate-in slide-in-from-top-2">
-                <input 
-                  type="text" 
-                  placeholder="Party Name" 
-                  required
-                  value={newPartyName}
-                  onChange={(e) => setNewPartyName(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-800 border-none text-[10px] font-black p-2.5 rounded-lg outline-none"
-                />
-                <input 
-                  type="tel" 
-                  placeholder="Phone No" 
-                  value={newPartyPhone}
-                  onChange={(e) => setNewPartyPhone(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-800 border-none text-[10px] font-black p-2.5 rounded-lg outline-none"
-                />
-                <button type="submit" disabled={isSubmitting} className="w-full bg-primary-600 text-white text-[9px] font-black uppercase py-2.5 rounded-lg tracking-widest shadow-lg shadow-primary-500/20">
-                  {isSubmitting ? 'Saving...' : 'Add Party'}
-                </button>
-              </form>
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-sm animate-in zoom-in-95 relative">
+                  <button onClick={() => setShowAddParty(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all">
+                    <X className="w-4 h-4" />
+                  </button>
+                  <h3 className="text-lg font-black uppercase tracking-tight mb-4 text-slate-900 dark:text-white">Add New Party</h3>
+                  <form onSubmit={handleAddParty} className="space-y-3">
+                    <input 
+                      type="text" 
+                      placeholder="Party Name" 
+                      required
+                      value={newPartyName}
+                      onChange={(e) => setNewPartyName(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-none text-sm font-bold p-3 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                    />
+                    <input 
+                      type="tel" 
+                      placeholder="Phone No" 
+                      value={newPartyPhone}
+                      onChange={(e) => setNewPartyPhone(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-none text-sm font-bold p-3 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                    />
+                    <button type="submit" disabled={isSubmitting} className="w-full bg-primary-600 hover:bg-primary-700 text-white text-xs font-black uppercase py-3.5 rounded-xl tracking-widest shadow-lg shadow-primary-500/20 transition-all active:scale-95">
+                      {isSubmitting ? 'Saving...' : 'Add Party'}
+                    </button>
+                  </form>
+                </div>
+              </div>
             )}
 
             <div className="relative mb-3 px-1">

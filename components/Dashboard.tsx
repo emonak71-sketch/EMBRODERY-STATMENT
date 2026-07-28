@@ -1,18 +1,24 @@
 
 import React from 'react';
-import { Landmark, TrendingUp, TrendingDown, Package, CreditCard, Wallet } from 'lucide-react';
-import { User } from '../types';
+import { Landmark, TrendingUp, TrendingDown, Package, CreditCard, Wallet, Users } from 'lucide-react';
+import { User, Party, Transaction, TabType } from '../types';
+import { ChevronRight } from 'lucide-react';
 
 interface Stats {
   totalCredit: number;
   totalCollected: number;
   totalOutstanding: number;
-  totalSales: number;
-  totalExpenses: number;
-  inventoryValue: number;
+  monthlyWork: number;
 }
 
-const Dashboard: React.FC<{ stats: Stats; user: User | null }> = ({ stats, user }) => {
+const Dashboard: React.FC<{ 
+  stats: Stats; 
+  user: User | null;
+  parties?: Party[];
+  transactions?: Transaction[];
+  setActiveTab?: (tab: TabType) => void;
+  setSelectedParty?: (party: Party) => void;
+}> = ({ stats, user, parties = [], transactions = [], setActiveTab, setSelectedParty }) => {
   const cards = [
     { 
       title: 'Total Outstanding', 
@@ -29,32 +35,27 @@ const Dashboard: React.FC<{ stats: Stats; user: User | null }> = ({ stats, user 
       isDynamic: false
     },
     { 
-      title: 'Inventory Value', 
-      amount: stats.inventoryValue, 
-      icon: <Package className="w-5 h-5 text-primary-500" />,
-      color: 'bg-primary-50 dark:bg-primary-900/10',
-      isDynamic: false
-    },
-    { 
-      title: 'Monthly Sales', 
-      amount: stats.totalSales, 
-      icon: <Wallet className="w-5 h-5 text-amber-500" />,
-      color: 'bg-amber-50 dark:bg-amber-900/10',
-      isDynamic: false
-    },
-    { 
-      title: 'Expenses', 
-      amount: stats.totalExpenses, 
-      icon: <TrendingDown className="w-5 h-5 text-orange-500" />,
-      color: 'bg-orange-50 dark:bg-orange-900/10',
-      isDynamic: false
-    },
-    { 
       title: 'Net Receivables', 
       amount: stats.totalCredit - stats.totalCollected, 
       icon: <Landmark className="w-5 h-5 text-indigo-500" />,
       color: 'bg-indigo-50 dark:bg-indigo-900/10',
       isDynamic: true
+    },
+    {
+      title: 'Monthly Work',
+      amount: stats.monthlyWork,
+      icon: <Wallet className="w-5 h-5 text-amber-500" />,
+      color: 'bg-amber-50 dark:bg-amber-900/10',
+      isDynamic: false
+    }
+  ,
+    {
+      title: 'Total Parties',
+      amount: parties.length,
+      icon: <Users className="w-5 h-5 text-purple-500" />,
+      color: 'bg-purple-50 dark:bg-purple-900/10',
+      isDynamic: false,
+      onClick: () => { if (setActiveTab) setActiveTab('parties'); }
     }
   ];
 
@@ -84,8 +85,9 @@ const Dashboard: React.FC<{ stats: Stats; user: User | null }> = ({ stats, user 
           
           return (
             <div 
-              key={i} 
-              className="bg-white dark:bg-slate-900 p-5 rounded-[1.5rem] shadow-sm border border-slate-200 dark:border-slate-800 transition-all hover:-translate-y-1 hover:shadow-xl animate-in zoom-in-95 fade-in duration-500"
+              key={i}
+              onClick={(card as any).onClick}
+              className={`bg-white dark:bg-slate-900 p-5 rounded-[1.5rem] shadow-sm border border-slate-200 dark:border-slate-800 transition-all hover:-translate-y-1 hover:shadow-xl animate-in zoom-in-95 fade-in duration-500 ${(card as any).onClick ? 'cursor-pointer' : ''}`}
               style={{ animationDelay: `${i * 100}ms` }}
             >
               <div className="flex justify-between items-start mb-4">
@@ -96,13 +98,15 @@ const Dashboard: React.FC<{ stats: Stats; user: User | null }> = ({ stats, user 
               <div>
                 <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{card.title}</p>
                 <h2 className={`text-xl font-black tracking-tight ${isNegative ? 'text-emerald-600' : isPositive ? 'text-rose-600' : 'text-slate-900 dark:text-white'}`}>
-                  ৳{card.amount.toLocaleString('en-IN')}
+                  {card.title === 'Total Parties' ? card.amount : `৳${card.amount.toLocaleString('en-IN')}`}
                 </h2>
               </div>
             </div>
           );
         })}
       </div>
+
+      
     </div>
   );
 };

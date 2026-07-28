@@ -1,23 +1,43 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Landmark, AlertTriangle } from 'lucide-react';
-import { Party, Transaction, Product, Expense, Sale, User, TabType } from './types';
+import { Party, Transaction, User, TabType } from './types';
 import { dbService } from './services/supabaseService';
 import { supabase, supabaseUrl } from './services/supabaseClient';
 import Auth from './components/Auth';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Ledger from './components/Ledger';
-import Inventory from './components/Inventory';
 import Settings from './components/Settings';
+import PartiesList from './components/PartiesList';
+
+const sendSMSAlert = async (phone: string, message: string) => {
+  try {
+    // Generic SMS gateway integration
+    console.log(`[SMS Gateway] Sending SMS to ${phone}...`);
+    console.log(`[SMS Gateway] Message: ${message}`);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Example implementation for a real API (e.g., Twilio, Nexmo, local providers):
+    // const response = await fetch('https://api.smsgateway.com/v1/send', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer YOUR_API_KEY' },
+    //   body: JSON.stringify({ to: phone, text: message })
+    // });
+    
+    return { success: true, message: 'SMS sent successfully' };
+  } catch (error) {
+    console.error('SMS sending failed:', error);
+    return { success: false, message: 'Failed to send SMS' };
+  }
+};
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [parties, setParties] = useState<Party[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -28,9 +48,7 @@ const App: React.FC = () => {
     totalCredit: 0,
     totalCollected: 0,
     totalOutstanding: 0,
-    totalSales: 0,
-    totalExpenses: 0,
-    inventoryValue: 0
+    monthlyWork: 0
   });
 
   const refreshData = useCallback(async () => {
@@ -38,10 +56,7 @@ const App: React.FC = () => {
     try {
       const db = await dbService.getInitialData();
       setParties(db.parties);
-      setProducts(db.products);
-      setSales(db.sales);
-      setExpenses(db.expenses);
-      setTransactions(db.transactions);
+                        setTransactions(db.transactions);
 
       // Only count non-deleted parties for stats
       const activePartiesIds = new Set(db.parties.filter(p => !p.is_deleted).map(p => p.id));
@@ -49,17 +64,22 @@ const App: React.FC = () => {
 
       const totalCredit = activeTransactions.reduce((sum, item) => sum + (Number(item.credit) || 0), 0);
       const totalCollected = activeTransactions.reduce((sum, item) => sum + (Number(item.payment) || 0), 0);
-      const totalSales = db.sales.reduce((sum, item) => sum + (Number(item.total_amount) || 0), 0);
-      const totalExpenses = db.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-      const inventoryValue = db.products.reduce((sum, item) => sum + ((Number(item.buying_price) || 0) * (Number(item.stock) || 0)), 0);
+      
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+      
+      const monthlyWork = activeTransactions.filter(t => {
+        if (!t.date) return false;
+        const d = new Date(t.date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      }).reduce((sum, item) => sum + (Number(item.credit) || 0), 0);
 
       setStats({
         totalCredit,
         totalCollected,
         totalOutstanding: totalCredit - totalCollected,
-        totalSales,
-        totalExpenses,
-        inventoryValue
+        monthlyWork
       });
     } catch (err) {
       console.error('Failed to fetch data:', err);
@@ -109,9 +129,7 @@ const App: React.FC = () => {
           totalCredit: 0,
           totalCollected: 0,
           totalOutstanding: 0,
-          totalSales: 0,
-          totalExpenses: 0,
-          inventoryValue: 0
+          monthlyWork: 0
         });
       }
     });
@@ -196,11 +214,18 @@ const App: React.FC = () => {
     }
   };
 
+  const [partyToPermDelete, setPartyToPermDelete] = useState<string | null>(null);
+
   const handlePermanentDeleteParty = async (id: string) => {
-    if (!confirm('This will permanently delete this party and all transactions. This action cannot be undone.')) return;
+    setPartyToPermDelete(id);
+  };
+  
+  const confirmPermanentDeleteParty = async () => {
+    if (!partyToPermDelete) return;
     try {
-      await dbService.deleteParty(id);
+      await dbService.deleteParty(partyToPermDelete);
       await refreshData();
+      setPartyToPermDelete(null);
     } catch (err: any) {
       alert(`Error permanently deleting party: ${err.message || 'Unknown error'}`);
     }
@@ -224,25 +249,24 @@ const App: React.FC = () => {
     }
   };
 
+  const [txToDelete, setTxToDelete] = useState<string | null>(null);
+
   const handleDeleteTransaction = async (id: string) => {
-    if (!confirm('Delete this transaction record?')) return;
+    setTxToDelete(id);
+  };
+
+  const confirmDeleteTransaction = async () => {
+    if (!txToDelete) return;
     try {
-      await dbService.deleteTransaction(id);
+      await dbService.deleteTransaction(txToDelete);
       await refreshData();
+      setTxToDelete(null);
     } catch (err: any) {
       alert(`Error deleting transaction: ${err.message || 'Unknown error'}`);
     }
   };
 
-  const handleAddProduct = async (p: Omit<Product, 'id'>) => {
-    try {
-      await dbService.addProduct(p);
-      await refreshData();
-    } catch (err: any) {
-      alert(`Error adding product: ${err.message || 'Unknown error'}`);
-    }
-  };
-
+  
   const handleUpdateProfile = async (email: string, biz: string) => {
     try {
       const updatedUser = await dbService.updateProfile(email, biz);
@@ -317,7 +341,8 @@ const App: React.FC = () => {
       />
 
       <main className="flex-1 overflow-y-auto p-4 md:p-10 no-print">
-        {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} />}
+        {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} />}
+        {activeTab === 'parties' && <PartiesList parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
         {activeTab === 'ledger' && (
           <Ledger 
             parties={parties} 
@@ -327,6 +352,7 @@ const App: React.FC = () => {
             onAddTransaction={handleAddTransaction}
             onEditTransaction={handleEditTransaction}
             onDeleteTransaction={handleDeleteTransaction}
+            onSendSMS={sendSMSAlert}
           />
         )}
         {activeTab === 'inventory' && (
@@ -359,9 +385,41 @@ const App: React.FC = () => {
               onAddTransaction={handleAddTransaction}
               onEditTransaction={handleEditTransaction}
               onDeleteTransaction={handleDeleteTransaction}
+              onSendSMS={sendSMSAlert}
             />
          )}
       </div>
+      
+      
+      {partyToPermDelete && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 max-w-xs w-full text-center animate-in zoom-in-95">
+            <h4 className="text-lg font-black uppercase tracking-tight mb-2 text-rose-600">Delete Permanently?</h4>
+            <p className="text-[11px] font-bold text-slate-500 mb-8 leading-relaxed">
+              This action cannot be undone.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setPartyToPermDelete(null)} className="py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all">Cancel</button>
+              <button onClick={confirmPermanentDeleteParty} className="py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-500/20 transition-all">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {txToDelete && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 max-w-xs w-full text-center animate-in zoom-in-95">
+            <h4 className="text-lg font-black uppercase tracking-tight mb-2 text-rose-600">Delete Transaction?</h4>
+            <p className="text-[11px] font-bold text-slate-500 mb-8 leading-relaxed">
+              Are you sure you want to delete this record?
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setTxToDelete(null)} className="py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all">Cancel</button>
+              <button onClick={confirmDeleteTransaction} className="py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-500/20 transition-all">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

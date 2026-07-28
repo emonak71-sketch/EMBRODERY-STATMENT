@@ -5,12 +5,12 @@ import { Landmark, ArrowRight, Loader2, AlertCircle, ShieldCheck } from 'lucide-
 interface AuthProps {
   onLogin: (email: string, pass: string) => Promise<any>;
   onSignup: (email: string, pass: string, biz: string) => Promise<any>;
-  onResetPassword: (email: string) => Promise<any>;
-  onUpdatePassword: (pass: string) => Promise<any>;
+  onResetপাসওয়ার্ড: (email: string) => Promise<any>;
+  onUpdateপাসওয়ার্ড: (pass: string) => Promise<any>;
   isResetting?: boolean;
 }
 
-const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetPassword, onUpdatePassword, isResetting = false }) => {
+const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetপাসওয়ার্ড, onUpdateপাসওয়ার্ড, isResetting = false }) => {
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>(isResetting ? 'login' : 'login');
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
@@ -27,7 +27,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetPassword, onUpdat
     
     try {
       if (isResetting) {
-        const res = await onUpdatePassword(pass);
+        const res = await onUpdateপাসওয়ার্ড(pass);
         if (!res.success) setErrorMsg(res.message || 'Update failed');
         else setInfoMsg(res.message);
       } else if (mode === 'login') {
@@ -37,11 +37,15 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetPassword, onUpdat
         const res = await onSignup(email, pass, businessName);
         if (!res.success) {
           setErrorMsg(res.message || 'Signup failed');
-        } else if (res.message) {
-          setInfoMsg(res.message);
+        } else {
+          // Auto login after signup
+          const loginRes = await onLogin(email, pass);
+          if (!loginRes.success) {
+             setInfoMsg(res.message || 'অ্যাকাউন্ট তৈরি সফল হয়েছে! দয়া করে লগ-ইন করুন।');
+          }
         }
       } else if (mode === 'forgot') {
-        const res = await onResetPassword(email);
+        const res = await onResetপাসওয়ার্ড(email);
         if (!res.success) setErrorMsg(res.message || 'Reset failed');
         else setInfoMsg(res.message);
       }
@@ -53,17 +57,17 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetPassword, onUpdat
   };
 
   const getTitle = () => {
-    if (isResetting) return 'Update Password';
-    if (mode === 'login') return 'Log In';
-    if (mode === 'signup') return 'Create Profile';
-    return 'Reset Password';
+    if (isResetting) return 'পাসওয়ার্ড আপডেট';
+    if (mode === 'login') return 'লগ-ইন করুন';
+    if (mode === 'signup') return 'নতুন প্রোফাইল তৈরি করুন';
+    return 'পাসওয়ার্ড রিসেট';
   };
 
   const getButtonText = () => {
-    if (isResetting) return 'Update Password';
-    if (mode === 'login') return 'Log In';
-    if (mode === 'signup') return 'Create Profile';
-    return 'Send Reset Link';
+    if (isResetting) return 'পাসওয়ার্ড আপডেট';
+    if (mode === 'login') return 'লগ-ইন করুন';
+    if (mode === 'signup') return 'নতুন প্রোফাইল তৈরি করুন';
+    return 'রিসেট লিঙ্ক পাঠান';
   };
 
   return (
@@ -74,7 +78,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetPassword, onUpdat
             <Landmark className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter animate-in fade-in slide-in-from-bottom-4 delay-300 duration-700">Embrodery Statement</h1>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] mt-3 animate-in fade-in delay-500 duration-1000">Professional Ledger Workspace</p>
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] mt-3 animate-in fade-in delay-500 duration-1000">প্রফেশনাল লেজার ওয়ার্কস্পেস</p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 p-8 md:p-10 rounded-[2.5rem] shadow-2xl shadow-black/5 border border-slate-100 dark:border-slate-800 animate-in fade-in zoom-in-95 delay-200 duration-700">
@@ -97,21 +101,21 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetPassword, onUpdat
           <form onSubmit={handleSubmit} className="space-y-5">
             {mode === 'signup' && !isResetting && (
               <div className="space-y-2 animate-in slide-in-from-left-4 delay-300 duration-500">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Business Name</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">ব্যবসার নাম</label>
                 <input type="text" required className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border-none outline-none focus:ring-2 ring-primary-500 transition-all font-bold" placeholder="e.g. Skyline Designs" value={businessName} onChange={e => setBusinessName(e.target.value)} />
               </div>
             )}
             
             {!isResetting && (
               <div className="space-y-2 animate-in slide-in-from-left-4 delay-400 duration-500">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Email Address</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">ইমেইল ঠিকানা</label>
                 <input type="email" required className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border-none outline-none focus:ring-2 ring-primary-500 transition-all font-bold" placeholder="admin@example.com" value={email} onChange={e => setEmail(e.target.value)} />
               </div>
             )}
             
             {(mode !== 'forgot' || isResetting) && (
               <div className="space-y-2 animate-in slide-in-from-left-4 delay-500 duration-500">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">{isResetting ? 'New Password' : 'Password'}</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">{isResetting ? 'New পাসওয়ার্ড' : 'পাসওয়ার্ড'}</label>
                 <input type="password" required minLength={6} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border-none outline-none focus:ring-2 ring-primary-500 transition-all font-bold" placeholder="••••••••" value={pass} onChange={e => setPass(e.target.value)} />
               </div>
             )}
@@ -119,7 +123,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetPassword, onUpdat
             {mode === 'login' && !isResetting && (
               <div className="flex justify-end px-1 animate-in fade-in delay-600 duration-500">
                 <button type="button" onClick={() => { setMode('forgot'); setErrorMsg(null); setInfoMsg(null); }} className="text-[10px] font-black text-primary-600 hover:text-primary-700 transition-colors uppercase tracking-widest">
-                  Forgot Password?
+                  Forgot পাসওয়ার্ড?
                 </button>
               </div>
             )}
@@ -143,14 +147,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetPassword, onUpdat
                 setErrorMsg(null); 
                 setInfoMsg(null); 
               }} className="text-[10px] font-black text-primary-600 hover:text-primary-700 transition-colors uppercase tracking-[0.2em]">
-                {mode === 'login' ? 'Establish New Profile' : (mode === 'signup' ? 'Existing Profile Login' : 'Back to Login')}
+                {mode === 'login' ? 'নতুন প্রোফাইল খুলুন' : (mode === 'signup' ? 'আগের প্রোফাইলে লগ-ইন' : 'লগ-ইন এ ফিরে যান')}
               </button>
             )}
           </div>
         </div>
 
         <div className="mt-10 flex items-center justify-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest animate-in fade-in delay-[1200ms] duration-1000">
-          <ShieldCheck className="w-4 h-4 text-emerald-500" /> Verified Secure Session
+          <ShieldCheck className="w-4 h-4 text-emerald-500" /> নিরাপদ সেশন
         </div>
       </div>
     </div>
