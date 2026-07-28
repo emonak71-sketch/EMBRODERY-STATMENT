@@ -63,7 +63,7 @@ const MonthlyReports: React.FC<MonthlyReportsProps> = ({ transactions, parties, 
     const monthDetails = monthlyData[selectedMonth];
     
     // Convert partyTotals to array and sort descending by total
-    const sortedParties = Object.values(monthDetails.partyTotals).sort((a, b) => b.total - a.total);
+    const sortedParties = Object.values(monthDetails.partyTotals).sort((a: any, b: any) => b.total - a.total) as {name: string, total: number, memos: number, id: string}[];
 
     return (
       <div className="space-y-6 pt-14 md:pt-0 animate-in fade-in">

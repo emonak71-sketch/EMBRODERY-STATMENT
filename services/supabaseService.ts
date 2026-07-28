@@ -1,7 +1,7 @@
 
 // Import supabaseUrl directly to fix protected property access error
 import { supabase, supabaseUrl } from './supabaseClient';
-import { Party, Transaction, Product, Expense, Sale } from '../types';
+import { Party, Transaction } from '../types';
 
 const isConfigured = () => {
   return !supabaseUrl.includes('placeholder-project.supabase.co');
@@ -125,13 +125,7 @@ export const dbService = {
     if (error) throw handleDbError(error, 'deleting transaction');
     return true;
   },
-
-  addProduct: async (p: Omit<Product, 'id'>) => {
-    const { data, error } = await supabase.from('Products').insert([p]).select();
-    if (error) throw handleDbError(error, 'adding product');
-    return data?.[0];
-  },
-
+  
   resetPassword: async (email: string) => {
     if (!isConfigured()) return { success: false, message: 'Supabase configuration is missing.' };
     
