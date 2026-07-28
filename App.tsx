@@ -10,6 +10,7 @@ import Ledger from './components/Ledger';
 import Settings from './components/Settings';
 import MonthlyReports from './components/MonthlyReports';
 import PartiesList from './components/PartiesList';
+import { BiometricLock } from './components/BiometricLock';
 
 const sendSMSAlert = async (phone: string, message: string) => {
   try {
@@ -40,11 +41,12 @@ const App: React.FC = () => {
   const [parties, setParties] = useState<Party[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [loading, setLoading] = useState(true);
   const [isMisconfigured, setIsMisconfigured] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
+  const [isLocked, setIsLocked] = useState(() => localStorage.getItem('app_lock_enabled') === 'true');
   const [stats, setStats] = useState({
     totalCredit: 0,
     totalCollected: 0,
@@ -156,13 +158,16 @@ const App: React.FC = () => {
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
 
   const handleLogin = async (e: string, p: string) => {
     const res = await dbService.login(e, p);
+    if (res.success) setIsLocked(false);
     return res;
   };
 
@@ -320,6 +325,10 @@ const App: React.FC = () => {
         isResetting={isResettingPassword}
       />
     );
+  }
+
+  if (user && isLocked) {
+    return <BiometricLock onUnlock={() => setIsLocked(false)} onLogout={handleLogout} />;
   }
 
   return (

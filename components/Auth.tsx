@@ -12,7 +12,7 @@ interface AuthProps {
 
 const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetপাসওয়ার্ড, onUpdateপাসওয়ার্ড, isResetting = false }) => {
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>(isResetting ? 'login' : 'login');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('saved_email') || '');
   const [pass, setPass] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,12 +35,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetপাসওয়�
       } else if (mode === 'login') {
         const res = await onLogin(cleanEmail, pass);
         if (!res.success) setErrorMsg(res.message || 'লগ-ইন ব্যর্থ হয়েছে');
+        else localStorage.setItem('saved_email', cleanEmail);
       } else if (mode === 'signup') {
         const res = await onSignup(cleanEmail, pass, businessName.trim());
         if (!res.success) {
           setErrorMsg(res.message || 'প্রোফাইল তৈরি করতে ব্যর্থ হয়েছে');
         } else {
           // Auto login after signup
+          localStorage.setItem('saved_email', cleanEmail);
           const loginRes = await onLogin(cleanEmail, pass);
           if (!loginRes.success) {
              setInfoMsg(res.message || 'অ্যাকাউন্ট তৈরি সফল হয়েছে! দয়া করে লগ-ইন করুন।');

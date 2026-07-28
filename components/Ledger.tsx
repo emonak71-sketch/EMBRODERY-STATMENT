@@ -140,7 +140,7 @@ const Ledger: React.FC<LedgerProps> = ({
       tCredit += (Number(t.credit) || 0);
       tPayment += (Number(t.payment) || 0);
       return { ...t, running_balance: balance };
-    });
+    }).reverse();
 
     return { entries, tCredit, tPayment, finalBalance: balance };
   };
