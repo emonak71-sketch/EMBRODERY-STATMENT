@@ -8,6 +8,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Ledger from './components/Ledger';
 import Settings from './components/Settings';
+import MonthlyReports from './components/MonthlyReports';
 import PartiesList from './components/PartiesList';
 
 const sendSMSAlert = async (phone: string, message: string) => {
@@ -124,7 +125,6 @@ const App: React.FC = () => {
         setUser(null);
         setParties([]);
         setTransactions([]);
-        setProducts([]);
         setStats({
           totalCredit: 0,
           totalCollected: 0,
@@ -355,12 +355,7 @@ const App: React.FC = () => {
             onSendSMS={sendSMSAlert}
           />
         )}
-        {activeTab === 'inventory' && (
-          <Inventory 
-            products={products}
-            onAddProduct={handleAddProduct}
-          />
-        )}
+        {activeTab === 'monthly_reports' && <MonthlyReports setActiveTab={setActiveTab} transactions={transactions} parties={parties} />}
         {activeTab === 'settings' && (
           <Settings 
             user={user}

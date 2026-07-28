@@ -2,9 +2,11 @@
 import React, { useState, useRef } from 'react';
 import { Plus, ReceiptText, Trash2, Download, Loader2, CheckCircle2, Landmark, Phone, Edit2, Check, X } from 'lucide-react';
 import { Party, Transaction, User as UserType } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 import * as htmlToImage from 'html-to-image';
 
 interface LedgerProps {
+  setActiveTab?: (tab: string) => void;
   parties: Party[];
   selectedParty: Party | null;
   transactions: Transaction[];
@@ -17,8 +19,9 @@ interface LedgerProps {
 
 const Ledger: React.FC<LedgerProps> = ({ 
   parties, selectedParty, transactions, user, 
-  onAddTransaction, onEditTransaction, onDeleteTransaction, onSendSMS
+  onAddTransaction, onEditTransaction, onDeleteTransaction, onSendSMS, setActiveTab
 }) => {
+  const { t } = useLanguage();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [billNo, setBillNo] = useState('');
   const [amount, setAmount] = useState<string>('');
@@ -292,7 +295,7 @@ const Ledger: React.FC<LedgerProps> = ({
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-1">Hisab Statement Memo</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-slate-500 mb-1">Date</p>
+                      <p className="text-sm font-medium text-slate-500 mb-1">{t('date')}</p>
                       <p className="text-base font-semibold text-slate-800">
                         {new Date().toLocaleDateString('en-GB')}
                       </p>
@@ -318,11 +321,11 @@ const Ledger: React.FC<LedgerProps> = ({
                   <table className="w-full">
                     <thead>
                       <tr className="border-y border-slate-200 bg-slate-50/50">
-                        <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                        <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('date')}</th>
                         <th className="py-3 px-4 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Bill</th>
-                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Credit</th>
-                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Payment</th>
-                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Balance</th>
+                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('credit')}</th>
+                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('payment')}</th>
+                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('balance')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -404,7 +407,7 @@ const Ledger: React.FC<LedgerProps> = ({
             }} className="space-y-4">
               <div className="flex gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl">
                 <button type="button" onClick={() => setEntryType('work')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${entryType === 'work' ? 'bg-white dark:bg-slate-700 shadow-md text-primary-600' : 'text-slate-500'}`}>Work</button>
-                <button type="button" onClick={() => setEntryType('payment')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${entryType === 'payment' ? 'bg-white dark:bg-slate-700 shadow-md text-emerald-600' : 'text-slate-500'}`}>Payment</button>
+                <button type="button" onClick={() => setEntryType('payment')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${entryType === 'payment' ? 'bg-white dark:bg-slate-700 shadow-md text-emerald-600' : 'text-slate-500'}`}>{t('payment')}</button>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3.5 text-xs font-bold w-full outline-none focus:ring-2 focus:ring-primary-500 transition-all" />

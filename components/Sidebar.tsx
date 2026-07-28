@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Landmark, FileText, Package, ShoppingCart, Receipt, Search, Users, Sun, Moon, LogOut, Menu, X, MoreVertical, Edit2, Trash2, Settings, Plus, RotateCcw } from 'lucide-react';
 import { Party, TabType } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SidebarProps {
   activeTab: TabType;
@@ -24,6 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   isDarkMode, toggleDarkMode, onLogout, onAddParty, onEditParty, onDeleteParty,
   onRestoreParty, onPermanentDeleteParty
 }) => {
+  const { t, language, setLanguage } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -94,10 +96,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           <nav className="flex-shrink-0 space-y-1 mb-6">
             {[
-              { id: 'dashboard', label: 'Dashboard', icon: <Landmark className="w-5 h-5" /> },
-              { id: 'parties', label: 'Parties', icon: <Users className="w-5 h-5" /> },
-              { id: 'ledger', label: 'Ledger', icon: <FileText className="w-5 h-5" /> },
-              { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
+              { id: 'dashboard', label: t('dashboard'), icon: <Landmark className="w-5 h-5" /> },
+              { id: 'parties', label: t('parties'), icon: <Users className="w-5 h-5" /> },
+              { id: 'ledger', label: t('ledger'), icon: <FileText className="w-5 h-5" /> },
+              { id: 'settings', label: t('settings'), icon: <Settings className="w-5 h-5" /> },
             ].map((item) => (
               <button
                 key={item.id}
@@ -136,11 +138,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <button onClick={() => setShowAddParty(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all">
                     <X className="w-4 h-4" />
                   </button>
-                  <h3 className="text-lg font-black uppercase tracking-tight mb-4 text-slate-900 dark:text-white">Add New Party</h3>
+                  <h3 className="text-lg font-black uppercase tracking-tight mb-4 text-slate-900 dark:text-white">{t('add_new_party')}</h3>
                   <form onSubmit={handleAddParty} className="space-y-3">
                     <input 
                       type="text" 
-                      placeholder="Party Name" 
+                      placeholder={t('party_name')} 
                       required
                       value={newPartyName}
                       onChange={(e) => setNewPartyName(e.target.value)}
@@ -148,7 +150,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     />
                     <input 
                       type="tel" 
-                      placeholder="Phone No" 
+                      placeholder={t('phone_no')} 
                       value={newPartyPhone}
                       onChange={(e) => setNewPartyPhone(e.target.value)}
                       className="w-full bg-slate-50 dark:bg-slate-800 border-none text-sm font-bold p-3 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 transition-all"
@@ -216,13 +218,28 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           <div className="mt-auto pt-4 border-t border-slate-200 dark:border-slate-800 space-y-1">
+            {/* Language Toggle */}
+            <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 mb-2">
+              <button
+                onClick={() => setLanguage('en')}
+                className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${language === 'en' ? 'bg-white dark:bg-slate-700 text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                EN
+              </button>
+              <button
+                onClick={() => setLanguage('bn')}
+                className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${language === 'bn' ? 'bg-white dark:bg-slate-700 text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                বাংলা
+              </button>
+            </div>
             <button onClick={toggleDarkMode} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-[9px] font-black uppercase tracking-widest">
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+              <span>{isDarkMode ? t('light') : t('dark')}</span>
             </button>
             <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-rose-50 text-rose-600 dark:hover:bg-rose-900/10 transition-colors text-[9px] font-black uppercase tracking-widest">
               <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
+              <span>{t('logout')}</span>
             </button>
           </div>
         </div>
@@ -290,8 +307,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               Are you sure you want to delete <span className="text-slate-900 dark:text-white">"{showDeleteConfirm.name}"</span>?
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setShowDeleteConfirm(null)} className="py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all">Cancel</button>
-              <button onClick={() => { onDeleteParty(showDeleteConfirm.id); setShowDeleteConfirm(null); }} className="py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-500/20 transition-all">Delete</button>
+              <button onClick={() => setShowDeleteConfirm(null)} className="py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all">{t('cancel')}</button>
+              <button onClick={() => { onDeleteParty(showDeleteConfirm.id); setShowDeleteConfirm(null); }} className="py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-500/20 transition-all">{t('delete')}</button>
             </div>
           </div>
         </div>
@@ -305,7 +322,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <div className="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-xl">
                 <Edit2 className="w-5 h-5 text-primary-600" />
               </div>
-              <h4 className="text-lg font-black uppercase tracking-tight">Edit Party</h4>
+              <h4 className="text-lg font-black uppercase tracking-tight">{t('edit_party')}</h4>
             </div>
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div className="space-y-1.5">
@@ -329,7 +346,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 />
               </div>
               <div className="grid grid-cols-2 gap-3 pt-4">
-                <button type="button" onClick={() => setShowEditModal(null)} className="py-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">Cancel</button>
+                <button type="button" onClick={() => setShowEditModal(null)} className="py-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">{t('cancel')}</button>
                 <button type="submit" className="py-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-primary-600 hover:bg-primary-700 shadow-xl shadow-primary-500/20 transition-all">Update</button>
               </div>
             </form>

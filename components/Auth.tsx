@@ -25,32 +25,34 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetপাসওয়�
     setErrorMsg(null);
     setInfoMsg(null);
     
+    const cleanEmail = email.trim().toLowerCase();
+    
     try {
       if (isResetting) {
         const res = await onUpdateপাসওয়ার্ড(pass);
-        if (!res.success) setErrorMsg(res.message || 'Update failed');
+        if (!res.success) setErrorMsg(res.message || 'আপডেট করতে ব্যর্থ হয়েছে');
         else setInfoMsg(res.message);
       } else if (mode === 'login') {
-        const res = await onLogin(email, pass);
-        if (!res.success) setErrorMsg(res.message || 'Login failed');
+        const res = await onLogin(cleanEmail, pass);
+        if (!res.success) setErrorMsg(res.message || 'লগ-ইন ব্যর্থ হয়েছে');
       } else if (mode === 'signup') {
-        const res = await onSignup(email, pass, businessName);
+        const res = await onSignup(cleanEmail, pass, businessName.trim());
         if (!res.success) {
-          setErrorMsg(res.message || 'Signup failed');
+          setErrorMsg(res.message || 'প্রোফাইল তৈরি করতে ব্যর্থ হয়েছে');
         } else {
           // Auto login after signup
-          const loginRes = await onLogin(email, pass);
+          const loginRes = await onLogin(cleanEmail, pass);
           if (!loginRes.success) {
              setInfoMsg(res.message || 'অ্যাকাউন্ট তৈরি সফল হয়েছে! দয়া করে লগ-ইন করুন।');
           }
         }
       } else if (mode === 'forgot') {
-        const res = await onResetপাসওয়ার্ড(email);
-        if (!res.success) setErrorMsg(res.message || 'Reset failed');
+        const res = await onResetপাসওয়ার্ড(cleanEmail);
+        if (!res.success) setErrorMsg(res.message || 'রিসেট করতে ব্যর্থ হয়েছে');
         else setInfoMsg(res.message);
       }
     } catch (err) {
-      setErrorMsg('An unexpected error occurred. Please try again.');
+      setErrorMsg('একটি ত্রুটি ঘটেছে। দয়া করে আবার চেষ্টা করুন।');
     } finally {
       setLoading(false);
     }
@@ -109,14 +111,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetপাসওয়�
             {!isResetting && (
               <div className="space-y-2 animate-in slide-in-from-left-4 delay-400 duration-500">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">ইমেইল ঠিকানা</label>
-                <input type="email" required className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border-none outline-none focus:ring-2 ring-primary-500 transition-all font-bold" placeholder="admin@example.com" value={email} onChange={e => setEmail(e.target.value)} />
+                <input type="email" required autoCapitalize="none" autoCorrect="off" spellCheck={false} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border-none outline-none focus:ring-2 ring-primary-500 transition-all font-bold" placeholder="admin@example.com" value={email} onChange={e => setEmail(e.target.value)} />
               </div>
             )}
             
             {(mode !== 'forgot' || isResetting) && (
               <div className="space-y-2 animate-in slide-in-from-left-4 delay-500 duration-500">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">{isResetting ? 'New পাসওয়ার্ড' : 'পাসওয়ার্ড'}</label>
-                <input type="password" required minLength={6} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border-none outline-none focus:ring-2 ring-primary-500 transition-all font-bold" placeholder="••••••••" value={pass} onChange={e => setPass(e.target.value)} />
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">{isResetting ? 'নতুন পাসওয়ার্ড' : 'পাসওয়ার্ড'}</label>
+                <input type="password" required minLength={6} autoCapitalize="none" autoCorrect="off" spellCheck={false} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border-none outline-none focus:ring-2 ring-primary-500 transition-all font-bold" placeholder="••••••••" value={pass} onChange={e => setPass(e.target.value)} />
               </div>
             )}
 

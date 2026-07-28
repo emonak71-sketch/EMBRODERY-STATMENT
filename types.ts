@@ -36,4 +36,4 @@ export interface LedgerEntry extends Transaction {
   running_balance: number;
 }
 
-export type TabType = 'dashboard' | 'ledger' | 'parties' | 'settings';
+export type TabType = 'dashboard' | 'ledger' | 'parties' | 'settings' | 'monthly_reports';

@@ -22,16 +22,32 @@ const handleDbError = (error: any, context: string) => {
 
 export const dbService = {
   login: async (email: string, pass: string) => {
-    if (!isConfigured()) return { success: false, message: 'Supabase configuration is missing.' };
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-    if (error) return { success: false, message: error.message };
+    if (!isConfigured()) return { success: false, message: 'Supabase ব্যাকএন্ড কনফিগার করা নেই।' };
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: pass });
+    if (error) {
+      let msg = error.message;
+      if (error.message.includes('Invalid login credentials')) {
+        msg = 'ইমেইল বা পাসওয়ার্ড ভুল হয়েছে। সঠিক তথ্য দিয়ে চেষ্টা করুন।';
+      } else if (error.message.includes('Email not confirmed')) {
+        msg = 'আপনার ইমেইল কনফার্ম করা হয়নি। জিমেইল ইনবক্স চেক করে কনফার্মেশন লিঙ্কে ক্লিক করুন।';
+      }
+      return { success: false, message: msg };
+    }
     return { success: true, user: { id: data.user.id, email: data.user.email!, business_name: data.user.user_metadata?.business_name || 'EMBRODERY STATEMENT' } };
   },
   
   signup: async (email: string, pass: string, businessName: string) => {
-    if (!isConfigured()) return { success: false, message: 'Supabase configuration is missing.' };
-    const { data, error } = await supabase.auth.signUp({ email, password: pass, options: { data: { business_name: businessName } } });
-    if (error) return { success: false, message: error.message };
+    if (!isConfigured()) return { success: false, message: 'Supabase ব্যাকএন্ড কনফিগার করা নেই।' };
+    const { data, error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password: pass, options: { data: { business_name: businessName } } });
+    if (error) {
+      let msg = error.message;
+      if (error.message.includes('User already registered') || error.message.includes('already exists')) {
+        msg = 'এই ইমেইল দিয়ে ইতোমধ্যে একটি একাউন্ট খোলা আছে। লগ-ইন করার চেষ্টা করুন।';
+      } else if (error.message.includes('Password should be at least')) {
+        msg = 'পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে।';
+      }
+      return { success: false, message: msg };
+    }
     return { success: true, user: { id: data.user!.id, email: data.user!.email!, business_name: businessName }, message: data.session ? null : 'অ্যাকাউন্ট তৈরি সফল হয়েছে! দয়া করে লগ-ইন করুন।' };
   },
 
@@ -59,7 +75,10 @@ export const dbService = {
   },
 
   addParty: async (party: Omit<Party, 'id' | 'created_at'>) => {
-    const { data, error } = await supabase.from('Parties').insert([party]).select();
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    const payload = userId ? { ...party, user_id: userId } : party;
+    const { data, error } = await supabase.from('Parties').insert([payload]).select();
     if (error) throw handleDbError(error, 'adding party');
     return data?.[0];
   },
@@ -77,8 +96,9 @@ export const dbService = {
   },
 
   addTransaction: async (tx: Omit<Transaction, 'id' | 'created_at'>) => {
-    // Explicitly mapping to ensure all columns are sent
-    const { data, error } = await supabase.from('Transactions').insert([{
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    const payload = {
       party_id: tx.party_id,
       date: tx.date,
       bill_no: tx.bill_no,
@@ -86,8 +106,10 @@ export const dbService = {
       pcs: tx.pcs || 0,
       rate: tx.rate || 0,
       credit: tx.credit || 0,
-      payment: tx.payment || 0
-    }]).select();
+      payment: tx.payment || 0,
+      ...(userId ? { user_id: userId } : {})
+    };
+    const { data, error } = await supabase.from('Transactions').insert([payload]).select();
     if (error) throw handleDbError(error, 'adding transaction');
     return data?.[0];
   },

@@ -1,14 +1,17 @@
 
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Save, Mail, Building, Loader2, CheckCircle2 } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Mail, Building, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { User } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SettingsProps {
+  setActiveTab?: (tab: string) => void;
   user: User | null;
   onUpdateProfile: (email: string, biz: string) => Promise<void>;
 }
 
-const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile }) => {
+const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, setActiveTab }) => {
+  const { t } = useLanguage();
   const [email, setEmail] = useState(user?.email || '');
   const [biz, setBiz] = useState(user?.business_name || '');
   const [loading, setLoading] = useState(false);
@@ -32,6 +35,14 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile }) => {
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center gap-4 mb-10">
+        {setActiveTab && (
+          <button 
+            onClick={() => setActiveTab('dashboard')}
+            className="p-3 bg-slate-100 dark:bg-slate-800 rounded-[1rem] hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-300"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+        )}
         <div className="p-4 bg-primary-600 rounded-[1.5rem] shadow-xl shadow-primary-500/30">
           <SettingsIcon className="w-8 h-8 text-white" />
         </div>
