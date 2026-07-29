@@ -83,6 +83,14 @@ const Dashboard: React.FC<{
       onClick: () => { if (setActiveTab) setActiveTab('monthly_reports'); }
     },
     {
+      title: 'Monthly Collected',
+      amount: stats.monthlyCollected || 0,
+      icon: <TrendingUp className="w-5 h-5 text-teal-500" />,
+      color: 'bg-teal-50 dark:bg-teal-900/10',
+      isDynamic: false,
+      onClick: () => { if (setActiveTab) setActiveTab('monthly_collections'); }
+    },
+    {
       title: t('total_parties'),
       amount: parties.length,
       icon: <Users className="w-5 h-5 text-purple-500" />,

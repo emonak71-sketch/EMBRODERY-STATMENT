@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Plus, ReceiptText, Trash2, Download, Loader2, CheckCircle2, Landmark, Phone, Edit2, Check, X } from 'lucide-react';
+import { Plus, ReceiptText, Trash2, Download, Loader2, CheckCircle2, Landmark, Phone, Edit2, Check, X, ArrowLeft } from 'lucide-react';
 import { Party, Transaction, User as UserType } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import * as htmlToImage from 'html-to-image';
@@ -242,9 +242,16 @@ const Ledger: React.FC<LedgerProps> = ({
         ) : (
           <div className="space-y-4">
             <div className="flex justify-between items-center gap-2 bg-white dark:bg-slate-900 p-4 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-md no-print">
-              <div className="truncate">
-                <h2 className="text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white truncate">{selectedParty.name}</h2>
-                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Statement View</p>
+              <div className="flex items-center gap-3 truncate">
+                {setActiveTab && (
+                  <button onClick={() => setActiveTab('parties')} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-300">
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                )}
+                <div className="truncate">
+                  <h2 className="text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white truncate">{selectedParty.name}</h2>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Statement View</p>
+                </div>
               </div>
               <div className="flex gap-2">
                 <button 

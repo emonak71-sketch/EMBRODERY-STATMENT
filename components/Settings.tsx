@@ -12,6 +12,12 @@ interface SettingsProps {
   onUpdateProfile: (email: string, biz: string) => Promise<void>;
 }
 
+
+const isMobileDevice = () => {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
 const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, setActiveTab }) => {
   const { t } = useLanguage();
   const [email, setEmail] = useState(user?.email || '');
@@ -116,6 +122,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, setActiveTab
           </button>
         </form>
 
+        {isMobileDevice() && (
         <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 md:p-10 shadow-2xl shadow-slate-200/50 dark:shadow-black/20 border border-slate-100 dark:border-slate-800 mt-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -136,6 +143,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, setActiveTab
             </button>
           </div>
         </div>
+        )}
 
       </div>
 

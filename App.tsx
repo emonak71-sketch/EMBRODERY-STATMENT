@@ -9,6 +9,7 @@ import Dashboard from './components/Dashboard';
 import Ledger from './components/Ledger';
 import Settings from './components/Settings';
 import MonthlyReports from './components/MonthlyReports';
+import MonthlyCollections from './components/MonthlyCollections';
 import PartiesList from './components/PartiesList';
 import { BiometricLock } from './components/BiometricLock';
 
@@ -35,6 +36,12 @@ const sendSMSAlert = async (phone: string, message: string) => {
   }
 };
 
+
+const isMobileDevice = () => {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -46,12 +53,13 @@ const App: React.FC = () => {
   const [isMisconfigured, setIsMisconfigured] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  const [isLocked, setIsLocked] = useState(() => localStorage.getItem('app_lock_enabled') === 'true');
+  const [isLocked, setIsLocked] = useState(() => isMobileDevice() && localStorage.getItem('app_lock_enabled') === 'true');
   const [stats, setStats] = useState({
     totalCredit: 0,
     totalCollected: 0,
     totalOutstanding: 0,
-    monthlyWork: 0
+    monthlyWork: 0,
+          monthlyCollected: 0
   });
 
   const refreshData = useCallback(async () => {
@@ -72,6 +80,12 @@ const App: React.FC = () => {
       const currentMonth = currentDate.getMonth();
       const currentYear = currentDate.getFullYear();
       
+      const monthlyCollected = activeTransactions.filter(t => {
+        if (!t.date) return false;
+        const d = new Date(t.date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      }).reduce((sum, item) => sum + (Number(item.payment) || 0), 0);
+
       const monthlyWork = activeTransactions.filter(t => {
         if (!t.date) return false;
         const d = new Date(t.date);
@@ -82,7 +96,8 @@ const App: React.FC = () => {
         totalCredit,
         totalCollected,
         totalOutstanding: totalCredit - totalCollected,
-        monthlyWork
+        monthlyWork,
+        monthlyCollected
       });
     } catch (err) {
       console.error('Failed to fetch data:', err);
@@ -131,7 +146,8 @@ const App: React.FC = () => {
           totalCredit: 0,
           totalCollected: 0,
           totalOutstanding: 0,
-          monthlyWork: 0
+          monthlyWork: 0,
+          monthlyCollected: 0
         });
       }
     });
@@ -154,6 +170,17 @@ const App: React.FC = () => {
       };
     }
   }, [user, refreshData, isMisconfigured]);
+
+  
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isMobileDevice() && localStorage.getItem('app_lock_enabled') === 'true') {
+        setIsLocked(true);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -354,6 +381,7 @@ const App: React.FC = () => {
         {activeTab === 'parties' && <PartiesList parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
         {activeTab === 'ledger' && (
           <Ledger 
+            setActiveTab={setActiveTab}
             parties={parties} 
             selectedParty={selectedParty} 
             transactions={selectedParty ? transactions.filter(t => t.party_id === selectedParty.id) : []}
@@ -365,6 +393,7 @@ const App: React.FC = () => {
           />
         )}
         {activeTab === 'monthly_reports' && <MonthlyReports setActiveTab={setActiveTab} transactions={transactions} parties={parties} />}
+        {activeTab === 'monthly_collections' && <MonthlyCollections setActiveTab={setActiveTab} transactions={transactions} parties={parties} />}
         {activeTab === 'settings' && (
           <Settings 
             user={user}
