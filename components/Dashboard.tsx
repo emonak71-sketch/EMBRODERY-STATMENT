@@ -20,7 +20,7 @@ const Dashboard: React.FC<{
 }> = ({ stats, user, parties = [], transactions = [], setActiveTab, setSelectedParty }) => {
   const { t } = useLanguage();
   
-  const [viewMode, setViewMode] = useState<'overview' | 'outstanding' | 'collected' | 'collected_party'>('overview');
+  const [viewMode, setViewMode] = useState<'overview' | 'outstanding' | 'collected' | 'collected_party' | 'total_work'>('overview');
   const [selectedCollectedPartyId, setSelectedCollectedPartyId] = useState<string | null>(null);
 
   // Calculate outstanding per party and sort descending
@@ -40,6 +40,15 @@ const Dashboard: React.FC<{
       const payment = txs.reduce((sum, tx) => sum + (Number(tx.payment) || 0), 0);
       return { ...p, totalPayment: payment };
     }).filter(p => p.totalPayment > 0).sort((a, b) => b.totalPayment - a.totalPayment);
+  }, [parties, transactions]);
+
+  // Calculate total credit per party and sort descending
+  const totalWorkParties = useMemo(() => {
+    return parties.map(p => {
+      const txs = transactions.filter(tx => tx.party_id === p.id);
+      const credit = txs.reduce((sum, tx) => sum + (Number(tx.credit) || 0), 0);
+      return { ...p, totalCredit: credit };
+    }).filter(p => p.totalCredit > 0).sort((a, b) => b.totalCredit - a.totalCredit);
   }, [parties, transactions]);
 
   // Payments for selected party
@@ -68,11 +77,12 @@ const Dashboard: React.FC<{
       onClick: () => setViewMode('collected')
     },
     { 
-      title: t('net_receivables'), 
-      amount: stats.totalCredit - stats.totalCollected, 
+      title: t('total_work'), 
+      amount: stats.totalCredit, 
       icon: <Landmark className="w-5 h-5 text-indigo-500" />,
       color: 'bg-indigo-50 dark:bg-indigo-900/10',
-      isDynamic: true
+      isDynamic: false,
+      onClick: () => setViewMode('total_work')
     },
     {
       title: t('monthly_work'),
@@ -99,6 +109,44 @@ const Dashboard: React.FC<{
       onClick: () => { if (setActiveTab) setActiveTab('parties'); }
     }
   ];
+
+  if (viewMode === 'total_work') {
+    return (
+      <div className="space-y-6 pt-14 md:pt-0 animate-in fade-in">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setViewMode('overview')}
+            className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-300"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">
+              {t('total_work')}
+            </h1>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {totalWorkParties.map((p) => (
+              <div key={p.id} className="flex justify-between items-center p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">{p.name}</h3>
+                  <p className="text-[10px] font-bold text-slate-400 mt-1">{p.phone || 'No phone number'}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-black text-indigo-600">৳{p.totalCredit.toLocaleString('en-IN')}</p>
+                </div>
+              </div>
+            ))}
+            {totalWorkParties.length === 0 && (
+              <div className="p-8 text-center text-slate-500 text-sm font-bold">{t('no_work_records')}</div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (viewMode === 'outstanding') {
     return (
