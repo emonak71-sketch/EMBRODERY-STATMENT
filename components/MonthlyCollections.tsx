@@ -48,7 +48,7 @@ const MonthlyCollections: React.FC<MonthlyCollectionsProps> = ({ transactions, p
           if (!data[monthYear].partyTotals[party.id]) {
             data[monthYear].partyTotals[party.id] = { name: partyName, total: 0, memos: 0, id: party.id };
           }
-          data[monthYear].partyTotals[party.id].total += Number(tx.credit);
+          data[monthYear].partyTotals[party.id].total += Number(tx.payment);
           data[monthYear].partyTotals[party.id].memos += 1;
         }
       }
@@ -136,12 +136,12 @@ const MonthlyCollections: React.FC<MonthlyCollectionsProps> = ({ transactions, p
                     </td>
                     <td className="p-4 text-right whitespace-nowrap text-slate-600 dark:text-slate-300">
                       <div className="flex flex-col items-end">
-                        <span>{tx.pcs} pcs</span>
-                        <span className="text-[10px] text-slate-400">@ ৳{tx.rate}</span>
+                        {tx.pcs ? <span>{tx.pcs} pcs</span> : <span>-</span>}
+                        {tx.rate ? <span className="text-[10px] text-slate-400">@ ৳{tx.rate}</span> : null}
                       </div>
                     </td>
                     <td className="p-4 text-right whitespace-nowrap text-emerald-600">
-                      ৳{Number(tx.credit).toLocaleString('en-IN')}
+                      ৳{Number(tx.payment).toLocaleString('en-IN')}
                     </td>
                   </tr>
                 ))}
