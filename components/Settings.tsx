@@ -31,6 +31,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, setActiveTab
     if (lockEnabled) {
       localStorage.removeItem('app_lock_enabled');
       localStorage.removeItem('biometric_id');
+      localStorage.removeItem('app_pin');
       setLockEnabled(false);
     } else {
       const res = await setupBiometrics(user?.email || 'user');

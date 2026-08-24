@@ -53,7 +53,7 @@ const App: React.FC = () => {
   const [isMisconfigured, setIsMisconfigured] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  const [isLocked, setIsLocked] = useState(() => isMobileDevice() && localStorage.getItem('app_lock_enabled') === 'true');
+  const [isLocked, setIsLocked] = useState(() => localStorage.getItem('app_lock_enabled') === 'true');
   const [stats, setStats] = useState({
     totalCredit: 0,
     totalCollected: 0,
@@ -174,7 +174,7 @@ const App: React.FC = () => {
   
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && isMobileDevice() && localStorage.getItem('app_lock_enabled') === 'true') {
+      if (!document.hidden && localStorage.getItem('app_lock_enabled') === 'true') {
         setIsLocked(true);
       }
     };

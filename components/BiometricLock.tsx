@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Fingerprint, Lock, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Fingerprint, Lock, AlertCircle } from 'lucide-react';
 
-export const BiometricLock = ({ onUnlock, onLogout }) => {
-  const [error, setError] = useState(null);
+export const BiometricLock = ({ onUnlock, onLogout }: { onUnlock: () => void, onLogout: () => void }) => {
+  const [error, setError] = useState<string | null>(null);
   
   const handleUnlock = async () => {
     try {
       setError(null);
       const credId = localStorage.getItem('biometric_id');
       if (!credId) {
-        // Fallback or error
-        setError('Biometrics not set up.');
+        setError('Biometrics not set up properly.');
         return;
       }
       
@@ -43,16 +42,16 @@ export const BiometricLock = ({ onUnlock, onLogout }) => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950">
-      <div className="text-center space-y-6">
+      <div className="text-center space-y-6 w-full max-w-xs">
         <div className="inline-flex p-5 bg-primary-100 dark:bg-primary-900/30 rounded-full text-primary-600 animate-pulse">
           <Lock className="w-12 h-12" />
         </div>
         <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-wider">অ্যাপ লক</h2>
-        <p className="text-slate-500 font-bold">অ্যাক্সেস করতে আপনার ফেস/ফিঙ্গারপ্রিন্ট ব্যবহার করুন</p>
+        <p className="text-slate-500 font-bold">অ্যাক্সেস করতে আপনার ফেস/ফিঙ্গারপ্রিন্ট বা পিন ব্যবহার করুন</p>
         
         {error && (
-          <div className="p-3 bg-red-100 text-red-600 rounded-xl font-bold flex items-center justify-center gap-2">
-            <AlertCircle className="w-5 h-5" /> {error}
+          <div className="p-3 bg-red-100 text-red-600 rounded-xl font-bold flex items-center justify-center gap-2 text-sm">
+            <AlertCircle className="w-5 h-5 shrink-0" /> {error}
           </div>
         )}
         
@@ -68,32 +67,47 @@ export const BiometricLock = ({ onUnlock, onLogout }) => {
   );
 };
 
-export const setupBiometrics = async (userEmail) => {
+export const setupBiometrics = async (userEmail: string) => {
   try {
+    if (!window.PublicKeyCredential) {
+      alert('আপনার ডিভাইসে বায়োমেট্রিক সাপোর্ট নেই (Biometrics not supported).');
+      return false;
+    }
+
     const cred = await navigator.credentials.create({
       publicKey: {
         challenge: new Uint8Array(32),
-        rp: { name: "Embrodery Statement" },
+        rp: { name: "Business App" },
         user: {
           id: new Uint8Array(16),
           name: userEmail,
           displayName: userEmail
         },
-        pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+        pubKeyCredParams: [
+          { alg: -7, type: "public-key" }, 
+          { alg: -257, type: "public-key" }
+        ],
+        authenticatorSelection: { 
+          authenticatorAttachment: "platform", 
+          userVerification: "required" 
+        },
         timeout: 60000,
         attestation: "none"
       }
     });
     
     if (cred) {
-      const idBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(cred.rawId)));
+      const idBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array((cred as any).rawId) as any));
       localStorage.setItem('biometric_id', idBase64);
       localStorage.setItem('app_lock_enabled', 'true');
       return true;
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error(e);
+    if (e.name === 'NotAllowedError') {
+      alert('বায়োমেট্রিক লক বাতিল করা হয়েছে।');
+    }
     return false;
   }
+  return false;
 };
