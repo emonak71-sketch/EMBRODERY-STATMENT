@@ -154,6 +154,15 @@ export const dbService = {
     const {data,error}=await supabase.from('WorkerAttendance').select('*').eq('user_id',uid).eq('attendance_date',date);
     if(error) throw handleDbError(error,'loading attendance'); return data||[];
   },
+  getWorkerAttendanceForMonth: async (month:string) => {
+    const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
+    if(!uid) throw new Error('Please sign in again.');
+    const [year,monthNumber]=month.split('-').map(Number);
+    const lastDay=new Date(year,monthNumber,0).getDate();
+    const start=month+'-01', end=month+'-'+String(lastDay).padStart(2,'0');
+    const {data,error}=await supabase.from('WorkerAttendance').select('*').eq('user_id',uid).gte('attendance_date',start).lte('attendance_date',end);
+    if(error) throw handleDbError(error,'loading monthly attendance'); return data||[];
+  },
   saveWorkerAttendance: async (rows:Array<{worker_id:string;attendance_date:string;status:string;check_in?:string|null;check_out?:string|null;note?:string}>) => {
     const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
     if(!uid) throw new Error('Please sign in again.');
