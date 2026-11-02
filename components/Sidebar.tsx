@@ -76,11 +76,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      <button onClick={() => setIsOpen(true)} className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white dark:bg-slate-900 rounded-lg shadow-lg">
+      <button onClick={() => setIsOpen(true)} className="app-menu-trigger md:hidden fixed top-4 left-4 z-50 p-2.5 rounded-2xl shadow-xl shadow-slate-900/10">
         <Menu className="w-6 h-6" />
       </button>
 
-      <aside className={`fixed inset-y-0 left-0 z-[70] w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 md:relative md:translate-x-0 no-print ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`app-sidebar fixed inset-y-0 left-0 z-[70] w-[88vw] max-w-72 border-r border-white/70 dark:border-white/10 shadow-2xl shadow-slate-900/10 transition-transform duration-500 ease-[cubic-bezier(.22,1,.36,1)] md:relative md:w-72 md:max-w-none md:translate-x-0 no-print ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 h-full flex flex-col overflow-hidden">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3 font-black text-lg text-slate-900 dark:text-white uppercase tracking-tighter">
