@@ -48,10 +48,6 @@ const Ledger: React.FC<LedgerProps> = ({
   const [showQuickEntry, setShowQuickEntry] = useState(false);
   const ledgerRef = useRef<HTMLDivElement>(null);
 
-  const calculatedAmount = Number(pcs) * Number(rate);
-  const hasProductionCalculation = entryType === 'work' && pcs.trim() !== '' && rate.trim() !== '' && Number.isFinite(calculatedAmount) && calculatedAmount > 0;
-  const effectiveAmount = hasProductionCalculation ? calculatedAmount : Number(amount);
-
   const ledger = useMemo(() => {
     let balance = 0;
     let totalCredit = 0;
