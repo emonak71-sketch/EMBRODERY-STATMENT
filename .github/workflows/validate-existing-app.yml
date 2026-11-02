@@ -2,12 +2,12 @@ name: Validate existing app
 on:
   push:
     branches:
-      - in-place-safe-otp-ui-2026-11-02
+      - professional-v11-qa-2026-11-02
   pull_request:
     branches:
       - main
 jobs:
-  build:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
@@ -17,9 +17,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Install dependencies
-        run: npm install
+      - name: Install locked dependencies
+        run: npm ci
       - name: Check dependency security
         run: npm audit --audit-level=moderate
-      - name: Build production bundle
+      - name: TypeScript validation
+        run: npm run typecheck
+      - name: Production build
         run: npm run build
