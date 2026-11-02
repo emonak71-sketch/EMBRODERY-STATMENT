@@ -230,7 +230,7 @@ const Ledger: React.FC<LedgerProps> = ({
         csvCell(entry.running_balance || 0)
       ].join(',');
     });
-    const csvContent = String.fromCharCode(0xFEFF) + [headers.map(csvCell).join(','), ...rows].join(String.fromCharCode(13, 10));
+    const csvContent = String.fromCharCode(0xFEFF) + [headers.map(header => csvCell(header)).join(','), ...rows].join(String.fromCharCode(13, 10));
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
