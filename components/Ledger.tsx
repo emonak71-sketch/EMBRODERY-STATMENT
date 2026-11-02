@@ -269,10 +269,17 @@ const Ledger: React.FC<LedgerProps> = ({
                           <input aria-label="Edit transaction details" type="text" className="col-span-2 min-w-0 w-full bg-white dark:bg-slate-900 p-2 text-[11px] border rounded-lg" placeholder="Details" value={editDetails} onChange={(ev) => setEditDetails(ev.target.value)} />
                         </div>
                       ) : (
-                        <div className="text-sm font-bold truncate">
-                          <span className="text-slate-400 text-[10px] mr-2">{new Date(e.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}</span>
-                          <span className="text-[10px] text-slate-500 bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded mr-2 font-mono">#{e.bill_no}</span>
-                          <span className={`${e.credit > 0 ? 'text-primary-600' : 'text-emerald-600'} text-sm font-black`}>৳{e.credit || e.payment}</span>
+                        <div className="min-w-0">
+                          <div className="text-sm font-bold truncate">
+                            <span className="text-slate-400 text-[10px] mr-2">{new Date(e.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}</span>
+                            <span className="text-[10px] text-slate-500 bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded mr-2 font-mono">#{e.bill_no}</span>
+                            <span className={`${e.credit > 0 ? 'text-primary-600' : 'text-emerald-600'} text-sm font-black`}>৳{e.credit || e.payment}</span>
+                          </div>
+                          {e.credit > 0 && (
+                            <p className="mt-1 truncate text-[10px] font-medium text-slate-500">
+                              {e.details || 'Embroidery Work'}{e.pcs > 0 && e.rate > 0 ? ` · ${e.pcs} pcs × ৳${e.rate}` : ''}
+                            </p>
+                          )}
                         </div>
                       )}
                    </div>
@@ -308,7 +315,7 @@ const Ledger: React.FC<LedgerProps> = ({
             <div className="ledger-toolbar flex justify-between items-center gap-2 bg-white dark:bg-slate-900 p-4 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-md no-print">
               <div className="flex items-center gap-3 truncate">
                 {setActiveTab && (
-                  <button onClick={() => setActiveTab('parties')} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-300">
+                  <button type="button" aria-label="Back to customers" onClick={() => setActiveTab('parties')} className="min-h-11 min-w-11 grid place-items-center p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-300">
                     <ArrowLeft className="w-5 h-5" />
                   </button>
                 )}
@@ -319,7 +326,7 @@ const Ledger: React.FC<LedgerProps> = ({
               </div>
               <div className="ledger-actions flex gap-2">
                 <button 
-                  onClick={() => setShowQuickEntry(true)}
+                  onClick={() => { setFormError(null); setShowQuickEntry(true); }}
                   className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
                 >
                   <Plus className="w-4 h-4" /> Quick Entry
@@ -392,17 +399,17 @@ const Ledger: React.FC<LedgerProps> = ({
                   {/* Table */}
                   <table className="statement-table w-full">
                     <colgroup>
-                      <col style={{ width: '22%' }} />
+                      <col style={{ width: '18%' }} />
                       <col style={{ width: '12%' }} />
+                      <col style={{ width: '34%' }} />
                       <col style={{ width: '18%' }} />
                       <col style={{ width: '18%' }} />
-                      <col style={{ width: '30%' }} />
                     </colgroup>
                     <thead>
                       <tr className="border-y border-slate-200 bg-slate-50/50">
                         <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('date')}</th>
                         <th className="py-3 px-4 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Bill</th>
-                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('credit')}</th>
+                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Work / Production</th>
                         <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('payment')}</th>
                         <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('balance')}</th>
                       </tr>
@@ -474,7 +481,7 @@ const Ledger: React.FC<LedgerProps> = ({
       {showQuickEntry && selectedParty && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-sm animate-in zoom-in-95 relative">
-            <button type="button" aria-label="Close quick entry" onClick={() => setShowQuickEntry(false)} className="absolute top-4 right-4 min-h-11 min-w-11 grid place-items-center p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all">
+            <button type="button" aria-label="Close quick entry" onClick={() => { setShowQuickEntry(false); setFormError(null); }} className="absolute top-4 right-4 min-h-11 min-w-11 grid place-items-center p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all">
               <X className="w-5 h-5" />
             </button>
             
