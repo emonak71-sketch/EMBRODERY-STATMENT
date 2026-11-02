@@ -615,7 +615,6 @@ button { -webkit-tap-highlight-color: transparent; }
   .party-action-trigger { opacity: 1 !important; }
   .transaction-action-button { width: 44px; height: 44px; opacity: 1 !important; }
   .party-action-menu { min-width: 152px; }
-  .settings-page { padding-top: 4.75rem; }
   .settings-surface { padding: 1.15rem !important; border-radius: 1.5rem !important; }
   .auth-panel { padding: 1.25rem !important; border-radius: 1.6rem !important; }
   .auth-logo { width: min(9rem, 42vw) !important; }
