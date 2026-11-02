@@ -201,7 +201,7 @@ try {
   assert.match(download.suggestedFilename(), /_Ledger_.*\.csv$/);
 
   const popupPromise = page.waitForEvent('popup');
-  await page.getByRole('button', { name: 'WhatsApp', exact: true }).click();
+  assert.ok(popup.url().startsWith('https://wa.me/') || popup.url().startsWith('https://api.whatsapp.com/send'), 'WhatsApp should open a valid WhatsApp chat URL.');
   const popup = await popupPromise;
   assert.match(popup.url(), /^https:\/\/wa\.me\//);
   await popup.close();
