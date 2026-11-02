@@ -61,18 +61,23 @@ export const dbService = {
   logout: async () => { if (isConfigured()) await supabase.auth.signOut(); },
 
   getInitialData: async () => {
-    if (!isConfigured()) return { parties: [], transactions: [], products: [], expenses: [], sales: [] };
-    try {
-      const [parties, txs, products, expenses, sales] = await Promise.all([
-        supabase.from('Parties').select('*'),
-        supabase.from('Transactions').select('*').order('date', { ascending: true }),
-        supabase.from('Products').select('*'),
-        supabase.from('Expenses').select('*'),
-        supabase.from('Sales').select('*'),
-      ]);
-      return { parties: parties.data || [], transactions: txs.data || [], products: products.data || [], expenses: expenses.data || [], sales: sales.data || [] };
-    } catch (err) { return { parties: [], transactions: [], products: [], expenses: [], sales: [] }; }
-  },
+    if (!isConfigured()) throw new Error('Supabase configuration is missing.');
+    const [partiesResult, transactionsResult] = await Promise.all([
+      supabase.from('Parties').select('*'),
+      supabase.from('Transactions').select('*').order('date', { ascending: true })
+    ]);
+
+    if (partiesResult.error) throw handleDbError(partiesResult.error, 'loading parties');
+    if (transactionsResult.error) throw handleDbError(transactionsResult.error, 'loading transactions');
+
+    return {
+      parties: partiesResult.data || [],
+      transactions: transactionsResult.data || [],
+      products: [],
+      expenses: [],
+      sales: []
+    };
+  }
 
   addParty: async (party: Omit<Party, 'id' | 'created_at'>) => {
     const { data: { session } } = await supabase.auth.getSession();
