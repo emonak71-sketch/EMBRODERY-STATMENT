@@ -11,18 +11,18 @@ interface AuthResult {
 interface AuthProps {
   onLogin: (email: string, pass: string) => Promise<AuthResult>;
   onSignup: (email: string, pass: string, biz: string) => Promise<AuthResult>;
-  onResetপাসওয়ার্ড: (email: string) => Promise<AuthResult>;
+  onResetPassword: (email: string) => Promise<AuthResult>;
   onVerifyResetCode: (email: string, code: string) => Promise<AuthResult>;
-  onUpdateপাসওয়ার্ড: (pass: string) => Promise<AuthResult>;
+  onUpdatePassword: (pass: string) => Promise<AuthResult>;
   isResetting?: boolean;
 }
 
 const Auth: React.FC<AuthProps> = ({
   onLogin,
   onSignup,
-  onResetপাসওয়ার্ড,
+  onResetPassword,
   onVerifyResetCode,
-  onUpdateপাসওয়ার্ড,
+  onUpdatePassword,
   isResetting = false
 }) => {
   const [mode, setMode] = useState<AuthMode>(isResetting ? 'reset' : 'login');
@@ -76,7 +76,7 @@ const Auth: React.FC<AuthProps> = ({
           setInfoMsg(result.message || 'অ্যাকাউন্ট তৈরি হয়েছে। এখন লগ-ইন করুন।');
         }
       } else if (mode === 'forgot') {
-        const result = await onResetপাসওয়ার্ড(cleanEmail);
+        const result = await onResetPassword(cleanEmail);
         if (!result.success) {
           setErrorMsg(result.message || 'কোড পাঠানো যায়নি। আবার চেষ্টা করুন।');
         } else {
@@ -108,7 +108,7 @@ const Auth: React.FC<AuthProps> = ({
           setErrorMsg('নতুন পাসওয়ার্ড দুটি মিলছে না।');
           return;
         }
-        const result = await onUpdateপাসওয়ার্ড(pass);
+        const result = await onUpdatePassword(pass);
         if (!result.success) setErrorMsg(result.message || 'পাসওয়ার্ড আপডেট করা যায়নি।');
         else setInfoMsg(result.message || 'পাসওয়ার্ড পরিবর্তন হয়েছে।');
       }
@@ -126,7 +126,7 @@ const Auth: React.FC<AuthProps> = ({
     setErrorMsg(null);
     setInfoMsg(null);
     try {
-      const result = await onResetপাসওয়ার্ড(cleanEmail);
+      const result = await onResetPassword(cleanEmail);
       if (!result.success) setErrorMsg(result.message || 'নতুন কোড পাঠানো যায়নি।');
       else setInfoMsg('নতুন ৬ সংখ্যার কোড পাঠানোর অনুরোধ সফল হয়েছে।');
     } catch {
