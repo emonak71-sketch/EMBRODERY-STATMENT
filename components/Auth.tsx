@@ -1,169 +1,351 @@
+import React, { useEffect, useState } from 'react';
+import { ArrowLeft, ArrowRight, Loader2, AlertCircle, ShieldCheck, Mail, KeyRound, Eye, EyeOff } from 'lucide-react';
 
-import React, { useState } from 'react';
-import { ArrowRight, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
+type AuthMode = 'login' | 'signup' | 'forgot' | 'verify' | 'reset';
+
+interface AuthResult {
+  success: boolean;
+  message?: string;
+}
 
 interface AuthProps {
-  onLogin: (email: string, pass: string) => Promise<any>;
-  onSignup: (email: string, pass: string, biz: string) => Promise<any>;
-  onResetপাসওয়ার্ড: (email: string) => Promise<any>;
-  onUpdateপাসওয়ার্ড: (pass: string) => Promise<any>;
+  onLogin: (email: string, pass: string) => Promise<AuthResult>;
+  onSignup: (email: string, pass: string, biz: string) => Promise<AuthResult>;
+  onResetপাসওয়ার্ড: (email: string) => Promise<AuthResult>;
+  onVerifyResetCode: (email: string, code: string) => Promise<AuthResult>;
+  onUpdateপাসওয়ার্ড: (pass: string) => Promise<AuthResult>;
   isResetting?: boolean;
 }
 
-const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetপাসওয়ার্ড, onUpdateপাসওয়ার্ড, isResetting = false }) => {
-  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>(isResetting ? 'login' : 'login');
+const Auth: React.FC<AuthProps> = ({
+  onLogin,
+  onSignup,
+  onResetপাসওয়ার্ড,
+  onVerifyResetCode,
+  onUpdateপাসওয়ার্ড,
+  isResetting = false
+}) => {
+  const [mode, setMode] = useState<AuthMode>(isResetting ? 'reset' : 'login');
   const [email, setEmail] = useState(() => localStorage.getItem('saved_email') || '');
   const [pass, setPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [otp, setOtp] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (isResetting) setMode('reset');
+  }, [isResetting]);
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (loading) return;
+
     setLoading(true);
     setErrorMsg(null);
     setInfoMsg(null);
-    
-    const cleanEmail = email.trim().toLowerCase();
-    
+
     try {
-      if (isResetting) {
-        const res = await onUpdateপাসওয়ার্ড(pass);
-        if (!res.success) setErrorMsg(res.message || 'আপডেট করতে ব্যর্থ হয়েছে');
-        else setInfoMsg(res.message);
-      } else if (mode === 'login') {
-        const res = await onLogin(cleanEmail, pass);
-        if (!res.success) setErrorMsg(res.message || 'লগ-ইন ব্যর্থ হয়েছে');
+      if (mode === 'login') {
+        const result = await onLogin(cleanEmail, pass);
+        if (!result.success) setErrorMsg(result.message || 'ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।');
         else localStorage.setItem('saved_email', cleanEmail);
       } else if (mode === 'signup') {
-        const res = await onSignup(cleanEmail, pass, businessName.trim());
-        if (!res.success) {
-          setErrorMsg(res.message || 'প্রোফাইল তৈরি করতে ব্যর্থ হয়েছে');
+        if (pass.length < 8) {
+          setErrorMsg('নিরাপত্তার জন্য পাসওয়ার্ড অন্তত ৮ অক্ষরের দিন।');
+          return;
+        }
+        if (pass !== confirmPass) {
+          setErrorMsg('দুটি পাসওয়ার্ড মিলছে না।');
+          return;
+        }
+        const result = await onSignup(cleanEmail, pass, businessName.trim());
+        if (!result.success) {
+          setErrorMsg(result.message || 'অ্যাকাউন্ট তৈরি করা যায়নি।');
         } else {
-          // Auto login after signup
           localStorage.setItem('saved_email', cleanEmail);
-          const loginRes = await onLogin(cleanEmail, pass);
-          if (!loginRes.success) {
-             setInfoMsg(res.message || 'অ্যাকাউন্ট তৈরি সফল হয়েছে! দয়া করে লগ-ইন করুন।');
-          }
+          setMode('login');
+          setPass('');
+          setConfirmPass('');
+          setInfoMsg(result.message || 'অ্যাকাউন্ট তৈরি হয়েছে। এখন লগ-ইন করুন।');
         }
       } else if (mode === 'forgot') {
-        const res = await onResetপাসওয়ার্ড(cleanEmail);
-        if (!res.success) setErrorMsg(res.message || 'রিসেট করতে ব্যর্থ হয়েছে');
-        else setInfoMsg(res.message);
+        const result = await onResetপাসওয়ার্ড(cleanEmail);
+        if (!result.success) {
+          setErrorMsg(result.message || 'কোড পাঠানো যায়নি। আবার চেষ্টা করুন।');
+        } else {
+          setMode('verify');
+          setOtp('');
+          setInfoMsg(result.message || 'আপনার ইমেইলে ৬ সংখ্যার কোড পাঠানো হয়েছে।');
+        }
+      } else if (mode === 'verify') {
+        const code = otp.replace(/\D/g, '');
+        if (!/^\d{6}$/.test(code)) {
+          setErrorMsg('৬ সংখ্যার সঠিক কোডটি লিখুন।');
+          return;
+        }
+        const result = await onVerifyResetCode(cleanEmail, code);
+        if (!result.success) {
+          setErrorMsg(result.message || 'কোডটি সঠিক নয় অথবা মেয়াদ শেষ হয়েছে।');
+        } else {
+          setMode('reset');
+          setPass('');
+          setConfirmPass('');
+          setInfoMsg('কোড যাচাই হয়েছে। এখন নতুন পাসওয়ার্ড দিন।');
+        }
+      } else if (mode === 'reset') {
+        if (pass.length < 8) {
+          setErrorMsg('নতুন পাসওয়ার্ড অন্তত ৮ অক্ষরের হতে হবে।');
+          return;
+        }
+        if (pass !== confirmPass) {
+          setErrorMsg('নতুন পাসওয়ার্ড দুটি মিলছে না।');
+          return;
+        }
+        const result = await onUpdateপাসওয়ার্ড(pass);
+        if (!result.success) setErrorMsg(result.message || 'পাসওয়ার্ড আপডেট করা যায়নি।');
+        else setInfoMsg(result.message || 'পাসওয়ার্ড পরিবর্তন হয়েছে।');
       }
-    } catch (err) {
-      setErrorMsg('একটি ত্রুটি ঘটেছে। দয়া করে আবার চেষ্টা করুন।');
+    } catch (error) {
+      console.error('Authentication flow failed:', error);
+      setErrorMsg('একটি সমস্যা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।');
     } finally {
       setLoading(false);
     }
   };
 
-  const getTitle = () => {
-    if (isResetting) return 'পাসওয়ার্ড আপডেট';
-    if (mode === 'login') return 'লগ-ইন করুন';
-    if (mode === 'signup') return 'নতুন প্রোফাইল তৈরি করুন';
-    return 'পাসওয়ার্ড রিসেট';
+  const handleResendCode = async () => {
+    if (!cleanEmail || resending) return;
+    setResending(true);
+    setErrorMsg(null);
+    setInfoMsg(null);
+    try {
+      const result = await onResetপাসওয়ার্ড(cleanEmail);
+      if (!result.success) setErrorMsg(result.message || 'নতুন কোড পাঠানো যায়নি।');
+      else setInfoMsg('নতুন ৬ সংখ্যার কোড পাঠানোর অনুরোধ সফল হয়েছে।');
+    } catch {
+      setErrorMsg('কোড পুনরায় পাঠানো যায়নি। আবার চেষ্টা করুন।');
+    } finally {
+      setResending(false);
+    }
   };
 
-  const getButtonText = () => {
-    if (isResetting) return 'পাসওয়ার্ড আপডেট';
-    if (mode === 'login') return 'লগ-ইন করুন';
-    if (mode === 'signup') return 'নতুন প্রোফাইল তৈরি করুন';
-    return 'রিসেট লিঙ্ক পাঠান';
+  const title: Record<AuthMode, string> = {
+    login: 'আপনার অ্যাকাউন্টে প্রবেশ করুন',
+    signup: 'নতুন অ্যাকাউন্ট তৈরি করুন',
+    forgot: 'পাসওয়ার্ড রিসেট করুন',
+    verify: 'ইমেইল কোড যাচাই করুন',
+    reset: 'নতুন পাসওয়ার্ড সেট করুন'
   };
+
+  const buttonText: Record<AuthMode, string> = {
+    login: 'নিরাপদে লগ-ইন করুন',
+    signup: 'অ্যাকাউন্ট তৈরি করুন',
+    forgot: '৬ সংখ্যার কোড পাঠান',
+    verify: 'কোড যাচাই করুন',
+    reset: 'নতুন পাসওয়ার্ড সংরক্ষণ করুন'
+  };
+
+  const showEmail = mode !== 'reset';
+  const showPasswordField = mode === 'login' || mode === 'signup' || mode === 'reset';
 
   return (
-    <div className="auth-shell min-h-screen flex flex-col items-center justify-center p-6 font-sans overflow-hidden">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-10 animate-in fade-in slide-in-from-top-12 duration-1000 ease-out">
+    <main className="auth-shell min-h-screen flex flex-col items-center justify-center px-4 py-8 sm:px-6 font-sans">
+      <div className="w-full max-w-[440px]">
+        <div className="text-center mb-7 auth-brand-enter">
           <img
             src="/embroidery-statement-logo.jpg"
-            alt="Embroidery Statement logo"
-            className="mx-auto mb-4 w-44 sm:w-48 max-w-full rounded-2xl shadow-xl shadow-sky-500/10 ring-1 ring-sky-100/70 dark:ring-sky-900/40 animate-in fade-in zoom-in-95 duration-700"
+            alt="Embroidery Statement"
+            className="mx-auto mb-4 w-36 sm:w-44 max-w-full rounded-2xl auth-logo"
             fetchPriority="high"
           />
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] mt-3 animate-in fade-in delay-500 duration-1000">প্রফেশনাল লেজার ওয়ার্কস্পেস</p>
+          <p className="text-sm font-bold tracking-[0.18em] text-slate-500 dark:text-slate-400">
+            EMBROIDERY BUSINESS WORKSPACE
+          </p>
         </div>
 
-        <div className="auth-panel bg-white dark:bg-slate-900 p-8 md:p-10 rounded-[2.5rem] shadow-2xl shadow-black/5 border border-slate-100 dark:border-slate-800 animate-in fade-in zoom-in-95 delay-200 duration-700">
-          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-8 text-center">{getTitle()}</h2>
+        <section className="auth-panel rounded-[2rem] p-6 sm:p-9">
+          <div className="mb-7 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl auth-icon">
+              {mode === 'verify' ? <KeyRound className="h-7 w-7" /> : mode === 'forgot' || mode === 'reset' ? <ShieldCheck className="h-7 w-7" /> : <Mail className="h-7 w-7" />}
+            </div>
+            <h1 className="text-2xl sm:text-[1.7rem] font-black tracking-tight text-slate-900 dark:text-white">{title[mode]}</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+              {mode === 'login' && 'আপনার ব্যবসার হিসাব নিরাপদে পরিচালনা করুন।'}
+              {mode === 'signup' && 'আপনার ব্যবসার জন্য নতুন Workspace খুলুন।'}
+              {mode === 'forgot' && 'আপনার অ্যাকাউন্টের ইমেইল দিন। আমরা ৬ সংখ্যার যাচাইকরণ কোড পাঠাব।'}
+              {mode === 'verify' && 'ইমেইলে পাওয়া ৬ সংখ্যার কোডটি এখানে লিখুন।'}
+              {mode === 'reset' && 'কোড যাচাই সম্পন্ন হয়েছে। এখন নতুন পাসওয়ার্ড তৈরি করুন।'}
+            </p>
+          </div>
 
           {errorMsg && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-2xl flex items-start gap-3 text-red-600 dark:text-red-400 text-sm animate-in zoom-in-90 duration-300">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p className="font-bold leading-tight">{errorMsg}</p>
+            <div role="alert" className="mb-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50/90 p-4 text-sm font-semibold text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <span>{errorMsg}</span>
             </div>
           )}
 
           {infoMsg && (
-            <div className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800 rounded-2xl flex items-start gap-3 text-emerald-600 dark:text-emerald-400 text-sm animate-in zoom-in-90 duration-300">
-              <ShieldCheck className="w-5 h-5 flex-shrink-0" />
-              <p className="font-bold leading-tight">{infoMsg}</p>
+            <div role="status" className="mb-5 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50/90 p-4 text-sm font-semibold text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200">
+              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
+              <span>{infoMsg}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {mode === 'signup' && !isResetting && (
-              <div className="space-y-2 animate-in slide-in-from-left-4 delay-300 duration-500">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">ব্যবসার নাম</label>
-                <input type="text" required className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border-none outline-none focus:ring-2 ring-primary-500 transition-all font-bold" placeholder="e.g. Skyline Designs" value={businessName} onChange={e => setBusinessName(e.target.value)} />
-              </div>
-            )}
-            
-            {!isResetting && (
-              <div className="space-y-2 animate-in slide-in-from-left-4 delay-400 duration-500">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">ইমেইল ঠিকানা</label>
-                <input type="email" required autoCapitalize="none" autoCorrect="off" spellCheck={false} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border-none outline-none focus:ring-2 ring-primary-500 transition-all font-bold" placeholder="admin@example.com" value={email} onChange={e => setEmail(e.target.value)} />
-              </div>
-            )}
-            
-            {(mode !== 'forgot' || isResetting) && (
-              <div className="space-y-2 animate-in slide-in-from-left-4 delay-500 duration-500">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">{isResetting ? 'নতুন পাসওয়ার্ড' : 'পাসওয়ার্ড'}</label>
-                <input type="password" required minLength={6} autoCapitalize="none" autoCorrect="off" spellCheck={false} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border-none outline-none focus:ring-2 ring-primary-500 transition-all font-bold" placeholder="••••••••" value={pass} onChange={e => setPass(e.target.value)} />
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'signup' && (
+              <label className="block space-y-2">
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">ব্যবসার নাম</span>
+                <input
+                  type="text"
+                  required
+                  autoComplete="organization"
+                  value={businessName}
+                  onChange={event => setBusinessName(event.target.value)}
+                  className="auth-input"
+                  placeholder="যেমন: Emon Embroidery"
+                />
+              </label>
             )}
 
-            {mode === 'login' && !isResetting && (
-              <div className="flex justify-end px-1 animate-in fade-in delay-600 duration-500">
-                <button type="button" onClick={() => { setMode('forgot'); setErrorMsg(null); setInfoMsg(null); }} className="text-[10px] font-black text-primary-600 hover:text-primary-700 transition-colors uppercase tracking-widest">
-                  Forgot পাসওয়ার্ড?
+            {showEmail && (
+              <label className="block space-y-2">
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">ইমেইল ঠিকানা</span>
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={email}
+                  onChange={event => setEmail(event.target.value)}
+                  className="auth-input"
+                  placeholder="name@gmail.com"
+                />
+              </label>
+            )}
+
+            {mode === 'verify' && (
+              <label className="block space-y-2">
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">৬ সংখ্যার OTP</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                  value={otp}
+                  onChange={event => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="auth-input text-center text-2xl font-black tracking-[0.55em]"
+                  placeholder="••••••"
+                />
+              </label>
+            )}
+
+            {showPasswordField && (
+              <>
+                <label className="block space-y-2">
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    {mode === 'reset' ? 'নতুন পাসওয়ার্ড' : 'পাসওয়ার্ড'}
+                  </span>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      minLength={mode === 'login' ? 6 : 8}
+                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                      value={pass}
+                      onChange={event => setPass(event.target.value)}
+                      className="auth-input pr-12"
+                      placeholder="কমপক্ষে ৮ অক্ষর"
+                    />
+                    <button
+                      type="button"
+                      className="auth-password-toggle"
+                      onClick={() => setShowPassword(value => !value)}
+                      aria-label={showPassword ? 'পাসওয়ার্ড লুকান' : 'পাসওয়ার্ড দেখান'}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </label>
+
+                {(mode === 'signup' || mode === 'reset') && (
+                  <label className="block space-y-2">
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">পাসওয়ার্ড নিশ্চিত করুন</span>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      minLength={8}
+                      autoComplete="new-password"
+                      value={confirmPass}
+                      onChange={event => setConfirmPass(event.target.value)}
+                      className="auth-input"
+                      placeholder="আবার পাসওয়ার্ড লিখুন"
+                    />
+                  </label>
+                )}
+              </>
+            )}
+
+            {mode === 'login' && (
+              <div className="flex justify-end">
+                <button type="button" onClick={() => { setMode('forgot'); setErrorMsg(null); setInfoMsg(null); }} className="text-sm font-bold text-primary-600 hover:text-primary-700 dark:text-primary-300">
+                  পাসওয়ার্ড ভুলে গেছেন?
                 </button>
               </div>
             )}
 
-            <button type="submit" disabled={loading} className="w-full bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-black py-5 rounded-2xl shadow-2xl shadow-primary-500/30 flex items-center justify-center gap-3 group transition-all uppercase text-xs tracking-[0.2em] mt-4 animate-in fade-in slide-in-from-bottom-4 delay-700 duration-500">
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                <>{getButtonText()} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>
-              )}
+            <button type="submit" disabled={loading} className="auth-submit">
+              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <>{buttonText[mode]} <ArrowRight className="h-5 w-5" /></>}
             </button>
           </form>
 
-          <div className="mt-8 text-center animate-in fade-in delay-1000 duration-1000">
-            {isResetting ? (
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                Please enter your new password above.
-              </p>
+          {mode === 'verify' && (
+            <button type="button" onClick={handleResendCode} disabled={resending || loading} className="mt-4 w-full text-sm font-bold text-primary-600 hover:text-primary-700 disabled:opacity-50 dark:text-primary-300">
+              {resending ? 'কোড পাঠানো হচ্ছে…' : 'কোড পাননি? আবার পাঠান'}
+            </button>
+          )}
+
+          <div className="mt-6 border-t border-slate-200/70 pt-5 text-center dark:border-white/10">
+            {mode === 'reset' ? (
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">নতুন পাসওয়ার্ড সংরক্ষণ হলে আপনি অ্যাপে প্রবেশ করতে পারবেন।</p>
             ) : (
-              <button onClick={() => { 
-                if (mode === 'forgot') setMode('login');
-                else setMode(mode === 'login' ? 'signup' : 'login'); 
-                setErrorMsg(null); 
-                setInfoMsg(null); 
-              }} className="text-[10px] font-black text-primary-600 hover:text-primary-700 transition-colors uppercase tracking-[0.2em]">
-                {mode === 'login' ? 'নতুন প্রোফাইল খুলুন' : (mode === 'signup' ? 'আগের প্রোফাইলে লগ-ইন' : 'লগ-ইন এ ফিরে যান')}
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg(null);
+                  setInfoMsg(null);
+                  setOtp('');
+                  setPass('');
+                  setConfirmPass('');
+                  if (mode === 'forgot' || mode === 'verify') setMode('login');
+                  else setMode(mode === 'login' ? 'signup' : 'login');
+                }}
+                className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-primary-700 dark:text-slate-300 dark:hover:text-primary-300"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                {mode === 'login' ? 'নতুন অ্যাকাউন্ট তৈরি করুন' : mode === 'signup' ? 'লগ-ইন-এ ফিরে যান' : 'লগ-ইন-এ ফিরে যান'}
               </button>
             )}
           </div>
-        </div>
+        </section>
 
-        <div className="mt-10 flex items-center justify-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest animate-in fade-in delay-[1200ms] duration-1000">
-          <ShieldCheck className="w-4 h-4 text-emerald-500" /> নিরাপদ সেশন
+        <div className="mt-6 flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <ShieldCheck className="h-4 w-4 text-emerald-500" />
+          Secure Supabase Authentication
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 
