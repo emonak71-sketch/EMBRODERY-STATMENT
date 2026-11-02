@@ -53,25 +53,44 @@ export const dbService = {
 
   updateProfile: async (email: string, businessName: string) => {
     if (!isConfigured()) throw new Error('Supabase not configured');
-    const { data, error } = await supabase.auth.updateUser({ email, data: { business_name: businessName } });
+    const { data: current, error: currentError } = await supabase.auth.getUser();
+    if (currentError) throw currentError;
+
+    const nextEmail = email.trim().toLowerCase();
+    const currentEmail = current.user.email?.trim().toLowerCase();
+    const updates: { email?: string; data: { business_name: string } } = {
+      data: { business_name: businessName.trim() }
+    };
+    if (nextEmail && nextEmail !== currentEmail) updates.email = nextEmail;
+
+    const { data, error } = await supabase.auth.updateUser(updates);
     if (error) throw error;
-    return { id: data.user.id, email: data.user.email!, business_name: data.user.user_metadata?.business_name || businessName };
+    return {
+      id: data.user.id,
+      email: data.user.email || current.user.email || nextEmail,
+      business_name: data.user.user_metadata?.business_name || businessName.trim()
+    };
   },
 
   logout: async () => { if (isConfigured()) await supabase.auth.signOut(); },
 
   getInitialData: async () => {
-    if (!isConfigured()) return { parties: [], transactions: [], products: [], expenses: [], sales: [] };
-    try {
-      const [parties, txs, products, expenses, sales] = await Promise.all([
-        supabase.from('Parties').select('*'),
-        supabase.from('Transactions').select('*').order('date', { ascending: true }),
-        supabase.from('Products').select('*'),
-        supabase.from('Expenses').select('*'),
-        supabase.from('Sales').select('*'),
-      ]);
-      return { parties: parties.data || [], transactions: txs.data || [], products: products.data || [], expenses: expenses.data || [], sales: sales.data || [] };
-    } catch (err) { return { parties: [], transactions: [], products: [], expenses: [], sales: [] }; }
+    if (!isConfigured()) throw new Error('Supabase backend is not configured.');
+
+    // Load only the two tables used by the current workspace. Do not turn a
+    // failed request into empty arrays: that can make saved records look deleted.
+    const [partiesResult, transactionsResult] = await Promise.all([
+      supabase.from('Parties').select('*'),
+      supabase.from('Transactions').select('*').order('date', { ascending: true })
+    ]);
+
+    if (partiesResult.error) throw partiesResult.error;
+    if (transactionsResult.error) throw transactionsResult.error;
+
+    return {
+      parties: partiesResult.data || [],
+      transactions: transactionsResult.data || []
+    };
   },
 
   addParty: async (party: Omit<Party, 'id' | 'created_at'>) => {
