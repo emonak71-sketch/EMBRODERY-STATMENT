@@ -115,7 +115,9 @@ const Dashboard: React.FC<{
     return (
       <div className="space-y-6  animate-in fade-in">
         <div className="flex items-center gap-4">
-          <button 
+          <button
+            type="button"
+            aria-label="Back to dashboard overview"
             onClick={() => setViewMode('overview')}
             className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-300"
           >
@@ -153,7 +155,9 @@ const Dashboard: React.FC<{
     return (
       <div className="space-y-6  animate-in fade-in">
         <div className="flex items-center gap-4">
-          <button 
+          <button
+            type="button"
+            aria-label="Back to dashboard overview"
             onClick={() => setViewMode('overview')}
             className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-300"
           >
@@ -191,7 +195,9 @@ const Dashboard: React.FC<{
     return (
       <div className="space-y-6  animate-in fade-in">
         <div className="flex items-center gap-4">
-          <button 
+          <button
+            type="button"
+            aria-label="Back to dashboard overview"
             onClick={() => setViewMode('overview')}
             className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-300"
           >
