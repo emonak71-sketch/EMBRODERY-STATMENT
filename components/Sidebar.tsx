@@ -71,12 +71,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       setShowEditModal(null);
     } catch (err) {
       console.error(err);
+      alert(err instanceof Error ? err.message : 'পার্টির তথ্য আপডেট করা যায়নি। আবার চেষ্টা করুন।');
     }
   };
 
   return (
     <>
-      <button onClick={() => setIsOpen(true)} className="app-menu-trigger md:hidden fixed top-4 left-4 z-50 p-2.5 rounded-2xl shadow-xl shadow-slate-900/10">
+      <button type="button" aria-label="Open navigation menu" aria-expanded={isOpen} onClick={() => setIsOpen(true)} className="app-menu-trigger md:hidden fixed top-4 left-4 z-50 p-2.5 rounded-2xl shadow-xl shadow-slate-900/10">
         <Menu className="w-6 h-6" />
       </button>
 
@@ -93,7 +94,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <span className="leading-none">EMBROIDERY<br/><span className="text-[9px] font-bold text-slate-400">STATEMENT</span></span>
             </div>
-            <button onClick={() => setIsOpen(false)} className="md:hidden p-1">
+            <button type="button" aria-label="Close navigation menu" onClick={() => setIsOpen(false)} className="md:hidden min-h-11 min-w-11 p-2 rounded-xl">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -107,6 +108,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             ].map((item) => (
               <button
                 key={item.id}
+                type="button"
+                aria-current={activeTab === item.id ? 'page' : undefined}
                 onClick={() => { setActiveTab(item.id as TabType); setIsOpen(false); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                   activeTab === item.id 
@@ -131,7 +134,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   </button>
                 )}
               </div>
-              <button onClick={() => setShowAddParty(!showAddParty)} className="p-1.5 bg-slate-100 dark:bg-slate-800 text-primary-600 rounded-lg hover:scale-110 transition-all">
+              <button type="button" aria-label={showAddParty ? 'Close add customer form' : 'Add customer'} onClick={() => setShowAddParty(!showAddParty)} className="min-h-11 min-w-11 grid place-items-center p-2 bg-slate-100 dark:bg-slate-800 text-primary-600 rounded-xl hover:scale-105 transition-all">
                 <Plus className={`w-3.5 h-3.5 transition-transform ${showAddParty ? 'rotate-45' : ''}`} />
               </button>
             </div>
@@ -193,22 +196,30 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <span className="text-[8px] opacity-70 font-mono tracking-tighter">{party.phone}</span>
                   </button>
                   
-                  <button 
+                  <button
+                    type="button"
+                    aria-label={`More actions for ${party.name}`}
+                    aria-haspopup="menu"
+                    aria-expanded={activeMenuId === party.id}
                     onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === party.id ? null : party.id); }}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 transition-all z-[75] ${activeMenuId === party.id ? 'opacity-100 bg-slate-100 dark:bg-slate-800 rounded-lg' : 'opacity-0 group-hover:opacity-100'}`}
+                    className={`party-action-trigger absolute right-1 top-1/2 -translate-y-1/2 transition-all z-[75] ${activeMenuId === party.id ? 'opacity-100 bg-slate-100 dark:bg-slate-800 rounded-xl' : 'opacity-0 group-hover:opacity-100'}`}
                   >
                     <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
                   </button>
 
                   {activeMenuId === party.id && (
-                    <div className="absolute right-0 top-[85%] z-[90] bg-white dark:bg-slate-800 shadow-2xl rounded-xl border border-slate-200 dark:border-slate-700 p-1 min-w-[120px] animate-in zoom-in-95 origin-top-right">
-                      <button 
+                    <div role="menu" className="party-action-menu absolute right-0 top-[85%] z-[90] bg-white dark:bg-slate-800 shadow-2xl rounded-xl border border-slate-200 dark:border-slate-700 p-1 min-w-[144px] animate-in zoom-in-95 origin-top-right">
+                      <button
+                        type="button"
+                        role="menuitem"
                         onClick={(e) => { e.stopPropagation(); setShowEditModal(party); setActiveMenuId(null); }} 
                         className="w-full flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg"
                       >
                         <Edit2 className="w-3.5 h-3.5 text-primary-500" /> Edit
                       </button>
-                      <button 
+                      <button
+                        type="button"
+                        role="menuitem"
                         onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm({ id: party.id, name: party.name }); setActiveMenuId(null); }} 
                         className="w-full flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-lg"
                       >
@@ -267,7 +278,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <Trash2 className="w-5 h-5 text-primary-600" />
                 <h3 className="font-black uppercase text-xs tracking-widest">Recycle Bin</h3>
               </div>
-              <button onClick={() => setShowRecycleBin(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+              <button type="button" aria-label="Close recycle bin" onClick={() => setShowRecycleBin(false)} className="min-h-11 min-w-11 grid place-items-center p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -284,10 +295,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <span className="text-[9px] font-mono text-slate-400">{p.phone}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => onRestoreParty(p.id)} className="p-2 text-primary-600 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all" title="Restore">
+                      <button type="button" onClick={() => onRestoreParty(p.id)} className="min-h-11 min-w-11 grid place-items-center p-2 text-primary-600 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all" title="Restore" aria-label={`Restore ${p.name}`}>
                         <RotateCcw className="w-4 h-4" />
                       </button>
-                      <button onClick={() => onPermanentDeleteParty(p.id)} className="p-2 text-rose-600 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all" title="Delete Permanently">
+                      <button type="button" onClick={() => onPermanentDeleteParty(p.id)} className="min-h-11 min-w-11 grid place-items-center p-2 text-rose-600 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all" title="Delete Permanently" aria-label={`Delete ${p.name} permanently`}>
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
