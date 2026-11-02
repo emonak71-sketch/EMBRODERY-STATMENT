@@ -3,7 +3,6 @@ import React, { useState, useRef } from 'react';
 import { Plus, ReceiptText, Trash2, Download, Loader2, CheckCircle2, Landmark, Phone, Edit2, Check, X, ArrowLeft } from 'lucide-react';
 import { Party, Transaction, User as UserType } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
-import * as htmlToImage from 'html-to-image';
 
 interface LedgerProps {
   setActiveTab?: (tab: string) => void;
@@ -14,27 +13,33 @@ interface LedgerProps {
   onAddTransaction: (data: Omit<Transaction, 'id' | 'created_at'>) => Promise<void>;
   onEditTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   onDeleteTransaction: (id: string) => Promise<void>;
-  onSendSMS?: (phone: string, message: string) => Promise<{success: boolean, message: string}>;
 }
 
 const Ledger: React.FC<LedgerProps> = ({ 
   parties, selectedParty, transactions, user, 
-  onAddTransaction, onEditTransaction, onDeleteTransaction, onSendSMS, setActiveTab
+  onAddTransaction, onEditTransaction, onDeleteTransaction, setActiveTab
 }) => {
   const { t } = useLanguage();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [billNo, setBillNo] = useState('');
   const [amount, setAmount] = useState<string>('');
+  const [pcs, setPcs] = useState<string>('');
+  const [rate, setRate] = useState<string>('');
+  const [details, setDetails] = useState('Embroidery Work');
   const [entryType, setEntryType] = useState<'work' | 'payment'>('work');
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isSendingSMS, setIsSendingSMS] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [showDownloadSuccess, setShowDownloadSuccess] = useState(false);
   
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [editBillNo, setEditBillNo] = useState<string>('');
+  const [editPcs, setEditPcs] = useState<string>('');
+  const [editRate, setEditRate] = useState<string>('');
+  const [editDetails, setEditDetails] = useState<string>('');
   const [showQuickEntry, setShowQuickEntry] = useState(false);
 
   const ledgerRef = useRef<HTMLDivElement>(null);
@@ -42,25 +47,45 @@ const Ledger: React.FC<LedgerProps> = ({
   const handleTxSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedParty || isSubmitting) return;
+
+    setFormError(null);
+    const pcsValue = entryType === 'work' ? Number(pcs) : 0;
+    const rateValue = entryType === 'work' ? Number(rate) : 0;
+    const val = entryType === 'work' ? pcsValue * rateValue : Number(amount);
+
+    if (!Number.isFinite(val) || val <= 0) {
+      setFormError(entryType === 'work'
+        ? 'PCS এবং Rate সঠিকভাবে লিখুন। মোট কাজের টাকা স্বয়ংক্রিয়ভাবে হিসাব হবে।'
+        : 'সঠিক পেমেন্টের পরিমাণ লিখুন।');
+      return;
+    }
+    if (entryType === 'work' && (!Number.isInteger(pcsValue) || pcsValue <= 0 || !Number.isFinite(rateValue) || rateValue <= 0)) {
+      setFormError('PCS অবশ্যই পূর্ণসংখ্যা এবং Rate শূন্যের বেশি হতে হবে।');
+      return;
+    }
+
     setIsSubmitting(true);
-    
     try {
-      const val = Number(amount) || 0;
       await onAddTransaction({
         party_id: selectedParty.id,
         date,
-        bill_no: billNo || 'N/A',
-        details: entryType === 'payment' ? 'Cash Payment' : 'Embroidery Work',
-        pcs: 0,
-        rate: 0,
+        bill_no: billNo.trim() || 'N/A',
+        details: entryType === 'payment' ? 'Cash Payment' : (details.trim() || 'Embroidery Work'),
+        pcs: entryType === 'work' ? pcsValue : 0,
+        rate: entryType === 'work' ? rateValue : 0,
         credit: entryType === 'work' ? val : 0,
         payment: entryType === 'payment' ? val : 0,
       });
-      
       setAmount('');
+      setPcs('');
+      setRate('');
+      setDetails('Embroidery Work');
       setBillNo('');
+      setFormError(null);
+      setShowQuickEntry(false);
     } catch (err) {
-      console.error(err);
+      console.error('Transaction save failed:', err);
+      setFormError(err instanceof Error ? err.message : 'লেনদেন সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।');
     } finally {
       setIsSubmitting(false);
     }
@@ -70,18 +95,41 @@ const Ledger: React.FC<LedgerProps> = ({
     setEditingTxId(tx.id);
     setEditValue(String(tx.credit || tx.payment));
     setEditBillNo(tx.bill_no);
+    setEditPcs(String(tx.pcs || ''));
+    setEditRate(String(tx.rate || ''));
+    setEditDetails(tx.details || '');
+    setFormError(null);
   };
 
   const handleSaveEdit = async (tx: Transaction) => {
-    if (!editingTxId) return;
-    const val = Number(editValue) || 0;
-    const updates: Partial<Transaction> = {
-      bill_no: editBillNo,
-      credit: tx.credit > 0 ? val : 0,
-      payment: tx.payment > 0 ? val : 0
-    };
-    await onEditTransaction(tx.id, updates);
-    setEditingTxId(null);
+    if (!editingTxId || isSavingEdit) return;
+    const val = Number(editValue);
+    const pcsValue = tx.credit > 0 ? Number(editPcs) || 0 : 0;
+    const rateValue = tx.credit > 0 ? Number(editRate) || 0 : 0;
+    const productionAmount = pcsValue > 0 && rateValue > 0 ? pcsValue * rateValue : val;
+    if (!Number.isFinite(val) || val < 0 || !Number.isFinite(productionAmount)) {
+      setFormError('সঠিক পরিমাণ, PCS এবং Rate লিখুন।');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setFormError(null);
+    try {
+      const updates: Partial<Transaction> = {
+        bill_no: editBillNo.trim() || 'N/A',
+        details: editDetails.trim() || (tx.payment > 0 ? 'Cash Payment' : 'Embroidery Work'),
+        pcs: pcsValue,
+        rate: rateValue,
+        credit: tx.credit > 0 ? productionAmount : 0,
+        payment: tx.payment > 0 ? val : 0
+      };
+      await onEditTransaction(tx.id, updates);
+      setEditingTxId(null);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'রেকর্ড আপডেট করা যায়নি।');
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   const handleDownloadHD = async () => {
@@ -97,7 +145,8 @@ const Ledger: React.FC<LedgerProps> = ({
       // Ensure the content is visible and layout is stable
       await new Promise(r => setTimeout(r, 200));
 
-      const dataUrl = await htmlToImage.toJpeg(node, {
+      const { toJpeg } = await import('html-to-image');
+      const dataUrl = await toJpeg(node, {
         quality: 0.95,
         pixelRatio: 2, 
         backgroundColor: '#ffffff',
@@ -147,42 +196,50 @@ const Ledger: React.FC<LedgerProps> = ({
 
   const { entries, tCredit, tPayment, finalBalance } = calculateLedger();
 
-  const handleSendAlert = async () => {
-    if (!selectedParty || !selectedParty.phone || isSendingSMS || !onSendSMS) {
-      if (selectedParty && !selectedParty.phone) {
-        alert("Please add a phone number for this party to send SMS.");
-      }
+  const handleWhatsAppAlert = () => {
+    if (!selectedParty?.phone) {
+      setFormError('WhatsApp বার্তা পাঠাতে আগে এই কাস্টমারের ফোন নম্বর যোগ করুন।');
       return;
     }
-    setIsSendingSMS(true);
-    const message = `Hello ${selectedParty.name},\nYour current due balance is ৳${finalBalance.toLocaleString('en-IN')}.\nPlease clear the dues as soon as possible.\n- ${user?.business_name || 'Business'}`;
-    const res = await onSendSMS(selectedParty.phone, message);
-    alert(res.message);
-    setIsSendingSMS(false);
+    const digits = selectedParty.phone.replace(/\\D/g, '');
+    const phone = digits.startsWith('0') ? `88${digits}` : digits;
+    if (phone.length < 8) {
+      setFormError('কাস্টমারের ফোন নম্বরটি সঠিক নয়।');
+      return;
+    }
+    const message = `Hello ${selectedParty.name}, your current due balance is ৳${finalBalance.toLocaleString('en-IN')}. Please review your account statement. - ${user?.business_name || 'Business'}`;
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleExportCSV = () => {
     if (!selectedParty || entries.length === 0) return;
-    
-    const headers = ['Date', 'Bill No', 'Details', 'Credit', 'Payment', 'Balance'];
-    const csvContent = [
-      headers.join(','),
-      ...entries.map(entry => {
-        const d = new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
-        const details = entry.details ? `"${entry.details.replace(/"/g, '""')}"` : '';
-        return `${d},"${entry.bill_no}",${details},${entry.credit},${entry.payment},${entry.running_balance}`;
-      }),
-      `"Statement Summary",,,,${finalBalance}`
-    ].join('\n');
 
+    const csvCell = (value: string | number | null | undefined) => {
+      let text = String(value ?? '');
+      if (/^[=+@-]/.test(text)) text = `'${text}`;
+      return `"${text.replace(/"/g, '""')}"`;
+    };
+    const headers = ['Date', 'Bill No', 'Details', 'PCS', 'Rate', 'Work Credit', 'Payment', 'Balance'];
+    const rows = entries.map(entry => {
+      const d = new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      return [
+        csvCell(d), csvCell(entry.bill_no), csvCell(entry.details),
+        csvCell(entry.pcs || 0), csvCell(entry.rate || 0),
+        csvCell(entry.credit || 0), csvCell(entry.payment || 0),
+        csvCell(entry.running_balance || 0)
+      ].join(',');
+    });
+    const csvContent = '\\uFEFF' + [headers.map(csvCell).join(','), ...rows].join('\\r\\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${selectedParty.name}_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `${selectedParty.name.replace(/[^a-z0-9-_]/gi, '_')}_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (
