@@ -359,7 +359,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="app-shell flex h-[100dvh] min-h-[100svh] w-full max-w-full overflow-hidden">
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -376,7 +376,7 @@ const App: React.FC = () => {
         onPermanentDeleteParty={handlePermanentDeleteParty}
       />
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-10 no-print">
+      <main className="app-main min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 no-print">
         {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} />}
         {activeTab === 'parties' && <PartiesList parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
         {activeTab === 'ledger' && (
