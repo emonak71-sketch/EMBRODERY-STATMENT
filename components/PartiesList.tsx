@@ -1,5 +1,5 @@
-import React from 'react';
-import { ChevronRight, Users, Plus, X, ArrowLeft } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { ChevronRight, Users, Plus, X, ArrowLeft, Search } from 'lucide-react';
 import { Party, Transaction, TabType } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -13,119 +13,82 @@ interface PartiesListProps {
 
 const PartiesList: React.FC<PartiesListProps> = ({ parties, transactions, setActiveTab, setSelectedParty, onAddParty }) => {
   const { t } = useLanguage();
-  const [showAddParty, setShowAddParty] = React.useState(false);
-  const [newPartyName, setNewPartyName] = React.useState('');
-  const [newPartyPhone, setNewPartyPhone] = React.useState('');
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [showAddParty, setShowAddParty] = useState(false);
+  const [newPartyName, setNewPartyName] = useState('');
+  const [newPartyPhone, setNewPartyPhone] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const handleAddParty = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const filteredParties = useMemo(() => parties
+    .filter(party => !party.is_deleted)
+    .filter(party => party.name.toLowerCase().includes(searchTerm.toLowerCase()) || String(party.phone || '').includes(searchTerm))
+    .sort((a, b) => a.name.localeCompare(b.name)), [parties, searchTerm]);
+
+  const handleAddParty = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await onAddParty(newPartyName, newPartyPhone);
+      await onAddParty(newPartyName.trim(), newPartyPhone.trim());
       setNewPartyName('');
       setNewPartyPhone('');
       setShowAddParty(false);
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error('Could not add party:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
+
   return (
-    <div className="space-y-6 pt-14 md:pt-0">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 animate-in fade-in slide-in-from-left-8 duration-700 ease-out">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setActiveTab('dashboard')}
-            className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-300"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">
-            {t('all_parties')}
-          </h1>
+    <div className="page-stack pt-14 md:pt-0">
+      <header className="page-heading">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => setActiveTab('dashboard')} className="secondary-icon-action" aria-label="Back to dashboard"><ArrowLeft className="h-5 w-5" /></button>
+          <div><p className="eyebrow">CUSTOMER RELATIONSHIP</p><h1 className="page-title">{t('all_parties')}</h1><p className="page-subtitle">কাস্টমার, যোগাযোগ এবং বর্তমান পাওনা এক জায়গায়।</p></div>
         </div>
-      </div>
-        <button
-          onClick={() => setShowAddParty(true)}
-          className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all shadow-lg shadow-primary-500/20"
-        >
-          <Plus className="w-4 h-4" />
-          {t('add_party')}
-        </button>
-      </div>
-            
-      <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden animate-in zoom-in-95 fade-in duration-500">
-        {parties.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 text-sm font-bold">{t('no_parties_found')}</div>
+        <button type="button" onClick={() => setShowAddParty(true)} className="primary-action"><Plus className="h-4 w-4" /> {t('add_party')}</button>
+      </header>
+
+      <section className="glass-panel overflow-hidden">
+        <div className="panel-toolbar">
+          <div><h2 className="panel-title">Customer Directory</h2><p className="panel-hint">{filteredParties.length} active customers</p></div>
+          <label className="search-field"><Search className="h-4 w-4" /><input value={searchTerm} onChange={event => setSearchTerm(event.target.value)} placeholder="নাম বা ফোন নম্বর খুঁজুন" /></label>
+        </div>
+
+        {filteredParties.length === 0 ? (
+          <div className="empty-state"><Users className="h-9 w-9" /><strong>{searchTerm ? 'কোনো কাস্টমার পাওয়া যায়নি' : t('no_parties_found')}</strong><span>{searchTerm ? 'অন্য নাম বা ফোন নম্বর দিয়ে চেষ্টা করুন।' : 'প্রথম কাস্টমার যোগ করে হিসাব শুরু করুন।'}</span></div>
         ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {parties.map(party => {
-              const partyTxs = transactions.filter(t => t.party_id === party.id);
-              const totalCredit = partyTxs.reduce((sum, t) => sum + (Number(t.credit) || 0), 0);
-              const totalPayment = partyTxs.reduce((sum, t) => sum + (Number(t.payment) || 0), 0);
+          <div className="divide-y divide-slate-100/80 dark:divide-white/5">
+            {filteredParties.map(party => {
+              const partyTransactions = transactions.filter(transaction => transaction.party_id === party.id);
+              const totalCredit = partyTransactions.reduce((sum, transaction) => sum + (Number(transaction.credit) || 0), 0);
+              const totalPayment = partyTransactions.reduce((sum, transaction) => sum + (Number(transaction.payment) || 0), 0);
               const balance = totalCredit - totalPayment;
-              
               return (
-                <button 
-                  key={party.id}
-                  onClick={() => {
-                    setSelectedParty(party);
-                    setActiveTab('ledger');
-                  }}
-                  className="w-full flex items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group text-left"
-                >
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white group-hover:text-primary-600 transition-colors">{party.name}</h3>
-                    <p className="text-[10px] font-bold text-slate-400 mt-1">{party.phone || 'No phone number'}</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{t('due_balance')}</p>
-                      <p className={`text-sm font-black ${balance > 0 ? 'text-rose-600' : balance < 0 ? 'text-emerald-600' : 'text-slate-600 dark:text-slate-300'}`}>
-                        ৳{balance.toLocaleString('en-IN')}
-                      </p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-primary-500 transition-colors" />
-                  </div>
+                <button type="button" key={party.id} onClick={() => { setSelectedParty(party); setActiveTab('ledger'); }} className="customer-row">
+                  <div className="customer-avatar"><Users className="h-5 w-5" /></div>
+                  <div className="min-w-0 flex-1 text-left"><strong className="block truncate">{party.name}</strong><span className="record-muted">{party.phone || 'ফোন নম্বর নেই'}</span></div>
+                  <div className="text-right"><span className="record-muted block">বর্তমান পাওনা</span><strong className={balance > 0 ? 'text-rose-600' : balance < 0 ? 'text-emerald-600' : 'text-slate-600 dark:text-slate-300'}>৳{balance.toLocaleString('en-IN')}</strong></div>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" />
                 </button>
               );
             })}
           </div>
         )}
-      </div>
-      
+      </section>
+
       {showAddParty && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-sm animate-in zoom-in-95 relative">
-            <button onClick={() => setShowAddParty(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all">
-              <X className="w-4 h-4" />
-            </button>
-            <h3 className="text-lg font-black uppercase tracking-tight mb-4 text-slate-900 dark:text-white">{t('add_new_party')}</h3>
-            <form onSubmit={handleAddParty} className="space-y-3">
-              <input 
-                type="text" 
-                placeholder={t('party_name')} 
-                required
-                value={newPartyName}
-                onChange={(e) => setNewPartyName(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border-none text-sm font-bold p-3 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 transition-all"
-              />
-              <input 
-                type="tel" 
-                placeholder={t('phone_no')} 
-                value={newPartyPhone}
-                onChange={(e) => setNewPartyPhone(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border-none text-sm font-bold p-3 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 transition-all"
-              />
-              <button type="submit" disabled={isSubmitting} className="w-full bg-primary-600 hover:bg-primary-700 text-white text-xs font-black uppercase py-3.5 rounded-xl tracking-widest shadow-lg shadow-primary-500/20 transition-all active:scale-95 disabled:opacity-50">
-                {isSubmitting ? 'Adding...' : 'Add Party'}
-              </button>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 modal-backdrop">
+          <section className="glass-modal relative w-full max-w-md p-6 sm:p-8">
+            <button type="button" onClick={() => setShowAddParty(false)} className="absolute right-4 top-4 secondary-icon-action" aria-label="Close"><X className="h-5 w-5" /></button>
+            <div className="mb-6"><p className="eyebrow">NEW CUSTOMER</p><h2 className="text-2xl font-black text-slate-900 dark:text-white">{t('add_new_party')}</h2></div>
+            <form onSubmit={handleAddParty} className="space-y-4">
+              <label className="block space-y-2"><span className="text-sm font-bold">পার্টির নাম</span><input type="text" placeholder={t('party_name')} required value={newPartyName} onChange={event => setNewPartyName(event.target.value)} className="auth-input" /></label>
+              <label className="block space-y-2"><span className="text-sm font-bold">ফোন নম্বর</span><input type="tel" placeholder={t('phone_no')} value={newPartyPhone} onChange={event => setNewPartyPhone(event.target.value)} className="auth-input" /></label>
+              <div className="grid grid-cols-2 gap-3 pt-2"><button type="button" onClick={() => setShowAddParty(false)} className="secondary-action justify-center">{t('cancel')}</button><button type="submit" disabled={isSubmitting} className="primary-action justify-center disabled:opacity-50">{isSubmitting ? 'যোগ হচ্ছে…' : 'কাস্টমার যোগ করুন'}</button></div>
             </form>
-          </div>
+          </section>
         </div>
       )}
     </div>
