@@ -4,8 +4,8 @@
   "description": "Embroidery Business Management & Customer Ledger",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f7fbff",
-  "theme_color": "#0648c8",
+  "background_color": "#eef7ff",
+  "theme_color": "#08265f",
   "icons": [
     {
       "src": "/embroidery-statement-logo.jpg",
