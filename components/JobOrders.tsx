@@ -16,7 +16,7 @@ const JobOrders: React.FC<JobOrdersProps> = ({ parties, transactions, setActiveT
   const activeParties = useMemo(() => parties.filter(party => !party.is_deleted), [parties]);
 
   const jobs = useMemo(() => {
-    const partyMap = new Map(activeParties.map(party => [party.id, party]));
+    const partyMap = new Map<string, Party>(activeParties.map(party => [party.id, party] as [string, Party]));
     const normalizedQuery = query.trim().toLowerCase();
     return transactions
       .filter(transaction => Number(transaction.credit) > 0 && partyMap.has(transaction.party_id))
