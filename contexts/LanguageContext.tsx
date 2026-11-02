@@ -15,6 +15,7 @@ const translations: Record<Language, Record<string, string>> = {
     'parties': 'Parties',
     'settings': 'Settings',
     'monthly_reports': 'Monthly Reports',
+    'workers_payroll': 'Workers & Payroll',
     'overview': 'Overview',
     'total_outstanding': 'Total Outstanding',
     'total_collected': 'Total Collected',
