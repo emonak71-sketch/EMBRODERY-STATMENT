@@ -334,8 +334,8 @@ const App: React.FC = () => {
             </button>
           </div>
         )}
-        {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} />}
-        {activeTab === 'parties' && <PartiesList parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
+        {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} parties={parties.filter(p => !p.is_deleted)} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} />}
+        {activeTab === 'parties' && <PartiesList parties={parties.filter(p => !p.is_deleted)} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
         {activeTab === 'ledger' && (
           <Ledger 
             setActiveTab={setActiveTab}
@@ -348,8 +348,8 @@ const App: React.FC = () => {
             onDeleteTransaction={handleDeleteTransaction}
           />
         )}
-        {activeTab === 'monthly_reports' && <MonthlyReports setActiveTab={setActiveTab} transactions={transactions} parties={parties} />}
-        {activeTab === 'monthly_collections' && <MonthlyCollections setActiveTab={setActiveTab} transactions={transactions} parties={parties} />}
+        {activeTab === 'monthly_reports' && <MonthlyReports setActiveTab={setActiveTab} transactions={transactions} parties={parties.filter(p => !p.is_deleted)} />}
+        {activeTab === 'monthly_collections' && <MonthlyCollections setActiveTab={setActiveTab} transactions={transactions} parties={parties.filter(p => !p.is_deleted)} />}
         {activeTab === 'settings' && (
           <Settings
             setActiveTab={setActiveTab}
