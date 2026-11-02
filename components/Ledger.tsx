@@ -2,7 +2,6 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Plus, ReceiptText, Trash2, Download, Loader2, CheckCircle2, Landmark, Phone, Edit2, Check, X, ArrowLeft, MessageCircle, Search, Calculator } from 'lucide-react';
 import { Party, Transaction, User as UserType, TabType } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
-import * as htmlToImage from 'html-to-image';
 
 interface LedgerProps {
   setActiveTab?: (tab: TabType) => void;
@@ -158,7 +157,8 @@ const Ledger: React.FC<LedgerProps> = ({
     setIsDownloading(true);
     try {
       window.getSelection()?.removeAllRanges();
-      const dataUrl = await htmlToImage.toJpeg(ledgerRef.current, {
+      const { toJpeg } = await import('html-to-image');
+      const dataUrl = await toJpeg(ledgerRef.current, {
         quality: 0.96,
         pixelRatio: 2,
         backgroundColor: '#ffffff',
