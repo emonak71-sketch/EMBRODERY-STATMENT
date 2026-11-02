@@ -200,7 +200,7 @@ const Ledger: React.FC<LedgerProps> = ({
                  <div key={e.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 group border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all">
                    <div className="flex-1 min-w-0">
                       {editingTxId === e.id ? (
-                        <div className="ledger-actions flex gap-2">
+                        <div className="flex gap-2">
                           <input type="text" className="w-16 bg-white dark:bg-slate-900 p-1 text-[11px] border rounded" value={editBillNo} onChange={(ev) => setEditBillNo(ev.target.value)} />
                           <input type="number" className="w-24 bg-white dark:bg-slate-900 p-1 text-[11px] border rounded font-black" value={editValue} onChange={(ev) => setEditValue(ev.target.value)} />
                         </div>
@@ -233,7 +233,7 @@ const Ledger: React.FC<LedgerProps> = ({
       </div>
 
       {/* Memo Display Area */}
-      <div className="flex-1 order-1 xl:order-1">
+      <div className="flex-1 min-w-0 w-full order-1 xl:order-1">
         {!selectedParty ? (
           <div className="h-40 bg-white dark:bg-slate-900 rounded-[2rem] flex flex-col items-center justify-center p-6 text-center border border-slate-200 dark:border-slate-800">
             <Landmark className="w-8 h-8 text-slate-200 mb-2" />
@@ -253,7 +253,7 @@ const Ledger: React.FC<LedgerProps> = ({
                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Statement View</p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="ledger-actions flex gap-2">
                 <button 
                   onClick={() => setShowQuickEntry(true)}
                   className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
@@ -290,18 +290,18 @@ const Ledger: React.FC<LedgerProps> = ({
             <div className="ledger-preview-wrapper w-full min-w-0 no-print bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden overflow-x-auto">
               <div 
                 ref={ledgerRef}
-                className="bg-white text-slate-800 p-8 md:p-12 min-h-[700px] w-full mx-auto font-sans"
+                className="statement-document bg-white text-slate-800 p-4 md:p-12 min-h-[700px] w-full min-w-0 mx-auto font-sans"
               >
-                <div className="min-w-[400px]">
+                <div className="statement-document-content w-full min-w-0">
                   {/* Header */}
-                  <div className="flex justify-between items-start border-b border-slate-200 pb-6 mb-8">
+                  <div className="statement-header flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-slate-200 pb-6 mb-8">
                     <div>
                       <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 leading-tight">
                         {user?.business_name || 'Business'}
                       </h1>
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-1">Hisab Statement Memo</p>
                     </div>
-                    <div className="text-right">
+                    <div className="statement-date text-left sm:text-right">
                       <p className="text-sm font-medium text-slate-500 mb-1">{t('date')}</p>
                       <p className="text-base font-semibold text-slate-800">
                         {new Date().toLocaleDateString('en-GB')}
@@ -310,13 +310,13 @@ const Ledger: React.FC<LedgerProps> = ({
                   </div>
 
                   {/* Customer Info & Summary */}
-                  <div className="grid grid-cols-2 gap-8 mb-10">
+                  <div className="statement-customer-summary grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-10">
                     <div>
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Billed To</p>
                       <h3 className="text-lg font-bold text-slate-800 mb-1">{selectedParty.name}</h3>
                       <p className="text-sm text-slate-600 font-medium">{selectedParty.phone || 'N/A'}</p>
                     </div>
-                    <div className="flex flex-col justify-center items-end text-right">
+                    <div className="statement-amount-due flex flex-col justify-center items-start sm:items-end text-left sm:text-right">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Amount Due</p>
                       <div className={`text-3xl font-bold tracking-tight leading-none ${finalBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                         ৳{finalBalance.toLocaleString('en-IN')}
@@ -325,7 +325,14 @@ const Ledger: React.FC<LedgerProps> = ({
                   </div>
 
                   {/* Table */}
-                  <table className="w-full">
+                  <table className="statement-table w-full">
+                    <colgroup>
+                      <col style={{ width: '22%' }} />
+                      <col style={{ width: '12%' }} />
+                      <col style={{ width: '18%' }} />
+                      <col style={{ width: '18%' }} />
+                      <col style={{ width: '30%' }} />
+                    </colgroup>
                     <thead>
                       <tr className="border-y border-slate-200 bg-slate-50/50">
                         <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('date')}</th>
@@ -365,7 +372,7 @@ const Ledger: React.FC<LedgerProps> = ({
                   </table>
 
                   {/* Signatures */}
-                  <div className="mt-24 flex justify-between gap-12 px-8">
+                  <div className="statement-signatures mt-24 flex justify-between gap-12 px-8">
                     <div className="flex-1 border-t border-slate-300 pt-3 text-center">
                       <p className="text-xs font-semibold text-slate-500">Customer Signature</p>
                     </div>
