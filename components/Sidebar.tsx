@@ -103,6 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               { id: 'dashboard', label: t('dashboard'), icon: <Landmark className="w-5 h-5" /> },
               { id: 'parties', label: t('parties'), icon: <Users className="w-5 h-5" /> },
               { id: 'ledger', label: t('ledger'), icon: <FileText className="w-5 h-5" /> },
+              { id: 'workers', label: 'Workers & Payroll', icon: <Users className="w-5 h-5" /> },
               { id: 'settings', label: t('settings'), icon: <Settings className="w-5 h-5" /> },
             ].map((item) => (
               <button

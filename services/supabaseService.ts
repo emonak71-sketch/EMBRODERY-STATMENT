@@ -126,6 +126,63 @@ export const dbService = {
     return true;
   },
   
+
+  // Worker Attendance & Payroll: all operations are scoped to the signed-in account.
+  getWorkers: async () => {
+    const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
+    if(!uid) throw new Error('Please sign in again.');
+    const {data,error}=await supabase.from('Workers').select('*').eq('user_id',uid).order('full_name');
+    if(error) throw handleDbError(error,'loading workers'); return data||[];
+  },
+  saveWorker: async (worker:{id?:string;worker_code:string;full_name:string;phone:string;designation:string;joining_date:string;monthly_salary:number;is_active:boolean}) => {
+    const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
+    if(!uid) throw new Error('Please sign in again.');
+    const payload={...worker,user_id:uid,updated_at:new Date().toISOString()};
+    const q=worker.id?supabase.from('Workers').update(payload).eq('id',worker.id).eq('user_id',uid):supabase.from('Workers').insert([{...payload,created_at:new Date().toISOString()}]);
+    const {data,error}=await q.select(); if(error) throw handleDbError(error,'saving worker');
+    if(!data?.length) throw new Error('Worker was not saved. Check account permissions.'); return data[0];
+  },
+  setWorkerActive: async (id:string,is_active:boolean) => {
+    const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
+    if(!uid) throw new Error('Please sign in again.');
+    const {data,error}=await supabase.from('Workers').update({is_active,updated_at:new Date().toISOString()}).eq('id',id).eq('user_id',uid).select();
+    if(error) throw handleDbError(error,'updating worker'); if(!data?.length) throw new Error('Worker not found.'); return data[0];
+  },
+  getWorkerAttendance: async (date:string) => {
+    const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
+    if(!uid) throw new Error('Please sign in again.');
+    const {data,error}=await supabase.from('WorkerAttendance').select('*').eq('user_id',uid).eq('attendance_date',date);
+    if(error) throw handleDbError(error,'loading attendance'); return data||[];
+  },
+  getWorkerAttendanceForMonth: async (month:string) => {
+    const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
+    if(!uid) throw new Error('Please sign in again.');
+    const [year,monthNumber]=month.split('-').map(Number);
+    const lastDay=new Date(year,monthNumber,0).getDate();
+    const start=month+'-01', end=month+'-'+String(lastDay).padStart(2,'0');
+    const {data,error}=await supabase.from('WorkerAttendance').select('*').eq('user_id',uid).gte('attendance_date',start).lte('attendance_date',end);
+    if(error) throw handleDbError(error,'loading monthly attendance'); return data||[];
+  },
+  saveWorkerAttendance: async (rows:Array<{worker_id:string;attendance_date:string;status:string;check_in?:string|null;check_out?:string|null;note?:string}>) => {
+    const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
+    if(!uid) throw new Error('Please sign in again.');
+    const payload=rows.map(r=>({...r,user_id:uid,updated_at:new Date().toISOString()}));
+    const {data,error}=await supabase.from('WorkerAttendance').upsert(payload,{onConflict:'user_id,worker_id,attendance_date'}).select();
+    if(error) throw handleDbError(error,'saving attendance'); return data||[];
+  },
+  getWorkerPayroll: async (month:string) => {
+    const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
+    if(!uid) throw new Error('Please sign in again.');
+    const {data,error}=await supabase.from('WorkerPayroll').select('*').eq('user_id',uid).eq('month_key',month);
+    if(error) throw handleDbError(error,'loading payroll'); return data||[];
+  },
+  saveWorkerPayroll: async (p:{worker_id:string;month_key:string;basic_salary:number;overtime_hours:number;overtime_amount:number;bonus:number;deduction:number;net_salary:number;status:'draft'|'paid';paid_at:string|null}) => {
+    const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
+    if(!uid) throw new Error('Please sign in again.');
+    const {data,error}=await supabase.from('WorkerPayroll').upsert({...p,user_id:uid,updated_at:new Date().toISOString()},{onConflict:'user_id,worker_id,month_key'}).select();
+    if(error) throw handleDbError(error,'saving payroll'); return data?.[0];
+  },
+
   resetPassword: async (email: string) => {
     if (!isConfigured()) return { success: false, message: 'Supabase configuration is missing.' };
     const cleanEmail = email.trim().toLowerCase();

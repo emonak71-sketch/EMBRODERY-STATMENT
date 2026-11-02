@@ -12,6 +12,7 @@ import MonthlyReports from './components/MonthlyReports';
 import MonthlyCollections from './components/MonthlyCollections';
 import PartiesList from './components/PartiesList';
 import { BiometricLock } from './components/BiometricLock';
+import WorkerAttendance from './components/WorkerAttendance';
 
 const sendSMSAlert = async (phone: string, message: string) => {
   try {
@@ -390,6 +391,7 @@ const App: React.FC = () => {
       />
 
       <main className="app-main min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 no-print">
+        {activeTab === 'workers' && <WorkerAttendance userId={user.id} />}
         {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} />}
         {activeTab === 'parties' && <PartiesList parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
         {activeTab === 'ledger' && (
