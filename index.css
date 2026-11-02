@@ -303,10 +303,4 @@ button { -webkit-tap-highlight-color: transparent; }
   .statement-signatures p {
     font-size: 9px !important;
   }
-
-  .dashboard-stat-value {
-    font-size: clamp(.82rem, 3.5vw, 1.05rem) !important;
-    white-space: nowrap;
-    letter-spacing: -.04em !important;
-  }
 }
