@@ -107,8 +107,13 @@ const Ledger: React.FC<LedgerProps> = ({
     const pcsValue = tx.credit > 0 ? Number(editPcs) || 0 : 0;
     const rateValue = tx.credit > 0 ? Number(editRate) || 0 : 0;
     const productionAmount = pcsValue > 0 && rateValue > 0 ? pcsValue * rateValue : val;
-    if (!Number.isFinite(val) || val < 0 || !Number.isFinite(productionAmount)) {
-      setFormError('সঠিক পরিমাণ, PCS এবং Rate লিখুন।');
+    if (
+      !Number.isFinite(val) || val < 0 || !Number.isFinite(productionAmount) ||
+      pcsValue < 0 || rateValue < 0 ||
+      (tx.credit > 0 && ((pcsValue > 0) !== (rateValue > 0))) ||
+      (pcsValue > 0 && !Number.isInteger(pcsValue))
+    ) {
+      setFormError('সঠিক পরিমাণ, PCS এবং Rate লিখুন। PCS ও Rate একসঙ্গে দিতে হবে।');
       return;
     }
 
