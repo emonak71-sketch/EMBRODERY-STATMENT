@@ -68,7 +68,7 @@ async function fulfillJson(route, status, body) {
 try {
   await waitForServer();
   browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true, serviceWorkers: 'block' });
   const page = await context.newPage();
   page.on('pageerror', error => pageErrors.push(error.message));
   page.on('request', request => console.log('REQUEST', request.method(), request.url()));
