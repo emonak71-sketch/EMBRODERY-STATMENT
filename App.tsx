@@ -119,7 +119,7 @@ const App: React.FC = () => {
         setUser({
           id: session.user.id,
           email: session.user.email!,
-          business_name: session.user.user_metadata?.business_name || 'EMBRODERY STATEMENT'
+          business_name: session.user.user_metadata?.business_name || 'EMBROIDERY STATEMENT'
         });
       } else {
         setLoading(false);
@@ -136,7 +136,7 @@ const App: React.FC = () => {
         setUser({
           id: session.user.id,
           email: session.user.email!,
-          business_name: session.user.user_metadata?.business_name || 'EMBRODERY STATEMENT'
+          business_name: session.user.user_metadata?.business_name || 'EMBROIDERY STATEMENT'
         });
       } else {
         setUser(null);

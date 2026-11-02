@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Landmark, ArrowRight, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
 
 interface AuthProps {
   onLogin: (email: string, pass: string) => Promise<any>;
@@ -78,10 +78,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetপাসওয়�
     <div className="auth-shell min-h-screen flex flex-col items-center justify-center p-6 font-sans overflow-hidden">
       <div className="w-full max-w-md">
         <div className="text-center mb-10 animate-in fade-in slide-in-from-top-12 duration-1000 ease-out">
-          <div className="inline-flex p-4 bg-primary-600 rounded-[2rem] shadow-2xl shadow-primary-500/40 mb-6 hover:scale-110 transition-transform duration-500 cursor-pointer">
-            <Landmark className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter animate-in fade-in slide-in-from-bottom-4 delay-300 duration-700">Embrodery Statement</h1>
+          <img
+            src="/embroidery-statement-logo.jpg"
+            alt="Embroidery Statement logo"
+            className="mx-auto mb-4 w-44 sm:w-48 max-w-full rounded-2xl shadow-xl shadow-sky-500/10 ring-1 ring-sky-100/70 dark:ring-sky-900/40 animate-in fade-in zoom-in-95 duration-700"
+            fetchPriority="high"
+          />
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] mt-3 animate-in fade-in delay-500 duration-1000">প্রফেশনাল লেজার ওয়ার্কস্পেস</p>
         </div>
 
