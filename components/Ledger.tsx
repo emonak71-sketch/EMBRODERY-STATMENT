@@ -1,6 +1,5 @@
-
-import React, { useState, useRef } from 'react';
-import { Plus, ReceiptText, Trash2, Download, Loader2, CheckCircle2, Landmark, Phone, Edit2, Check, X, ArrowLeft } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { Plus, ReceiptText, Trash2, Download, Loader2, CheckCircle2, Landmark, Phone, Edit2, Check, X, ArrowLeft, MessageCircle, Search, Calculator } from 'lucide-react';
 import { Party, Transaction, User as UserType } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import * as htmlToImage from 'html-to-image';
@@ -14,436 +13,347 @@ interface LedgerProps {
   onAddTransaction: (data: Omit<Transaction, 'id' | 'created_at'>) => Promise<void>;
   onEditTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   onDeleteTransaction: (id: string) => Promise<void>;
-  onSendSMS?: (phone: string, message: string) => Promise<{success: boolean, message: string}>;
+  onSendAlert?: (phone: string, message: string) => Promise<{ success: boolean; message: string }>;
 }
 
-const Ledger: React.FC<LedgerProps> = ({ 
-  parties, selectedParty, transactions, user, 
-  onAddTransaction, onEditTransaction, onDeleteTransaction, onSendSMS, setActiveTab
+const localDateValue = () => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+};
+
+const money = (value: number) => `৳${Number(value || 0).toLocaleString('en-IN')}`;
+
+const Ledger: React.FC<LedgerProps> = ({
+  parties, selectedParty, transactions, user,
+  onAddTransaction, onEditTransaction, onDeleteTransaction, onSendAlert, setActiveTab
 }) => {
   const { t } = useLanguage();
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(localDateValue);
   const [billNo, setBillNo] = useState('');
-  const [amount, setAmount] = useState<string>('');
+  const [amount, setAmount] = useState('');
+  const [pcs, setPcs] = useState('');
+  const [rate, setRate] = useState('');
+  const [details, setDetails] = useState('');
   const [entryType, setEntryType] = useState<'work' | 'payment'>('work');
-  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isSendingSMS, setIsSendingSMS] = useState(false);
+  const [isSendingAlert, setIsSendingAlert] = useState(false);
   const [showDownloadSuccess, setShowDownloadSuccess] = useState(false);
-  
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>('');
-  const [editBillNo, setEditBillNo] = useState<string>('');
+  const [editValue, setEditValue] = useState('');
+  const [editBillNo, setEditBillNo] = useState('');
+  const [editPcs, setEditPcs] = useState('');
+  const [editRate, setEditRate] = useState('');
   const [showQuickEntry, setShowQuickEntry] = useState(false);
-
   const ledgerRef = useRef<HTMLDivElement>(null);
 
-  const handleTxSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedParty || isSubmitting) return;
+  const calculatedAmount = Number(pcs) * Number(rate);
+  const hasProductionCalculation = entryType === 'work' && pcs.trim() !== '' && rate.trim() !== '' && Number.isFinite(calculatedAmount) && calculatedAmount > 0;
+  const effectiveAmount = hasProductionCalculation ? calculatedAmount : Number(amount);
+
+  const ledger = useMemo(() => {
+    let balance = 0;
+    let totalCredit = 0;
+    let totalPayment = 0;
+    const sorted = [...transactions].sort((a, b) => {
+      const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+      if (dateDiff !== 0) return dateDiff;
+      return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+    });
+    const chronological = sorted.map(transaction => {
+      const credit = Number(transaction.credit) || 0;
+      const payment = Number(transaction.payment) || 0;
+      balance += credit - payment;
+      totalCredit += credit;
+      totalPayment += payment;
+      return { ...transaction, running_balance: balance };
+    });
+    return {
+      entries: chronological.slice().reverse(),
+      totalCredit,
+      totalPayment,
+      finalBalance: balance
+    };
+  }, [transactions]);
+
+  const handleTxSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedParty || isSubmitting) return false;
+
+    const pcsValue = entryType === 'work' ? Number(pcs) || 0 : 0;
+    const rateValue = entryType === 'work' ? Number(rate) || 0 : 0;
+    if (entryType === 'work' && ((pcsValue > 0 && rateValue <= 0) || (rateValue > 0 && pcsValue <= 0))) {
+      alert('PCS এবং Rate দুটোই দিন।');
+      return false;
+    }
+    const value = entryType === 'work' && pcsValue > 0 && rateValue > 0 ? pcsValue * rateValue : Number(amount);
+    if (!Number.isFinite(value) || value <= 0) {
+      alert('সঠিক Amount লিখুন।');
+      return false;
+    }
+
     setIsSubmitting(true);
-    
     try {
-      const val = Number(amount) || 0;
       await onAddTransaction({
         party_id: selectedParty.id,
         date,
-        bill_no: billNo || 'N/A',
-        details: entryType === 'payment' ? 'Cash Payment' : 'Embroidery Work',
-        pcs: 0,
-        rate: 0,
-        credit: entryType === 'work' ? val : 0,
-        payment: entryType === 'payment' ? val : 0,
+        bill_no: billNo.trim() || 'N/A',
+        details: entryType === 'payment' ? 'Cash Payment' : details.trim() || 'Embroidery Work',
+        pcs: pcsValue,
+        rate: rateValue,
+        credit: entryType === 'work' ? value : 0,
+        payment: entryType === 'payment' ? value : 0
       });
-      
       setAmount('');
+      setPcs('');
+      setRate('');
+      setDetails('');
       setBillNo('');
-    } catch (err) {
-      console.error(err);
+      setDate(localDateValue());
+      return true;
+    } catch (error) {
+      console.error('Could not save ledger entry:', error);
+      return false;
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleStartEdit = (tx: Transaction) => {
-    setEditingTxId(tx.id);
-    setEditValue(String(tx.credit || tx.payment));
-    setEditBillNo(tx.bill_no);
+  const handleStartEdit = (transaction: Transaction) => {
+    setEditingTxId(transaction.id);
+    setEditValue(String(transaction.credit || transaction.payment || ''));
+    setEditBillNo(transaction.bill_no || '');
+    setEditPcs(String(transaction.pcs || ''));
+    setEditRate(String(transaction.rate || ''));
   };
 
-  const handleSaveEdit = async (tx: Transaction) => {
+  const handleSaveEdit = async (transaction: Transaction) => {
     if (!editingTxId) return;
-    const val = Number(editValue) || 0;
-    const updates: Partial<Transaction> = {
-      bill_no: editBillNo,
-      credit: tx.credit > 0 ? val : 0,
-      payment: tx.payment > 0 ? val : 0
-    };
-    await onEditTransaction(tx.id, updates);
-    setEditingTxId(null);
+    const pcsValue = transaction.credit > 0 ? Number(editPcs) || 0 : 0;
+    const rateValue = transaction.credit > 0 ? Number(editRate) || 0 : 0;
+    if (transaction.credit > 0 && ((pcsValue > 0 && rateValue <= 0) || (rateValue > 0 && pcsValue <= 0))) {
+      alert('PCS এবং Rate দুটোই দিন।');
+      return;
+    }
+    const value = transaction.credit > 0 && pcsValue > 0 && rateValue > 0
+      ? pcsValue * rateValue
+      : Number(editValue);
+    if (!Number.isFinite(value) || value <= 0) {
+      alert('সঠিক Amount লিখুন।');
+      return;
+    }
+    try {
+      await onEditTransaction(transaction.id, {
+        bill_no: editBillNo.trim() || 'N/A',
+        pcs: pcsValue,
+        rate: rateValue,
+        credit: transaction.credit > 0 ? value : 0,
+        payment: transaction.payment > 0 ? value : 0
+      });
+      setEditingTxId(null);
+    } catch (error) {
+      console.error('Could not update ledger entry:', error);
+    }
   };
 
   const handleDownloadHD = async () => {
-    if (!ledgerRef.current || isDownloading) return;
-    
+    if (!ledgerRef.current || !selectedParty || isDownloading) return;
     setIsDownloading(true);
     try {
-      // Clear any selections
       window.getSelection()?.removeAllRanges();
-      
-      const node = ledgerRef.current;
-      
-      // Ensure the content is visible and layout is stable
-      await new Promise(r => setTimeout(r, 200));
-
-      const dataUrl = await htmlToImage.toJpeg(node, {
-        quality: 0.95,
-        pixelRatio: 2, 
+      const dataUrl = await htmlToImage.toJpeg(ledgerRef.current, {
+        quality: 0.96,
+        pixelRatio: 2,
         backgroundColor: '#ffffff',
-        style: {
-          transform: 'scale(1)',
-          transformOrigin: 'top left',
-          margin: '0',
-          padding: '40px'
-        }
+        cacheBust: true
       });
-
       const link = document.createElement('a');
-      link.download = `${selectedParty?.name}_Statement_${date}.jpg`;
+      link.download = `${selectedParty.name}_Statement_${date}.jpg`;
       link.href = dataUrl;
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
-      
+      link.remove();
       setShowDownloadSuccess(true);
-      setTimeout(() => setShowDownloadSuccess(false), 3000);
-    } catch (err) {
-      console.error('Download error:', err);
-      alert('Download error. Please ensure you are not in a private/incognito window if on mobile.');
+      window.setTimeout(() => setShowDownloadSuccess(false), 3000);
+    } catch (error) {
+      console.error('Statement export failed:', error);
+      alert('Statement তৈরি করা যায়নি। আবার চেষ্টা করুন।');
     } finally {
       setIsDownloading(false);
     }
   };
 
-  const calculateLedger = () => {
-    let balance = 0;
-    let tCredit = 0;
-    let tPayment = 0;
-    
-    const sortedTxs = [...transactions].sort((a, b) => 
-      new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    const entries = sortedTxs.map(t => {
-      balance = balance + (Number(t.credit) || 0) - (Number(t.payment) || 0);
-      tCredit += (Number(t.credit) || 0);
-      tPayment += (Number(t.payment) || 0);
-      return { ...t, running_balance: balance };
-    }).reverse();
-
-    return { entries, tCredit, tPayment, finalBalance: balance };
-  };
-
-  const { entries, tCredit, tPayment, finalBalance } = calculateLedger();
-
   const handleSendAlert = async () => {
-    if (!selectedParty || !selectedParty.phone || isSendingSMS || !onSendSMS) {
-      if (selectedParty && !selectedParty.phone) {
-        alert("Please add a phone number for this party to send SMS.");
-      }
+    if (!selectedParty || !selectedParty.phone || !onSendAlert || isSendingAlert) {
+      if (selectedParty && !selectedParty.phone) alert('প্রথমে কাস্টমারের ফোন নম্বর যোগ করুন।');
       return;
     }
-    setIsSendingSMS(true);
-    const message = `Hello ${selectedParty.name},\nYour current due balance is ৳${finalBalance.toLocaleString('en-IN')}.\nPlease clear the dues as soon as possible.\n- ${user?.business_name || 'Business'}`;
-    const res = await onSendSMS(selectedParty.phone, message);
-    alert(res.message);
-    setIsSendingSMS(false);
+    setIsSendingAlert(true);
+    try {
+      const message = `Hello ${selectedParty.name},\nYour current due balance is ৳${ledger.finalBalance.toLocaleString('en-IN')}.\nPlease contact us for your latest embroidery statement.\n- ${user?.business_name || 'Embroidery Statement'}`;
+      const result = await onSendAlert(selectedParty.phone, message);
+      if (!result.success) alert(result.message);
+      else alert(result.message);
+    } catch (error) {
+      console.error('WhatsApp reminder failed:', error);
+      alert('WhatsApp reminder খোলা যায়নি। আবার চেষ্টা করুন।');
+    } finally {
+      setIsSendingAlert(false);
+    }
   };
 
   const handleExportCSV = () => {
-    if (!selectedParty || entries.length === 0) return;
-    
-    const headers = ['Date', 'Bill No', 'Details', 'Credit', 'Payment', 'Balance'];
-    const csvContent = [
-      headers.join(','),
-      ...entries.map(entry => {
-        const d = new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
-        const details = entry.details ? `"${entry.details.replace(/"/g, '""')}"` : '';
-        return `${d},"${entry.bill_no}",${details},${entry.credit},${entry.payment},${entry.running_balance}`;
-      }),
-      `"Statement Summary",,,,${finalBalance}`
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    if (!selectedParty || ledger.entries.length === 0) {
+      alert('Export করার মতো কোনো লেনদেন নেই।');
+      return;
+    }
+    const escapeCsv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const headers = ['Date', 'Bill No', 'Design / Details', 'PCS', 'Rate', 'Credit', 'Payment', 'Balance'];
+    const rows = ledger.entries.map(entry => [
+      new Date(entry.date).toLocaleDateString('en-GB'),
+      entry.bill_no,
+      entry.details || '',
+      Number(entry.pcs || 0),
+      Number(entry.rate || 0),
+      Number(entry.credit || 0),
+      Number(entry.payment || 0),
+      Number(entry.running_balance || 0)
+    ].map(escapeCsv).join(','));
+    rows.push(['Statement Summary', '', '', '', '', ledger.totalCredit, ledger.totalPayment, ledger.finalBalance].map(escapeCsv).join(','));
+    const blob = new Blob(['\uFEFF' + [headers.map(escapeCsv).join(','), ...rows].join('\r\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${selectedParty.name}_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `${selectedParty.name}_Ledger_${localDateValue()}.csv`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (
     <div className="flex min-w-0 w-full max-w-full flex-col xl:flex-row gap-6 pb-20">
-      
-            {/* Forms Area / Transaction History Wrapper */}
-      <div className="w-full xl:w-[300px] space-y-4 no-print order-2 xl:order-2 xl:sticky xl:top-4 self-start">
-        
-{/* Transaction History */}
+      <aside className="w-full xl:w-[320px] space-y-4 no-print order-2 xl:order-2 xl:sticky xl:top-4 self-start">
         {selectedParty && (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm">
-             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Recent Transactions</h3>
-             <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 scrollbar-thin">
-               {entries.slice().reverse().map(e => (
-                 <div key={e.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 group border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all">
-                   <div className="flex-1 min-w-0">
-                      {editingTxId === e.id ? (
-                        <div className="flex gap-2">
-                          <input type="text" className="w-16 bg-white dark:bg-slate-900 p-1 text-[11px] border rounded" value={editBillNo} onChange={(ev) => setEditBillNo(ev.target.value)} />
-                          <input type="number" className="w-24 bg-white dark:bg-slate-900 p-1 text-[11px] border rounded font-black" value={editValue} onChange={(ev) => setEditValue(ev.target.value)} />
-                        </div>
-                      ) : (
-                        <div className="text-sm font-bold truncate">
-                          <span className="text-slate-400 text-[10px] mr-2">{new Date(e.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}</span>
-                          <span className="text-[10px] text-slate-500 bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded mr-2 font-mono">#{e.bill_no}</span>
-                          <span className={`${e.credit > 0 ? 'text-primary-600' : 'text-emerald-600'} text-sm font-black`}>৳{e.credit || e.payment}</span>
-                        </div>
-                      )}
-                   </div>
-                   <div className="flex items-center gap-1">
-                     {editingTxId === e.id ? (
-                        <>
-                          <button onClick={() => handleSaveEdit(e)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded-lg"><Check className="w-4 h-4" /></button>
-                          <button onClick={() => setEditingTxId(null)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-4 h-4" /></button>
-                        </>
-                     ) : (
-                        <>
-                          <button onClick={() => handleStartEdit(e)} className="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => onDeleteTransaction(e.id)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
-                        </>
-                     )}
-                   </div>
-                 </div>
-               ))}
-             </div>
-          </div>
+          <section className="glass-panel p-4">
+            <div className="mb-3 flex items-center justify-between gap-2"><div><p className="eyebrow">ACCOUNT ACTIVITY</p><h3 className="panel-title">Recent Transactions</h3></div><span className="count-pill">{ledger.entries.length}</span></div>
+            <div className="max-h-[430px] overflow-y-auto space-y-2 pr-1">
+              {ledger.entries.slice().reverse().map(transaction => (
+                <article key={transaction.id} className="transaction-row">
+                  {editingTxId === transaction.id ? (
+                    <div className="w-full space-y-2">
+                      <input aria-label="Bill number" type="text" value={editBillNo} onChange={event => setEditBillNo(event.target.value)} className="compact-input" />
+                      {transaction.credit > 0 && <div className="grid grid-cols-2 gap-2"><input aria-label="PCS" type="number" min="0" value={editPcs} onChange={event => setEditPcs(event.target.value)} className="compact-input" placeholder="PCS" /><input aria-label="Rate" type="number" min="0" value={editRate} onChange={event => setEditRate(event.target.value)} className="compact-input" placeholder="Rate" /></div>}
+                      <input aria-label="Amount" type="number" min="0" value={editValue} onChange={event => setEditValue(event.target.value)} className="compact-input" placeholder="Amount" />
+                      <div className="flex justify-end gap-2"><button type="button" onClick={() => handleSaveEdit(transaction)} className="icon-action text-emerald-600" aria-label="Save edit"><Check className="h-4 w-4" /></button><button type="button" onClick={() => setEditingTxId(null)} className="icon-action" aria-label="Cancel edit"><X className="h-4 w-4" /></button></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2"><strong className="text-sm">{money(Number(transaction.credit || transaction.payment))}</strong><span className="record-muted">#{transaction.bill_no}</span></div>
+                        <p className="mt-1 truncate text-sm">{transaction.details || (transaction.credit > 0 ? 'Embroidery Work' : 'Cash Payment')}</p>
+                        <p className="record-muted mt-1">{new Date(transaction.date).toLocaleDateString('en-GB')} {transaction.credit > 0 && `· ${Number(transaction.pcs || 0)} PCS × ${money(Number(transaction.rate || 0))}`}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1"><button type="button" onClick={() => handleStartEdit(transaction)} className="icon-action" aria-label="Edit transaction"><Edit2 className="h-4 w-4" /></button><button type="button" onClick={() => onDeleteTransaction(transaction.id)} className="icon-action text-rose-500" aria-label="Delete transaction"><Trash2 className="h-4 w-4" /></button></div>
+                    </>
+                  )}
+                </article>
+              ))}
+              {ledger.entries.length === 0 && <div className="empty-state py-8"><ReceiptText className="h-8 w-8" /><strong>এখনো কোনো লেনদেন নেই</strong></div>}
+            </div>
+          </section>
         )}
-      </div>
+      </aside>
 
-      {/* Memo Display Area */}
-      <div className="flex-1 min-w-0 w-full order-1 xl:order-1">
+      <section className="flex-1 min-w-0 w-full order-1 xl:order-1">
         {!selectedParty ? (
-          <div className="h-40 bg-white dark:bg-slate-900 rounded-[2rem] flex flex-col items-center justify-center p-6 text-center border border-slate-200 dark:border-slate-800">
-            <Landmark className="w-8 h-8 text-slate-200 mb-2" />
-            <h2 className="text-xs font-black uppercase text-slate-400 tracking-widest">Select a party from the sidebar</h2>
-          </div>
+          <div className="glass-panel empty-state min-h-48"><Landmark className="h-10 w-10" /><strong>একটি কাস্টমার নির্বাচন করুন</strong><span>Sidebar বা Customer Directory থেকে কাস্টমার বেছে নিন।</span></div>
         ) : (
           <div className="space-y-4">
-            <div className="ledger-toolbar flex justify-between items-center gap-2 bg-white dark:bg-slate-900 p-4 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-md no-print">
-              <div className="flex items-center gap-3 truncate">
-                {setActiveTab && (
-                  <button onClick={() => setActiveTab('parties')} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-300">
-                    <ArrowLeft className="w-5 h-5" />
-                  </button>
-                )}
-                <div className="truncate">
-                  <h2 className="text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white truncate">{selectedParty.name}</h2>
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Statement View</p>
-                </div>
+            <div className="ledger-toolbar glass-panel p-4 no-print">
+              <div className="flex min-w-0 items-center gap-3">
+                {setActiveTab && <button type="button" onClick={() => setActiveTab('parties')} className="secondary-icon-action" aria-label="Back to customers"><ArrowLeft className="h-5 w-5" /></button>}
+                <div className="min-w-0"><p className="eyebrow">CUSTOMER LEDGER</p><h2 className="truncate text-lg font-black text-slate-900 dark:text-white">{selectedParty.name}</h2><p className="record-muted">{selectedParty.phone || 'ফোন নম্বর নেই'}</p></div>
               </div>
-              <div className="ledger-actions flex gap-2">
-                <button 
-                  onClick={() => setShowQuickEntry(true)}
-                  className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
-                >
-                  <Plus className="w-4 h-4" /> Quick Entry
-                </button>
-
-                <button 
-                  onClick={handleSendAlert} 
-                  disabled={isSendingSMS || !selectedParty.phone}
-                  className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all"
-                >
-                  {isSendingSMS ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Phone className="w-3.5 h-3.5" />}
-                  Alert
-                </button>
-                <button 
-                  onClick={handleExportCSV} 
-                  className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  CSV
-                </button>
-                <button 
-                  onClick={handleDownloadHD} 
-                  disabled={isDownloading}
-                  className="flex items-center gap-2 bg-slate-900 dark:bg-primary-600 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 disabled:opacity-50 transition-all"
-                >
-                  {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                  Save Statement
-                </button>
+              <div className="ledger-actions">
+                <button type="button" onClick={() => setShowQuickEntry(true)} className="primary-action"><Plus className="h-4 w-4" /> Quick Entry</button>
+                <button type="button" onClick={handleSendAlert} disabled={isSendingAlert || !selectedParty.phone} className="secondary-action"><MessageCircle className="h-4 w-4" /> {isSendingAlert ? 'Opening…' : 'WhatsApp Alert'}</button>
+                <button type="button" onClick={handleExportCSV} className="secondary-action"><Download className="h-4 w-4" /> CSV</button>
+                <button type="button" onClick={handleDownloadHD} disabled={isDownloading} className="secondary-action"><Download className="h-4 w-4" /> {isDownloading ? 'Preparing…' : 'Save Statement'}</button>
               </div>
             </div>
 
-            <div className="ledger-preview-wrapper w-full min-w-0 no-print bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden overflow-x-auto">
-              <div 
-                ref={ledgerRef}
-                className="statement-document bg-white text-slate-800 p-4 md:p-12 min-h-[700px] w-full min-w-0 mx-auto font-sans"
-              >
-                <div className="statement-document-content w-full min-w-0">
-                  {/* Header */}
-                  <div className="statement-header flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-slate-200 pb-6 mb-8">
-                    <div>
-                      <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 leading-tight">
-                        {user?.business_name || 'Business'}
-                      </h1>
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-1">Hisab Statement Memo</p>
-                    </div>
-                    <div className="statement-date text-left sm:text-right">
-                      <p className="text-sm font-medium text-slate-500 mb-1">{t('date')}</p>
-                      <p className="text-base font-semibold text-slate-800">
-                        {new Date().toLocaleDateString('en-GB')}
-                      </p>
-                    </div>
+            <div className="ledger-summary-grid no-print">
+              <div className="ledger-summary-card"><span>Total Work</span><strong>{money(ledger.totalCredit)}</strong></div>
+              <div className="ledger-summary-card"><span>Total Payment</span><strong>{money(ledger.totalPayment)}</strong></div>
+              <div className="ledger-summary-card"><span>Current Due</span><strong className={ledger.finalBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}>{money(ledger.finalBalance)}</strong></div>
+            </div>
+
+            <div className="ledger-preview-wrapper w-full min-w-0 no-print">
+              <div ref={ledgerRef} className="statement-document">
+                <div className="statement-document-content">
+                  <header className="statement-header">
+                    <div><h1>{user?.business_name || 'Embroidery Statement'}</h1><p>Customer Account Statement</p></div>
+                    <div className="statement-date"><span>STATEMENT DATE</span><strong>{new Date().toLocaleDateString('en-GB')}</strong></div>
+                  </header>
+
+                  <section className="statement-customer-summary">
+                    <div><span>BILLED TO</span><h2>{selectedParty.name}</h2><p>{selectedParty.phone || 'N/A'}</p></div>
+                    <div className="statement-amount-due"><span>AMOUNT DUE</span><strong className={ledger.finalBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}>{money(ledger.finalBalance)}</strong></div>
+                  </section>
+
+                  <div className="statement-desktop-table">
+                    <table className="statement-table">
+                      <thead><tr><th>Date</th><th>Bill</th><th>Work / Design</th><th className="text-right">PCS</th><th className="text-right">Rate</th><th className="text-right">Credit</th><th className="text-right">Payment</th><th className="text-right">Balance</th></tr></thead>
+                      <tbody>{ledger.entries.length === 0 ? <tr><td colSpan={8} className="py-14 text-center text-slate-400">No transactions found</td></tr> : ledger.entries.map(entry => <tr key={entry.id}><td>{new Date(entry.date).toLocaleDateString('en-GB')}</td><td>{entry.bill_no}</td><td>{entry.details || (entry.credit > 0 ? 'Embroidery Work' : 'Cash Payment')}</td><td className="text-right">{entry.credit > 0 ? Number(entry.pcs || 0).toLocaleString('en-IN') : '—'}</td><td className="text-right">{entry.credit > 0 && Number(entry.rate || 0) > 0 ? money(Number(entry.rate)) : '—'}</td><td className="text-right">{entry.credit > 0 ? money(Number(entry.credit)) : '—'}</td><td className="text-right">{entry.payment > 0 ? money(Number(entry.payment)) : '—'}</td><td className={`text-right font-bold ${Number(entry.running_balance) > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{money(Number(entry.running_balance))}</td></tr>)}</tbody>
+                      <tfoot><tr><td colSpan={5}>Statement Summary</td><td className="text-right">{money(ledger.totalCredit)}</td><td className="text-right">{money(ledger.totalPayment)}</td><td className="text-right">{money(ledger.finalBalance)}</td></tr></tfoot>
+                    </table>
                   </div>
 
-                  {/* Customer Info & Summary */}
-                  <div className="statement-customer-summary grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-10">
-                    <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Billed To</p>
-                      <h3 className="text-lg font-bold text-slate-800 mb-1">{selectedParty.name}</h3>
-                      <p className="text-sm text-slate-600 font-medium">{selectedParty.phone || 'N/A'}</p>
-                    </div>
-                    <div className="statement-amount-due flex flex-col justify-center items-start sm:items-end text-left sm:text-right">
-                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Amount Due</p>
-                      <div className={`text-3xl font-bold tracking-tight leading-none ${finalBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                        ৳{finalBalance.toLocaleString('en-IN')}
-                      </div>
-                    </div>
+                  <div className="statement-mobile-list">
+                    {ledger.entries.length === 0 ? <div className="py-10 text-center text-slate-400">No transactions found</div> : ledger.entries.map(entry => (
+                      <article key={entry.id} className="statement-mobile-card">
+                        <div className="flex items-start justify-between gap-3"><div><strong>{entry.bill_no}</strong><span>{new Date(entry.date).toLocaleDateString('en-GB')}</span></div><b className={Number(entry.running_balance) > 0 ? 'text-rose-600' : 'text-emerald-600'}>{money(Number(entry.running_balance))}</b></div>
+                        <p>{entry.details || (entry.credit > 0 ? 'Embroidery Work' : 'Cash Payment')}</p>
+                        {entry.credit > 0 && <div className="statement-mobile-meta"><span>{Number(entry.pcs || 0).toLocaleString('en-IN')} PCS</span><span>Rate {money(Number(entry.rate || 0))}</span><strong>Work {money(Number(entry.credit))}</strong></div>}
+                        {entry.payment > 0 && <div className="statement-mobile-meta"><strong className="text-emerald-600">Payment {money(Number(entry.payment))}</strong></div>}
+                      </article>
+                    ))}
                   </div>
 
-                  {/* Table */}
-                  <table className="statement-table w-full">
-                    <colgroup>
-                      <col style={{ width: '22%' }} />
-                      <col style={{ width: '12%' }} />
-                      <col style={{ width: '18%' }} />
-                      <col style={{ width: '18%' }} />
-                      <col style={{ width: '30%' }} />
-                    </colgroup>
-                    <thead>
-                      <tr className="border-y border-slate-200 bg-slate-50/50">
-                        <th className="py-3 px-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('date')}</th>
-                        <th className="py-3 px-4 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Bill</th>
-                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('credit')}</th>
-                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('payment')}</th>
-                        <th className="py-3 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('balance')}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {entries.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="py-16 text-center text-slate-400 font-medium text-sm">No transactions found</td>
-                        </tr>
-                      ) : entries.map(entry => (
-                        <tr key={entry.id} className="text-sm">
-                          <td className="py-4 px-4 font-medium text-slate-700">{new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
-                          <td className="py-4 px-4 font-medium text-slate-700 text-center">{entry.bill_no}</td>
-                          <td className="py-4 px-4 text-right font-medium text-slate-700">{entry.credit > 0 ? entry.credit.toLocaleString() : '-'}</td>
-                          <td className="py-4 px-4 text-right font-medium text-slate-700">{entry.payment > 0 ? entry.payment.toLocaleString() : '-'}</td>
-                          <td className={`py-4 px-4 text-right font-semibold ${entry.running_balance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                            {entry.running_balance.toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr className="border-t border-slate-200 bg-slate-50">
-                        <td colSpan={2} className="py-4 px-4 text-sm font-semibold text-slate-700">Statement Summary</td>
-                        <td className="py-4 px-4 text-right font-semibold text-slate-700">{tCredit.toLocaleString()}</td>
-                        <td className="py-4 px-4 text-right font-semibold text-slate-700">{tPayment.toLocaleString()}</td>
-                        <td className={`py-4 px-4 text-right text-lg font-bold ${finalBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                          ৳{finalBalance.toLocaleString()}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-
-                  {/* Signatures */}
-                  <div className="statement-signatures mt-24 flex justify-between gap-12 px-8">
-                    <div className="flex-1 border-t border-slate-300 pt-3 text-center">
-                      <p className="text-xs font-semibold text-slate-500">Customer Signature</p>
-                    </div>
-                    <div className="flex-1 border-t border-slate-300 pt-3 text-center">
-                      <p className="text-xs font-semibold text-slate-500">Authorized Signature</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-16 pt-8 border-t border-slate-100 text-center">
-                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Generated by Hisaab Khata Engine</p>
-                  </div>
+                  <footer className="statement-footer">
+                    <div><span>Customer Signature</span></div><div><span>Authorized Signature</span></div>
+                  </footer>
+                  <p className="statement-generated">Generated by Embroidery Statement</p>
                 </div>
               </div>
             </div>
           </div>
         )}
-      </div>
+      </section>
 
-      {showDownloadSuccess && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-6">
-          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Statement Saved to Gallery</span>
-        </div>
-      )}
+      {showDownloadSuccess && <div role="status" className="download-toast"><CheckCircle2 className="h-5 w-5 text-emerald-500" /><span>Statement image downloaded</span></div>}
 
       {showQuickEntry && selectedParty && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-sm animate-in zoom-in-95 relative">
-            <button onClick={() => setShowQuickEntry(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all">
-              <X className="w-5 h-5" />
-            </button>
-            
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-primary-50 dark:bg-primary-900/30 rounded-xl text-primary-600">
-                <ReceiptText className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-black text-lg text-slate-900 dark:text-white uppercase tracking-tight">Quick Entry</h3>
-                <p className="text-xs font-bold text-slate-500">{selectedParty.name}</p>
-              </div>
-            </div>
-            
-            <form onSubmit={(e) => {
-              handleTxSubmit(e);
-              setShowQuickEntry(false);
-            }} className="space-y-4">
-              <div className="flex gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl">
-                <button type="button" onClick={() => setEntryType('work')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${entryType === 'work' ? 'bg-white dark:bg-slate-700 shadow-md text-primary-600' : 'text-slate-500'}`}>Work</button>
-                <button type="button" onClick={() => setEntryType('payment')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${entryType === 'payment' ? 'bg-white dark:bg-slate-700 shadow-md text-emerald-600' : 'text-slate-500'}`}>{t('payment')}</button>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3.5 text-xs font-bold w-full outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
-                <input type="text" placeholder="Bill No" value={billNo} onChange={e => setBillNo(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3.5 text-xs font-bold w-full outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
-              </div>
-              <input 
-                type="number" 
-                placeholder="Amount (৳)" 
-                required
-                value={amount} 
-                onChange={e => setAmount(e.target.value)} 
-                className={`w-full ${entryType === 'work' ? 'bg-primary-50 text-primary-700' : 'bg-emerald-50 text-emerald-700'} dark:bg-slate-800 border-none rounded-xl p-4 text-2xl text-center font-black outline-none focus:ring-2 focus:ring-primary-500 transition-all`} 
-              />
-              <button type="submit" disabled={isSubmitting} className={`w-full font-black py-4 rounded-xl shadow-lg transition-all active:scale-95 uppercase text-xs tracking-widest ${entryType === 'work' ? 'bg-primary-600 hover:bg-primary-700 shadow-primary-500/20' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'} text-white`}>
-                {isSubmitting ? (
-                  <span className="flex items-center justify-center gap-2 animate-pulse">
-                    <Loader2 className="w-5 h-5 animate-spin" /> SAVING...
-                  </span>
-                ) : `Save ${entryType}`}
-              </button>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 modal-backdrop">
+          <section className="glass-modal relative w-full max-w-lg p-6 sm:p-8">
+            <button type="button" onClick={() => setShowQuickEntry(false)} className="absolute right-4 top-4 secondary-icon-action" aria-label="Close"><X className="h-5 w-5" /></button>
+            <div className="mb-6 flex items-center gap-3"><div className="page-heading-icon"><ReceiptText className="h-6 w-6" /></div><div><p className="eyebrow">NEW LEDGER ENTRY</p><h3 className="text-xl font-black text-slate-900 dark:text-white">Quick Entry</h3><p className="record-muted">{selectedParty.name}</p></div></div>
+            <form onSubmit={async event => { const saved = await handleTxSubmit(event); if (saved) setShowQuickEntry(false); }} className="space-y-4">
+              <div className="entry-type-switch"><button type="button" onClick={() => { setEntryType('work'); setAmount(''); }} className={entryType === 'work' ? 'active' : ''}>Work / Production</button><button type="button" onClick={() => { setEntryType('payment'); setPcs(''); setRate(''); setDetails(''); }} className={entryType === 'payment' ? 'active' : ''}>Payment Received</button></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><label className="form-field"><span>Date</span><input type="date" required value={date} onChange={event => setDate(event.target.value)} /></label><label className="form-field"><span>Bill / Memo No.</span><input type="text" value={billNo} onChange={event => setBillNo(event.target.value)} placeholder="e.g. B-1045" /></label></div>
+              {entryType === 'work' && (
+                <>
+                  <label className="form-field"><span>Design / Work Details</span><input type="text" value={details} onChange={event => setDetails(event.target.value)} placeholder="Design name or work description" /></label>
+                  <div className="grid grid-cols-2 gap-3"><label className="form-field"><span>Quantity (PCS)</span><input type="number" min="0" step="1" value={pcs} onChange={event => { setPcs(event.target.value); if (Number(event.target.value) > 0 && Number(rate) > 0) setAmount(String(Number(event.target.value) * Number(rate))); }} placeholder="0" /></label><label className="form-field"><span>Rate per PCS (৳)</span><input type="number" min="0" step="0.01" value={rate} onChange={event => { setRate(event.target.value); if (Number(pcs) > 0 && Number(event.target.value) > 0) setAmount(String(Number(pcs) * Number(event.target.value))); }} placeholder="0.00" /></label></div>
+                  <div className="calculation-hint"><Calculator className="h-4 w-4" /><span>{Number(pcs) > 0 && Number(rate) > 0 ? `${Number(pcs).toLocaleString('en-IN')} PCS × ${money(Number(rate))} = ${money(calculatedAmount)}` : 'PCS ও Rate দিলে Amount স্বয়ংক্রিয়ভাবে হিসাব হবে।'}</span></div>
+                </>
+              )}
+              <label className="form-field"><span>{entryType === 'work' ? 'Work Amount (৳)' : 'Payment Amount (৳)'}</span><input type="number" min="0.01" step="0.01" required readOnly={hasProductionCalculation} value={hasProductionCalculation ? String(calculatedAmount) : amount} onChange={event => setAmount(event.target.value)} placeholder="0.00" className="amount-input" /></label>
+              <button type="submit" disabled={isSubmitting} className="primary-action w-full justify-center py-4 disabled:opacity-50">{isSubmitting ? <><Loader2 className="h-5 w-5 animate-spin" /> Saving…</> : <><Check className="h-5 w-5" /> Save {entryType === 'work' ? 'Work Entry' : 'Payment'}</>}</button>
             </form>
-          </div>
+          </section>
         </div>
       )}
     </div>
