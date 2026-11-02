@@ -52,8 +52,9 @@ const PartiesList: React.FC<PartiesListProps> = ({ parties, transactions, setAct
         </div>
       </div>
         <button
+          type="button"
           onClick={() => setShowAddParty(true)}
-          className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all shadow-lg shadow-primary-500/20"
+          className="min-h-11 flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all shadow-lg shadow-primary-500/20"
         >
           <Plus className="w-4 h-4" />
           {t('add_party')}
@@ -103,7 +104,7 @@ const PartiesList: React.FC<PartiesListProps> = ({ parties, transactions, setAct
       {showAddParty && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-sm animate-in zoom-in-95 relative">
-            <button onClick={() => setShowAddParty(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all">
+            <button type="button" aria-label="Close add party form" onClick={() => setShowAddParty(false)} className="absolute top-4 right-4 min-h-11 min-w-11 grid place-items-center p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all">
               <X className="w-4 h-4" />
             </button>
             <h3 className="text-lg font-black uppercase tracking-tight mb-4 text-slate-900 dark:text-white">{t('add_new_party')}</h3>
