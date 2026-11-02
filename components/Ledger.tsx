@@ -1,11 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Plus, ReceiptText, Trash2, Download, Loader2, CheckCircle2, Landmark, Phone, Edit2, Check, X, ArrowLeft, MessageCircle, Search, Calculator } from 'lucide-react';
-import { Party, Transaction, User as UserType } from '../types';
+import { Party, Transaction, User as UserType, TabType } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import * as htmlToImage from 'html-to-image';
 
 interface LedgerProps {
-  setActiveTab?: (tab: string) => void;
+  setActiveTab?: (tab: TabType) => void;
   parties: Party[];
   selectedParty: Party | null;
   transactions: Transaction[];
@@ -341,12 +341,12 @@ const Ledger: React.FC<LedgerProps> = ({
             <button type="button" onClick={() => setShowQuickEntry(false)} className="absolute right-4 top-4 secondary-icon-action" aria-label="Close"><X className="h-5 w-5" /></button>
             <div className="mb-6 flex items-center gap-3"><div className="page-heading-icon"><ReceiptText className="h-6 w-6" /></div><div><p className="eyebrow">NEW LEDGER ENTRY</p><h3 className="text-xl font-black text-slate-900 dark:text-white">Quick Entry</h3><p className="record-muted">{selectedParty.name}</p></div></div>
             <form onSubmit={async event => { const saved = await handleTxSubmit(event); if (saved) setShowQuickEntry(false); }} className="space-y-4">
-              <div className="entry-type-switch"><button type="button" onClick={() => { setEntryType('work'); setAmount(''); }} className={entryType === 'work' ? 'active' : ''}>Work / Production</button><button type="button" onClick={() => { setEntryType('payment'); setPcs(''); setRate(''); setDetails(''); }} className={entryType === 'payment' ? 'active' : ''}>Payment Received</button></div>
+              <div className="entry-type-switch"><button type="button" onClick={() => { setEntryType('work'); setAmount(''); }} className={entryType === 'work' ? 'active' : ''}>Work / Production</button><button type="button" onClick={() => { setEntryType('payment'); setAmount(''); setPcs(''); setRate(''); setDetails(''); }} className={entryType === 'payment' ? 'active' : ''}>Payment Received</button></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><label className="form-field"><span>Date</span><input type="date" required value={date} onChange={event => setDate(event.target.value)} /></label><label className="form-field"><span>Bill / Memo No.</span><input type="text" value={billNo} onChange={event => setBillNo(event.target.value)} placeholder="e.g. B-1045" /></label></div>
               {entryType === 'work' && (
                 <>
                   <label className="form-field"><span>Design / Work Details</span><input type="text" value={details} onChange={event => setDetails(event.target.value)} placeholder="Design name or work description" /></label>
-                  <div className="grid grid-cols-2 gap-3"><label className="form-field"><span>Quantity (PCS)</span><input type="number" min="0" step="1" value={pcs} onChange={event => { setPcs(event.target.value); if (Number(event.target.value) > 0 && Number(rate) > 0) setAmount(String(Number(event.target.value) * Number(rate))); }} placeholder="0" /></label><label className="form-field"><span>Rate per PCS (৳)</span><input type="number" min="0" step="0.01" value={rate} onChange={event => { setRate(event.target.value); if (Number(pcs) > 0 && Number(event.target.value) > 0) setAmount(String(Number(pcs) * Number(event.target.value))); }} placeholder="0.00" /></label></div>
+                  <div className="grid grid-cols-2 gap-3"><label className="form-field"><span>Quantity (PCS)</span><input type="number" min="0" step="1" value={pcs} onChange={event => { setPcs(event.target.value); if (Number(event.target.value) > 0 && Number(rate) > 0) setAmount(String(Number(event.target.value) * Number(rate))); else setAmount(''); }} placeholder="0" /></label><label className="form-field"><span>Rate per PCS (৳)</span><input type="number" min="0" step="0.01" value={rate} onChange={event => { setRate(event.target.value); if (Number(pcs) > 0 && Number(event.target.value) > 0) setAmount(String(Number(pcs) * Number(event.target.value))); else setAmount(''); }} placeholder="0.00" /></label></div>
                   <div className="calculation-hint"><Calculator className="h-4 w-4" /><span>{Number(pcs) > 0 && Number(rate) > 0 ? `${Number(pcs).toLocaleString('en-IN')} PCS × ${money(Number(rate))} = ${money(calculatedAmount)}` : 'PCS ও Rate দিলে Amount স্বয়ংক্রিয়ভাবে হিসাব হবে।'}</span></div>
                 </>
               )}
