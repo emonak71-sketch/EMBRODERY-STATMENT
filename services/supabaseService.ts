@@ -128,21 +128,42 @@ export const dbService = {
   
   resetPassword: async (email: string) => {
     if (!isConfigured()) return { success: false, message: 'Supabase configuration is missing.' };
-    
-    // Get the current URL without any query params or hashes
-    const redirectUrl = window.location.href.split('#')[0].split('?')[0];
-    
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
+    const cleanEmail = email.trim().toLowerCase();
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
+    if (error) {
+      console.error('Password recovery email request failed:', error);
+      return { success: false, message: 'ইমেইলে ৬ সংখ্যার কোড পাঠানো যায়নি। ইমেইল ঠিকানা যাচাই করে আবার চেষ্টা করুন।' };
+    }
+    return { success: true, message: 'আপনার Gmail-এ ৬ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে।' };
+  },
+
+  verifyResetCode: async (email: string, token: string) => {
+    if (!isConfigured()) return { success: false, message: 'Supabase configuration is missing.' };
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanToken = token.replace(/\D/g, '');
+    if (!/^\d{6}$/.test(cleanToken)) {
+      return { success: false, message: '৬ সংখ্যার সঠিক কোডটি লিখুন।' };
+    }
+    const { error } = await supabase.auth.verifyOtp({
+      email: cleanEmail,
+      token: cleanToken,
+      type: 'recovery'
     });
-    if (error) return { success: false, message: error.message };
-    return { success: true, message: 'পাসওয়ার্ড রিসেট লিঙ্ক আপনার ইমেইলে পাঠানো হয়েছে।' };
+    if (error) {
+      console.error('Password recovery code verification failed:', error);
+      return { success: false, message: 'কোডটি ভুল অথবা মেয়াদ শেষ হয়েছে। নতুন কোড নিন।' };
+    }
+    return { success: true, message: 'কোড যাচাই সফল হয়েছে।' };
   },
 
   updatePassword: async (newPass: string) => {
     if (!isConfigured()) return { success: false, message: 'Supabase configuration is missing.' };
+    if (newPass.length < 8) return { success: false, message: 'নতুন পাসওয়ার্ড অন্তত ৮ অক্ষরের হতে হবে।' };
     const { error } = await supabase.auth.updateUser({ password: newPass });
-    if (error) return { success: false, message: error.message };
-    return { success: true, message: 'Password updated successfully.' };
+    if (error) {
+      console.error('Password update failed:', error);
+      return { success: false, message: 'নতুন পাসওয়ার্ড সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।' };
+    }
+    return { success: true, message: 'পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে।' };
   }
 };
