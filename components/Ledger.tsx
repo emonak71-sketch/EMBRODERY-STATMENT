@@ -257,9 +257,16 @@ const Ledger: React.FC<LedgerProps> = ({
                  <div key={e.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 group border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all">
                    <div className="flex-1 min-w-0">
                       {editingTxId === e.id ? (
-                        <div className="flex gap-2">
-                          <input type="text" className="w-16 bg-white dark:bg-slate-900 p-1 text-[11px] border rounded" value={editBillNo} onChange={(ev) => setEditBillNo(ev.target.value)} />
-                          <input type="number" className="w-24 bg-white dark:bg-slate-900 p-1 text-[11px] border rounded font-black" value={editValue} onChange={(ev) => setEditValue(ev.target.value)} />
+                        <div className="grid w-full grid-cols-2 gap-2">
+                          <input aria-label="Edit bill number" type="text" className="min-w-0 w-full bg-white dark:bg-slate-900 p-2 text-[11px] border rounded-lg" value={editBillNo} onChange={(ev) => setEditBillNo(ev.target.value)} />
+                          <input aria-label="Edit amount" type="number" min="0" step="0.01" className="min-w-0 w-full bg-white dark:bg-slate-900 p-2 text-[11px] border rounded-lg font-black" value={editValue} onChange={(ev) => setEditValue(ev.target.value)} />
+                          {e.credit > 0 && (
+                            <>
+                              <input aria-label="Edit production PCS" type="number" min="0" step="1" className="min-w-0 w-full bg-white dark:bg-slate-900 p-2 text-[11px] border rounded-lg" placeholder="PCS" value={editPcs} onChange={(ev) => setEditPcs(ev.target.value)} />
+                              <input aria-label="Edit production rate" type="number" min="0" step="0.01" className="min-w-0 w-full bg-white dark:bg-slate-900 p-2 text-[11px] border rounded-lg" placeholder="Rate" value={editRate} onChange={(ev) => setEditRate(ev.target.value)} />
+                            </>
+                          )}
+                          <input aria-label="Edit transaction details" type="text" className="col-span-2 min-w-0 w-full bg-white dark:bg-slate-900 p-2 text-[11px] border rounded-lg" placeholder="Details" value={editDetails} onChange={(ev) => setEditDetails(ev.target.value)} />
                         </div>
                       ) : (
                         <div className="text-sm font-bold truncate">
@@ -272,13 +279,13 @@ const Ledger: React.FC<LedgerProps> = ({
                    <div className="flex items-center gap-1">
                      {editingTxId === e.id ? (
                         <>
-                          <button onClick={() => handleSaveEdit(e)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded-lg"><Check className="w-4 h-4" /></button>
-                          <button onClick={() => setEditingTxId(null)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-4 h-4" /></button>
+                          <button type="button" aria-label="Save transaction changes" disabled={isSavingEdit} onClick={() => void handleSaveEdit(e)} className="transaction-action-button text-emerald-500 hover:bg-emerald-50 rounded-lg disabled:opacity-50"><Check className="w-4 h-4" /></button>
+                          <button type="button" aria-label="Cancel transaction edit" onClick={() => setEditingTxId(null)} className="transaction-action-button text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-4 h-4" /></button>
                         </>
                      ) : (
                         <>
-                          <button onClick={() => handleStartEdit(e)} className="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => onDeleteTransaction(e.id)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                          <button type="button" aria-label={`Edit transaction ${e.bill_no}`} onClick={() => handleStartEdit(e)} className="transaction-action-button text-slate-400 hover:text-primary-500 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
+                          <button type="button" aria-label={`Delete transaction ${e.bill_no}`} onClick={() => onDeleteTransaction(e.id)} className="transaction-action-button text-slate-400 hover:text-rose-500 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                         </>
                      )}
                    </div>
@@ -319,15 +326,16 @@ const Ledger: React.FC<LedgerProps> = ({
                 </button>
 
                 <button 
-                  onClick={handleSendAlert} 
-                  disabled={isSendingSMS || !selectedParty.phone}
+                  onClick={handleWhatsAppAlert}
+                  disabled={!selectedParty.phone}
                   className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all"
                 >
-                  {isSendingSMS ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Phone className="w-3.5 h-3.5" />}
-                  Alert
+                  <Phone className="w-3.5 h-3.5" />
+                  WhatsApp
                 </button>
                 <button 
-                  onClick={handleExportCSV} 
+                  onClick={handleExportCSV}
+                  disabled={entries.length === 0}
                   className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
                 >
                   <Download className="w-3.5 h-3.5" />
@@ -408,7 +416,15 @@ const Ledger: React.FC<LedgerProps> = ({
                         <tr key={entry.id} className="text-sm">
                           <td className="py-4 px-4 font-medium text-slate-700">{new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                           <td className="py-4 px-4 font-medium text-slate-700 text-center">{entry.bill_no}</td>
-                          <td className="py-4 px-4 text-right font-medium text-slate-700">{entry.credit > 0 ? entry.credit.toLocaleString() : '-'}</td>
+                          <td className="py-4 px-4 text-right font-medium text-slate-700">
+                            {entry.credit > 0 ? (
+                              <div className="flex flex-col items-end gap-0.5">
+                                <span className="font-bold">৳{entry.credit.toLocaleString('en-IN')}</span>
+                                <span className="max-w-full text-[10px] text-slate-500">{entry.details || 'Embroidery Work'}</span>
+                                {entry.pcs > 0 && entry.rate > 0 && <span className="text-[10px] text-slate-400">{entry.pcs} pcs × ৳{entry.rate.toLocaleString('en-IN')}</span>}
+                              </div>
+                            ) : '-'}
+                          </td>
                           <td className="py-4 px-4 text-right font-medium text-slate-700">{entry.payment > 0 ? entry.payment.toLocaleString() : '-'}</td>
                           <td className={`py-4 px-4 text-right font-semibold ${entry.running_balance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                             {entry.running_balance.toLocaleString()}
@@ -458,7 +474,7 @@ const Ledger: React.FC<LedgerProps> = ({
       {showQuickEntry && selectedParty && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-sm animate-in zoom-in-95 relative">
-            <button onClick={() => setShowQuickEntry(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all">
+            <button type="button" aria-label="Close quick entry" onClick={() => setShowQuickEntry(false)} className="absolute top-4 right-4 min-h-11 min-w-11 grid place-items-center p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all">
               <X className="w-5 h-5" />
             </button>
             
@@ -472,26 +488,50 @@ const Ledger: React.FC<LedgerProps> = ({
               </div>
             </div>
             
-            <form onSubmit={(e) => {
-              handleTxSubmit(e);
-              setShowQuickEntry(false);
-            }} className="space-y-4">
+            <form onSubmit={handleTxSubmit} className="space-y-4">
               <div className="flex gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl">
-                <button type="button" onClick={() => setEntryType('work')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${entryType === 'work' ? 'bg-white dark:bg-slate-700 shadow-md text-primary-600' : 'text-slate-500'}`}>Work</button>
-                <button type="button" onClick={() => setEntryType('payment')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${entryType === 'payment' ? 'bg-white dark:bg-slate-700 shadow-md text-emerald-600' : 'text-slate-500'}`}>{t('payment')}</button>
+                <button type="button" aria-pressed={entryType === 'work'} onClick={() => { setEntryType('work'); setFormError(null); }} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${entryType === 'work' ? 'bg-white dark:bg-slate-700 shadow-md text-primary-600' : 'text-slate-500'}`}>Work / Production</button>
+                <button type="button" aria-pressed={entryType === 'payment'} onClick={() => { setEntryType('payment'); setFormError(null); }} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${entryType === 'payment' ? 'bg-white dark:bg-slate-700 shadow-md text-emerald-600' : 'text-slate-500'}`}>{t('payment')}</button>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3.5 text-xs font-bold w-full outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
-                <input type="text" placeholder="Bill No" value={billNo} onChange={e => setBillNo(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3.5 text-xs font-bold w-full outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
+                <label className="block min-w-0">
+                  <span className="mb-1 block text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Date</span>
+                  <input aria-label="Transaction date" type="date" required value={date} onChange={e => setDate(e.target.value)} className="w-full min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
+                </label>
+                <label className="block min-w-0">
+                  <span className="mb-1 block text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Memo / Bill No.</span>
+                  <input aria-label="Memo or bill number" type="text" placeholder="Bill No" value={billNo} onChange={e => setBillNo(e.target.value)} className="w-full min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
+                </label>
               </div>
-              <input 
-                type="number" 
-                placeholder="Amount (৳)" 
-                required
-                value={amount} 
-                onChange={e => setAmount(e.target.value)} 
-                className={`w-full ${entryType === 'work' ? 'bg-primary-50 text-primary-700' : 'bg-emerald-50 text-emerald-700'} dark:bg-slate-800 border-none rounded-xl p-4 text-2xl text-center font-black outline-none focus:ring-2 focus:ring-primary-500 transition-all`} 
-              />
+              {entryType === 'work' ? (
+                <>
+                  <label className="block space-y-1">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Design / Work Details</span>
+                    <input aria-label="Design or work details" type="text" value={details} onChange={e => setDetails(e.target.value)} maxLength={120} placeholder="Embroidery design / work name" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="block space-y-1">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Production (PCS)</span>
+                      <input aria-label="Production pieces" type="number" inputMode="numeric" min="1" step="1" required value={pcs} onChange={e => setPcs(e.target.value)} placeholder="e.g. 250" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-lg font-black outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Rate / PCS (৳)</span>
+                      <input aria-label="Rate per piece" type="number" inputMode="decimal" min="0.01" step="0.01" required value={rate} onChange={e => setRate(e.target.value)} placeholder="e.g. 4.50" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-lg font-black outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
+                    </label>
+                  </div>
+                  <div className="production-total-panel">
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Calculated work amount</span>
+                    <strong>৳{(Number(pcs) > 0 && Number(rate) > 0 ? Number(pcs) * Number(rate) : 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
+                    <span className="text-[10px] text-slate-400">PCS × Rate per piece</span>
+                  </div>
+                </>
+              ) : (
+                <label className="block space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Payment received (৳)</span>
+                  <input aria-label="Payment amount" type="number" inputMode="decimal" min="0.01" step="0.01" required placeholder="Amount (৳)" value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-emerald-50 text-emerald-700 dark:bg-slate-800 border border-emerald-100 dark:border-slate-700 rounded-xl p-4 text-2xl text-center font-black outline-none focus:ring-2 focus:ring-emerald-500 transition-all" />
+                </label>
+              )}
+              {formError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300">{formError}</p>}
               <button type="submit" disabled={isSubmitting} className={`w-full font-black py-4 rounded-xl shadow-lg transition-all active:scale-95 uppercase text-xs tracking-widest ${entryType === 'work' ? 'bg-primary-600 hover:bg-primary-700 shadow-primary-500/20' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'} text-white`}>
                 {isSubmitting ? (
                   <span className="flex items-center justify-center gap-2 animate-pulse">
