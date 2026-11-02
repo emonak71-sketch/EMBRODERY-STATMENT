@@ -90,7 +90,7 @@ try {
     if (url.pathname.endsWith('/user') && method === 'GET') {
       return fulfillJson(route, 200, mockUser);
     }
-    if (url.pathname.endsWith('/user') && method === 'PATCH') {
+    if (url.pathname.endsWith('/user') && (method === 'PUT' || method === 'PATCH')) {
       const body = request.postDataJSON() || {};
       if (body.data?.business_name) mockUser.user_metadata.business_name = body.data.business_name;
       if (body.email) mockUser.email = body.email;
