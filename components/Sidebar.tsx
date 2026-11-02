@@ -129,7 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <div className="flex items-center gap-2">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Client Parties</h3>
                 {deletedParties.length > 0 && (
-                  <button onClick={() => setShowRecycleBin(true)} className="p-1 text-slate-400 hover:text-primary-600 transition-colors relative">
+                  <button type="button" aria-label="Open recycle bin" onClick={() => setShowRecycleBin(true)} className="min-h-11 min-w-11 grid place-items-center rounded-xl text-slate-400 hover:text-primary-600 transition-colors relative">
                     <Trash2 className="w-3.5 h-3.5" />
                     <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-primary-500 rounded-full border border-white dark:border-slate-900 animate-pulse" />
                   </button>
