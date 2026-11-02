@@ -359,9 +359,9 @@ const App: React.FC = () => {
       <Auth 
         onLogin={handleLogin} 
         onSignup={handleSignup} 
-        onResetপাসওয়ার্ড={handleResetPassword}
+        onResetPassword={handleResetPassword}
         onVerifyResetCode={handleVerifyResetCode}
-        onUpdateপাসওয়ার্ড={handleUpdatePassword}
+        onUpdatePassword={handleUpdatePassword}
         isResetting={isResettingPassword}
       />
     );
