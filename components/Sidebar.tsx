@@ -83,11 +83,15 @@ const Sidebar: React.FC<SidebarProps> = ({
       <aside className={`app-sidebar fixed inset-y-0 left-0 z-[70] w-[88vw] max-w-72 border-r border-white/70 dark:border-white/10 shadow-2xl shadow-slate-900/10 transition-transform duration-500 ease-[cubic-bezier(.22,1,.36,1)] md:relative md:w-72 md:max-w-none md:translate-x-0 no-print ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 h-full flex flex-col overflow-hidden">
           <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3 font-black text-lg text-slate-900 dark:text-white uppercase tracking-tighter">
-              <div className="p-2 bg-primary-600 rounded-lg shadow-lg shadow-primary-500/30">
-                <Landmark className="w-6 h-6 text-white" />
+            <div className="flex min-w-0 items-center gap-3 font-black text-lg text-slate-900 dark:text-white uppercase tracking-tighter">
+              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white shadow-md shadow-sky-500/10 ring-1 ring-sky-100 dark:ring-sky-900/40">
+                <img
+                  src="/embroidery-statement-logo.jpg"
+                  alt="Embroidery Statement"
+                  className="h-full w-full scale-[1.55] origin-top object-cover object-top"
+                />
               </div>
-              <span className="leading-none">EMBRODERY<br/><span className="text-[9px] font-bold text-slate-400">STATEMENT</span></span>
+              <span className="leading-none">EMBROIDERY<br/><span className="text-[9px] font-bold text-slate-400">STATEMENT</span></span>
             </div>
             <button onClick={() => setIsOpen(false)} className="md:hidden p-1">
               <X className="w-5 h-5" />
