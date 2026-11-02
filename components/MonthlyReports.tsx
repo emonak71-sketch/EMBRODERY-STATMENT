@@ -66,7 +66,7 @@ const MonthlyReports: React.FC<MonthlyReportsProps> = ({ transactions, parties, 
     const sortedParties = Object.values(monthDetails.partyTotals).sort((a: any, b: any) => b.total - a.total) as {name: string, total: number, memos: number, id: string}[];
 
     return (
-      <div className="space-y-6 pt-14 md:pt-0 animate-in fade-in">
+      <div className="space-y-6  animate-in fade-in">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setSelectedMonth(null)}
@@ -154,7 +154,7 @@ const MonthlyReports: React.FC<MonthlyReportsProps> = ({ transactions, parties, 
   }
 
   return (
-    <div className="space-y-6 pt-14 md:pt-0">
+    <div className="space-y-6 ">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 animate-in fade-in slide-in-from-left-8 duration-700 ease-out">
         <div className="flex items-center gap-4">
           <button 
