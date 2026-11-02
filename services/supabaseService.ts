@@ -77,7 +77,7 @@ export const dbService = {
       expenses: [],
       sales: []
     };
-  }
+  },
 
   addParty: async (party: Omit<Party, 'id' | 'created_at'>) => {
     const { data: { session } } = await supabase.auth.getSession();
