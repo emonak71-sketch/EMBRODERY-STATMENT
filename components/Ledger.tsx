@@ -259,7 +259,7 @@ const Ledger: React.FC<LedgerProps> = ({
                       {editingTxId === e.id ? (
                         <div className="grid w-full grid-cols-2 gap-2">
                           <input aria-label="Edit bill number" type="text" className="min-w-0 w-full bg-white dark:bg-slate-900 p-2 text-[11px] border rounded-lg" value={editBillNo} onChange={(ev) => setEditBillNo(ev.target.value)} />
-                          <input aria-label="Edit amount" type="number" min="0" step="0.01" className="min-w-0 w-full bg-white dark:bg-slate-900 p-2 text-[11px] border rounded-lg font-black" value={editValue} onChange={(ev) => setEditValue(ev.target.value)} />
+                          <input aria-label="Edit amount" type="number" min="0" step="0.01" className="min-w-0 w-full bg-white dark:bg-slate-900 p-2 text-[11px] border rounded-lg font-black disabled:opacity-70" value={e.credit > 0 && Number(editPcs) > 0 && Number(editRate) > 0 ? String(Number(editPcs) * Number(editRate)) : editValue} disabled={e.credit > 0 && Number(editPcs) > 0 && Number(editRate) > 0} onChange={(ev) => setEditValue(ev.target.value)} />
                           {e.credit > 0 && (
                             <>
                               <input aria-label="Edit production PCS" type="number" min="0" step="1" className="min-w-0 w-full bg-white dark:bg-slate-900 p-2 text-[11px] border rounded-lg" placeholder="PCS" value={editPcs} onChange={(ev) => setEditPcs(ev.target.value)} />
