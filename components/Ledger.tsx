@@ -201,7 +201,7 @@ const Ledger: React.FC<LedgerProps> = ({
       setFormError('WhatsApp বার্তা পাঠাতে আগে এই কাস্টমারের ফোন নম্বর যোগ করুন।');
       return;
     }
-    const digits = selectedParty.phone.replace(/\\D/g, '');
+    const digits = selectedParty.phone.replace(/\D/g, '');
     const phone = digits.startsWith('0') ? `88${digits}` : digits;
     if (phone.length < 8) {
       setFormError('কাস্টমারের ফোন নম্বরটি সঠিক নয়।');
@@ -215,27 +215,27 @@ const Ledger: React.FC<LedgerProps> = ({
   const handleExportCSV = () => {
     if (!selectedParty || entries.length === 0) return;
 
-    const csvCell = (value: string | number | null | undefined) => {
+    const csvCell = (value: string | number | null | undefined, protectFormula = false) => {
       let text = String(value ?? '');
-      if (/^[=+@-]/.test(text)) text = `'${text}`;
-      return `"${text.replace(/"/g, '""')}"`;
+      if (protectFormula && /^[=+@-]/.test(text)) text = "'" + text;
+      return '"' + text.replace(/"/g, '""') + '"';
     };
     const headers = ['Date', 'Bill No', 'Details', 'PCS', 'Rate', 'Work Credit', 'Payment', 'Balance'];
     const rows = entries.map(entry => {
       const d = new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
       return [
-        csvCell(d), csvCell(entry.bill_no), csvCell(entry.details),
+        csvCell(d), csvCell(entry.bill_no, true), csvCell(entry.details, true),
         csvCell(entry.pcs || 0), csvCell(entry.rate || 0),
         csvCell(entry.credit || 0), csvCell(entry.payment || 0),
         csvCell(entry.running_balance || 0)
       ].join(',');
     });
-    const csvContent = '\\uFEFF' + [headers.map(csvCell).join(','), ...rows].join('\\r\\n');
+    const csvContent = String.fromCharCode(0xFEFF) + [headers.map(csvCell).join(','), ...rows].join(String.fromCharCode(13, 10));
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${selectedParty.name.replace(/[^a-z0-9-_]/gi, '_')}_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = selectedParty.name.replace(/[^a-z0-9-_]/gi, '_') + '_Ledger_' + new Date().toISOString().split('T')[0] + '.csv';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
