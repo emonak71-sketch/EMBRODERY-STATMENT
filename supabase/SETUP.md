@@ -9,10 +9,12 @@ The app uses Supabase Auth's password-recovery OTP flow.
 3. Set the email subject to **Your Embroidery Statement password reset code**.
 4. Replace the template body with [recovery-email.html](./templates/recovery-email.html).
 5. Keep the Supabase variable `{{ .Token }}` in the template. Do not use `{{ .ConfirmationURL }}` when sending a six-digit code.
-6. Under **Authentication → URL Configuration**, set the Site URL to the production app URL and add the production URL to Redirect URLs.
+6. Under **Authentication → URL Configuration**, set the Site URL to `https://embroidery-statement-v10.vercel.app` and add that URL to Redirect URLs.
 7. Configure a production SMTP provider under **Authentication → SMTP Settings**. The built-in sender is rate-limited and is not intended for production delivery.
 
 The app verifies the code with Supabase Auth using `verifyOtp({ type: 'recovery' })`. A verified recovery session is required before the new password can be saved.
+
+The current Vercel production URL is `https://embroidery-statement-v10.vercel.app`. Vercel SSO protection is intentionally enabled until the database migration and real email-delivery test are complete. Do not make the deployment public before the RLS migration has been applied and verified.
 
 ## 2. Account-level data isolation (mandatory before multi-user production)
 
