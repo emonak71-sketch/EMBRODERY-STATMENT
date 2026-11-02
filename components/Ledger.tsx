@@ -186,7 +186,7 @@ const Ledger: React.FC<LedgerProps> = ({
   };
 
   return (
-    <div className="flex flex-col xl:flex-row gap-6 pb-20">
+    <div className="flex min-w-0 w-full max-w-full flex-col xl:flex-row gap-6 pb-20">
       
             {/* Forms Area / Transaction History Wrapper */}
       <div className="w-full xl:w-[300px] space-y-4 no-print order-2 xl:order-2 xl:sticky xl:top-4 self-start">
@@ -200,7 +200,7 @@ const Ledger: React.FC<LedgerProps> = ({
                  <div key={e.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 group border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all">
                    <div className="flex-1 min-w-0">
                       {editingTxId === e.id ? (
-                        <div className="flex gap-2">
+                        <div className="ledger-actions flex gap-2">
                           <input type="text" className="w-16 bg-white dark:bg-slate-900 p-1 text-[11px] border rounded" value={editBillNo} onChange={(ev) => setEditBillNo(ev.target.value)} />
                           <input type="number" className="w-24 bg-white dark:bg-slate-900 p-1 text-[11px] border rounded font-black" value={editValue} onChange={(ev) => setEditValue(ev.target.value)} />
                         </div>
@@ -241,7 +241,7 @@ const Ledger: React.FC<LedgerProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex justify-between items-center gap-2 bg-white dark:bg-slate-900 p-4 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-md no-print">
+            <div className="ledger-toolbar flex justify-between items-center gap-2 bg-white dark:bg-slate-900 p-4 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-md no-print">
               <div className="flex items-center gap-3 truncate">
                 {setActiveTab && (
                   <button onClick={() => setActiveTab('parties')} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-300">
@@ -287,7 +287,7 @@ const Ledger: React.FC<LedgerProps> = ({
               </div>
             </div>
 
-            <div className="w-full no-print bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden overflow-x-auto">
+            <div className="ledger-preview-wrapper w-full min-w-0 no-print bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden overflow-x-auto">
               <div 
                 ref={ledgerRef}
                 className="bg-white text-slate-800 p-8 md:p-12 min-h-[700px] w-full mx-auto font-sans"

@@ -299,7 +299,7 @@ const Dashboard: React.FC<{
             <div 
               key={i}
               onClick={(card as any).onClick}
-              className={`bg-white dark:bg-slate-900 p-5 rounded-[1.5rem] shadow-sm border border-slate-200 dark:border-slate-800 transition-all hover:-translate-y-1 hover:shadow-xl animate-in zoom-in-95 fade-in duration-500 ${(card as any).onClick ? 'cursor-pointer' : ''}`}
+              className={`dashboard-stat-card bg-white dark:bg-slate-900 p-5 rounded-[1.5rem] shadow-sm border border-slate-200 dark:border-slate-800 transition-all hover:-translate-y-1 hover:shadow-xl animate-in zoom-in-95 fade-in duration-500 ${(card as any).onClick ? 'cursor-pointer' : ''}`}
               style={{ animationDelay: `${i * 100}ms` }}
             >
               <div className="flex justify-between items-start mb-4">
