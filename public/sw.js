@@ -1,4 +1,4 @@
-const CACHE_NAME = 'embrodery-v2';
+const CACHE_NAME = 'embrodery-v10';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
