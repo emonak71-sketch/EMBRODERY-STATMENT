@@ -17,6 +17,7 @@ const PartiesList: React.FC<PartiesListProps> = ({ parties, transactions, setAct
   const [newPartyName, setNewPartyName] = React.useState('');
   const [newPartyPhone, setNewPartyPhone] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const activeParties = parties.filter(party => !party.is_deleted);
 
   const handleAddParty = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,12 +30,13 @@ const PartiesList: React.FC<PartiesListProps> = ({ parties, transactions, setAct
       setShowAddParty(false);
     } catch (err) {
       console.error(err);
+      alert(err instanceof Error ? err.message : 'পার্টি যোগ করা যায়নি। আবার চেষ্টা করুন।');
     } finally {
       setIsSubmitting(false);
     }
   };
   return (
-    <div className="space-y-6 pt-14 md:pt-0">
+    <div className="space-y-6 ">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 animate-in fade-in slide-in-from-left-8 duration-700 ease-out">
         <div className="flex items-center gap-4">
           <button 
@@ -59,11 +61,11 @@ const PartiesList: React.FC<PartiesListProps> = ({ parties, transactions, setAct
       </div>
             
       <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden animate-in zoom-in-95 fade-in duration-500">
-        {parties.length === 0 ? (
+        {activeParties.length === 0 ? (
           <div className="p-8 text-center text-slate-500 text-sm font-bold">{t('no_parties_found')}</div>
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {parties.map(party => {
+            {activeParties.map(party => {
               const partyTxs = transactions.filter(t => t.party_id === party.id);
               const totalCredit = partyTxs.reduce((sum, t) => sum + (Number(t.credit) || 0), 0);
               const totalPayment = partyTxs.reduce((sum, t) => sum + (Number(t.payment) || 0), 0);
