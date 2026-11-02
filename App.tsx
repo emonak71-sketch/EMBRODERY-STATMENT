@@ -198,7 +198,13 @@ const App: React.FC = () => {
   const handleSignup = async (email: string, password: string, businessName: string) => dbService.signup(email, password, businessName);
 
   const handleLogout = async () => {
-    await dbService.logout();
+    try {
+      await dbService.logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      alert('লগ-আউট সম্পন্ন করা যায়নি। আবার চেষ্টা করুন।');
+      return;
+    }
     setIsResettingPassword(false);
     setIsLocked(false);
     setUser(null);
@@ -306,9 +312,14 @@ const App: React.FC = () => {
 
   const handleVerifyResetCode = async (email: string, code: string) => {
     setIsResettingPassword(true);
-    const result = await dbService.verifyResetCode(email, code);
-    if (!result.success) setIsResettingPassword(false);
-    return result;
+    try {
+      const result = await dbService.verifyResetCode(email, code);
+      if (!result.success) setIsResettingPassword(false);
+      return result;
+    } catch (error) {
+      setIsResettingPassword(false);
+      throw error;
+    }
   };
 
   const handleUpdatePassword = async (newPassword: string) => {
