@@ -23,5 +23,9 @@ jobs:
         run: npm audit --audit-level=moderate
       - name: TypeScript validation
         run: npm run typecheck
+      - name: TypeScript validation
+        run: npm run typecheck
+      - name: Static interaction and mobile QA
+        run: npm run qa:static
       - name: Production build
         run: npm run build
