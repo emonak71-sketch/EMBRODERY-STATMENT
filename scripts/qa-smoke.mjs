@@ -71,6 +71,8 @@ try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
   const page = await context.newPage();
   page.on('pageerror', error => pageErrors.push(error.message));
+  page.on('request', request => console.log('REQUEST', request.method(), request.url()));
+  page.on('console', message => console.log('CONSOLE', message.type(), message.text()));
 
   await page.route(supabaseHost + '/auth/v1/**', async route => {
     const request = route.request();
