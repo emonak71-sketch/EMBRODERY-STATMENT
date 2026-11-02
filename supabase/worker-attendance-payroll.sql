@@ -21,7 +21,7 @@ create table if not exists public."WorkerAttendance" (
 create table if not exists public."WorkerPayroll" (
  id uuid primary key default gen_random_uuid(),
  user_id uuid not null references auth.users(id) on delete cascade,
- worker_id uuid not null, month_key text not null check(month_key ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),)$'),
+ worker_id uuid not null, month_key text not null check (month_key ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),
  basic_salary numeric(12,2) not null default 0 check(basic_salary>=0),
  overtime_hours numeric(8,2) not null default 0 check(overtime_hours>=0),
  overtime_amount numeric(12,2) not null default 0 check(overtime_amount>=0),
