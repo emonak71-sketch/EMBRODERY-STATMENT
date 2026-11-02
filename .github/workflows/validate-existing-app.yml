@@ -1,0 +1,25 @@
+name: Validate existing app
+on:
+  push:
+    branches:
+      - in-place-safe-otp-ui-2026-11-02
+  pull_request:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Check dependency security
+        run: npm audit --audit-level=moderate
+      - name: Build production bundle
+        run: npm run build
