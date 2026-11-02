@@ -351,7 +351,8 @@ const App: React.FC = () => {
         {activeTab === 'monthly_reports' && <MonthlyReports setActiveTab={setActiveTab} transactions={transactions} parties={parties} />}
         {activeTab === 'monthly_collections' && <MonthlyCollections setActiveTab={setActiveTab} transactions={transactions} parties={parties} />}
         {activeTab === 'settings' && (
-          <Settings 
+          <Settings
+            setActiveTab={setActiveTab}
             user={user}
             onUpdateProfile={handleUpdateProfile}
           />
