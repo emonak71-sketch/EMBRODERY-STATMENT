@@ -8,6 +8,7 @@ interface Stats {
   totalCollected: number;
   totalOutstanding: number;
   monthlyWork: number;
+  monthlyCollected: number;
 }
 
 const Dashboard: React.FC<{ 
@@ -102,7 +103,7 @@ const Dashboard: React.FC<{
     },
     {
       title: t('total_parties'),
-      amount: parties.length,
+      amount: parties.filter(p => !p.is_deleted).length,
       icon: <Users className="w-5 h-5 text-purple-500" />,
       color: 'bg-purple-50 dark:bg-purple-900/10',
       isDynamic: false,
@@ -296,10 +297,12 @@ const Dashboard: React.FC<{
           const isPositive = card.isDynamic && card.amount > 0;
           
           return (
-            <div 
+            <button
+              type="button"
               key={i}
-              onClick={(card as any).onClick}
-              className={`dashboard-stat-card bg-white dark:bg-slate-900 p-5 rounded-[1.5rem] shadow-sm border border-slate-200 dark:border-slate-800 transition-all hover:-translate-y-1 hover:shadow-xl animate-in zoom-in-95 fade-in duration-500 ${(card as any).onClick ? 'cursor-pointer' : ''}`}
+              onClick={card.onClick}
+              aria-label={`Open ${card.title} details`}
+              className="dashboard-stat-card w-full text-left bg-white dark:bg-slate-900 p-5 rounded-[1.5rem] shadow-sm border border-slate-200 dark:border-slate-800 transition-all hover:-translate-y-1 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-500 animate-in zoom-in-95 fade-in duration-500"
               style={{ animationDelay: `${i * 100}ms` }}
             >
               <div className="flex justify-between items-start mb-4">
@@ -313,7 +316,7 @@ const Dashboard: React.FC<{
                   {card.title === t('total_parties') ? card.amount : `৳${card.amount.toLocaleString('en-IN')}`}
                 </h2>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
