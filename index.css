@@ -212,3 +212,101 @@ button { -webkit-tap-highlight-color: transparent; }
   html, body, #root { min-width: 0; min-height: 0; overflow: visible !important; }
   .app-shell { display: block !important; height: auto !important; overflow: visible !important; background: #fff !important; }
 }
+
+
+/* Mobile statement layout: keep the complete memo and all five columns inside the viewport. */
+@media (max-width: 640px) {
+  .app-main .ledger-preview-wrapper {
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+  }
+
+  .app-main .ledger-preview-wrapper .statement-document {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 1rem !important;
+  }
+
+  .app-main .ledger-preview-wrapper .statement-document-content {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .app-main .ledger-preview-wrapper .statement-table {
+    display: table;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse;
+  }
+
+  .app-main .ledger-preview-wrapper .statement-table th,
+  .app-main .ledger-preview-wrapper .statement-table td {
+    min-width: 0 !important;
+    padding: .7rem .22rem !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .app-main .ledger-preview-wrapper .statement-table th {
+    font-size: clamp(7px, 2.05vw, 9px) !important;
+    letter-spacing: 0 !important;
+    line-height: 1.25;
+  }
+
+  .app-main .ledger-preview-wrapper .statement-table td {
+    font-size: clamp(8px, 2.25vw, 10px) !important;
+    line-height: 1.35;
+  }
+
+  .app-main .ledger-preview-wrapper .statement-table tfoot td:first-child {
+    font-size: 8px !important;
+  }
+
+  .statement-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+  }
+
+  .statement-date {
+    text-align: left !important;
+  }
+
+  .statement-customer-summary {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 1rem !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  .statement-amount-due {
+    align-items: flex-start !important;
+    text-align: left !important;
+  }
+
+  .statement-amount-due > div {
+    font-size: clamp(1.5rem, 7vw, 2rem) !important;
+  }
+
+  .statement-signatures {
+    gap: 1rem !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .statement-signatures > div {
+    min-width: 0;
+  }
+
+  .statement-signatures p {
+    font-size: 9px !important;
+  }
+
+  .dashboard-stat-value {
+    font-size: clamp(.82rem, 3.5vw, 1.05rem) !important;
+    white-space: nowrap;
+    letter-spacing: -.04em !important;
+  }
+}
