@@ -11,36 +11,6 @@ import Settings from './components/Settings';
 import MonthlyReports from './components/MonthlyReports';
 import MonthlyCollections from './components/MonthlyCollections';
 import PartiesList from './components/PartiesList';
-import { BiometricLock } from './components/BiometricLock';
-
-const sendSMSAlert = async (phone: string, message: string) => {
-  try {
-    // Generic SMS gateway integration
-    console.log(`[SMS Gateway] Sending SMS to ${phone}...`);
-    console.log(`[SMS Gateway] Message: ${message}`);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Example implementation for a real API (e.g., Twilio, Nexmo, local providers):
-    // const response = await fetch('https://api.smsgateway.com/v1/send', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer YOUR_API_KEY' },
-    //   body: JSON.stringify({ to: phone, text: message })
-    // });
-    
-    return { success: true, message: 'SMS sent successfully' };
-  } catch (error) {
-    console.error('SMS sending failed:', error);
-    return { success: false, message: 'Failed to send SMS' };
-  }
-};
-
-
-const isMobileDevice = () => {
-  if (typeof navigator === 'undefined') return false;
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-};
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -53,7 +23,8 @@ const App: React.FC = () => {
   const [isMisconfigured, setIsMisconfigured] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  const [isLocked, setIsLocked] = useState(() => localStorage.getItem('app_lock_enabled') === 'true');
+  const [dataError, setDataError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [stats, setStats] = useState({
     totalCredit: 0,
     totalCollected: 0,
@@ -64,45 +35,42 @@ const App: React.FC = () => {
 
   const refreshData = useCallback(async () => {
     if (!user) return;
+    setIsRefreshing(true);
     try {
       const db = await dbService.getInitialData();
+      // Update the UI only after both core tables have loaded successfully.
+      // A network/schema error must never make existing records appear deleted.
       setParties(db.parties);
-                        setTransactions(db.transactions);
+      setTransactions(db.transactions);
+      setDataError(null);
 
-      // Only count non-deleted parties for stats
       const activePartiesIds = new Set(db.parties.filter(p => !p.is_deleted).map(p => p.id));
       const activeTransactions = db.transactions.filter(t => activePartiesIds.has(t.party_id));
-
       const totalCredit = activeTransactions.reduce((sum, item) => sum + (Number(item.credit) || 0), 0);
       const totalCollected = activeTransactions.reduce((sum, item) => sum + (Number(item.payment) || 0), 0);
-      
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth();
-      const currentYear = currentDate.getFullYear();
-      
-      const monthlyCollected = activeTransactions.filter(t => {
-        if (!t.date) return false;
-        const d = new Date(t.date);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-      }).reduce((sum, item) => sum + (Number(item.payment) || 0), 0);
 
-      const monthlyWork = activeTransactions.filter(t => {
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      const thisMonth = activeTransactions.filter(t => {
         if (!t.date) return false;
         const d = new Date(t.date);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-      }).reduce((sum, item) => sum + (Number(item.credit) || 0), 0);
+        return !Number.isNaN(d.getTime()) && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      });
 
       setStats({
         totalCredit,
         totalCollected,
         totalOutstanding: totalCredit - totalCollected,
-        monthlyWork,
-        monthlyCollected
+        monthlyWork: thisMonth.reduce((sum, item) => sum + (Number(item.credit) || 0), 0),
+        monthlyCollected: thisMonth.reduce((sum, item) => sum + (Number(item.payment) || 0), 0)
       });
     } catch (err) {
-      console.error('Failed to fetch data:', err);
+      console.error('Failed to fetch workspace data:', err);
+      setDataError(err instanceof Error ? err.message : 'ডেটা লোড করা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।');
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   }, [user]);
 
@@ -142,6 +110,7 @@ const App: React.FC = () => {
         setUser(null);
         setParties([]);
         setTransactions([]);
+        setDataError(null);
         setStats({
           totalCredit: 0,
           totalCollected: 0,
@@ -173,16 +142,6 @@ const App: React.FC = () => {
 
   
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && localStorage.getItem('app_lock_enabled') === 'true') {
-        setIsLocked(true);
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, []);
-
-  useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
@@ -194,7 +153,6 @@ const App: React.FC = () => {
 
   const handleLogin = async (e: string, p: string) => {
     const res = await dbService.login(e, p);
-    if (res.success) setIsLocked(false);
     return res;
   };
 
@@ -209,21 +167,13 @@ const App: React.FC = () => {
   };
 
   const handleAddParty = async (name: string, phone: string) => {
-    try {
-      await dbService.addParty({ name, phone, is_deleted: false });
-      await refreshData();
-    } catch (err: any) {
-      alert(`Error adding party: ${err.message || 'Unknown error'}`);
-    }
+    await dbService.addParty({ name, phone, is_deleted: false });
+    await refreshData();
   };
 
   const handleEditParty = async (id: string, updates: Partial<Party>) => {
-    try {
-      await dbService.updateParty(id, updates);
-      await refreshData();
-    } catch (err: any) {
-      alert(`Error updating party: ${err.message || 'Unknown error'}`);
-    }
+    await dbService.updateParty(id, updates);
+    await refreshData();
   };
 
   const handleDeleteParty = async (id: string) => {
@@ -264,21 +214,13 @@ const App: React.FC = () => {
   };
 
   const handleAddTransaction = async (data: Omit<Transaction, 'id' | 'created_at'>) => {
-    try {
-      await dbService.addTransaction(data);
-      await refreshData();
-    } catch (err: any) {
-      alert(`Error adding transaction: ${err.message || 'Unknown error'}`);
-    }
+    await dbService.addTransaction(data);
+    await refreshData();
   };
 
   const handleEditTransaction = async (id: string, updates: Partial<Transaction>) => {
-    try {
-      await dbService.updateTransaction(id, updates);
-      await refreshData();
-    } catch (err: any) {
-      alert(`Error updating transaction: ${err.message || 'Unknown error'}`);
-    }
+    await dbService.updateTransaction(id, updates);
+    await refreshData();
   };
 
   const [txToDelete, setTxToDelete] = useState<string | null>(null);
@@ -313,15 +255,10 @@ const App: React.FC = () => {
   };
 
   const handleVerifyResetCode = async (email: string, code: string) => {
-    setIsResettingPassword(true);
-    try {
-      const result = await dbService.verifyResetCode(email, code);
-      if (!result.success) setIsResettingPassword(false);
-      return result;
-    } catch (error) {
-      setIsResettingPassword(false);
-      throw error;
-    }
+    const result = await dbService.verifyResetCode(email, code);
+    // Only reveal the new-password form after Supabase confirms the OTP.
+    if (result.success) setIsResettingPassword(true);
+    return result;
   };
 
   const handleUpdatePassword = async (newPass: string) => {
@@ -359,16 +296,12 @@ const App: React.FC = () => {
       <Auth 
         onLogin={handleLogin} 
         onSignup={handleSignup} 
-        onResetপাসওয়ার্ড={handleResetPassword}
+        onResetPassword={handleResetPassword}
         onVerifyResetCode={handleVerifyResetCode}
-        onUpdateপাসওয়ার্ড={handleUpdatePassword}
+        onUpdatePassword={handleUpdatePassword}
         isResetting={isResettingPassword}
       />
     );
-  }
-
-  if (user && isLocked) {
-    return <BiometricLock onUnlock={() => setIsLocked(false)} onLogout={handleLogout} />;
   }
 
   return (
@@ -390,6 +323,17 @@ const App: React.FC = () => {
       />
 
       <main className="app-main min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 no-print">
+        {dataError && (
+          <div role="alert" className="mb-5 flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50/90 p-4 text-sm text-amber-900 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-extrabold">ডেটা লোড করা যায়নি — আপনার পুরোনো রেকর্ড মুছে যায়নি।</p>
+              <p className="mt-1 text-xs opacity-80">সংযোগ ঠিক হলে আবার চেষ্টা করুন। {dataError}</p>
+            </div>
+            <button type="button" onClick={() => void refreshData()} disabled={isRefreshing} className="shrink-0 rounded-xl bg-amber-900 px-4 py-2.5 text-xs font-black text-white transition hover:bg-amber-800 disabled:opacity-60 dark:bg-amber-200 dark:text-amber-950">
+              {isRefreshing ? 'লোড হচ্ছে…' : 'আবার চেষ্টা করুন'}
+            </button>
+          </div>
+        )}
         {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} />}
         {activeTab === 'parties' && <PartiesList parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
         {activeTab === 'ledger' && (
@@ -402,7 +346,6 @@ const App: React.FC = () => {
             onAddTransaction={handleAddTransaction}
             onEditTransaction={handleEditTransaction}
             onDeleteTransaction={handleDeleteTransaction}
-            onSendSMS={sendSMSAlert}
           />
         )}
         {activeTab === 'monthly_reports' && <MonthlyReports setActiveTab={setActiveTab} transactions={transactions} parties={parties} />}
@@ -431,7 +374,6 @@ const App: React.FC = () => {
               onAddTransaction={handleAddTransaction}
               onEditTransaction={handleEditTransaction}
               onDeleteTransaction={handleDeleteTransaction}
-              onSendSMS={sendSMSAlert}
             />
          )}
       </div>
