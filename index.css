@@ -321,3 +321,88 @@ button { -webkit-tap-highlight-color: transparent; }
     padding-top: calc(76px + env(safe-area-inset-top, 0px)) !important;
   }
 }
+
+
+/* V10 professional finish — restrained cobalt, cyan glass, accessible motion. */
+:root {
+  --brand-cobalt: #1749c8;
+  --brand-cyan: #06b6d4;
+  --brand-ink: #10234f;
+  --surface-glass: rgba(255,255,255,.78);
+  --surface-glass-border: rgba(255,255,255,.72);
+}
+body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: -0.012em;
+}
+.app-shell {
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(37,99,235,.075), transparent 36rem),
+    radial-gradient(ellipse at 100% 100%, rgba(6,182,212,.07), transparent 34rem),
+    linear-gradient(145deg, rgba(248,250,255,.94), rgba(239,246,255,.82));
+}
+.dark .app-shell {
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(37,99,235,.17), transparent 36rem),
+    radial-gradient(ellipse at 100% 100%, rgba(6,182,212,.12), transparent 34rem),
+    linear-gradient(145deg, #071126, #020617 76%);
+}
+.app-main h1, .app-main h2, .app-main h3 {
+  letter-spacing: -.035em;
+  text-wrap: balance;
+}
+.app-main [class*="rounded-2xl"], .app-main [class*="rounded-3xl"] {
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+.app-main button:not(:disabled):hover, .app-sidebar button:not(:disabled):hover {
+  filter: saturate(1.08);
+}
+.app-main button:disabled, .app-sidebar button:disabled {
+  cursor: not-allowed;
+  opacity: .52;
+  filter: grayscale(.12);
+}
+.app-main input, .app-main textarea, .app-main select {
+  min-height: 42px;
+}
+.app-main button, .app-sidebar button {
+  min-height: 40px;
+}
+.app-main .overflow-x-auto, .app-main [class*="overflow-x-auto"] {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37,99,235,.34) transparent;
+}
+.app-main .overflow-x-auto::-webkit-scrollbar {
+  height: 7px;
+}
+.app-main .overflow-x-auto::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(90deg,rgba(37,99,235,.35),rgba(6,182,212,.35));
+}
+@media (max-width: 640px) {
+  .app-main {
+    padding-left: max(12px, env(safe-area-inset-left)) !important;
+    padding-right: max(12px, env(safe-area-inset-right)) !important;
+  }
+  .app-main h1 { font-size: clamp(1.35rem,5.5vw,1.8rem); }
+  .app-main h2 { font-size: clamp(1.05rem,4.5vw,1.35rem); }
+  .app-main p, .app-main label, .app-main input, .app-main select, .app-main textarea {
+    font-size: max(14px, 1em);
+  }
+  .app-main button, .app-sidebar button {
+    min-height: 44px;
+  }
+  .app-sidebar {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .auth-panel {
+    width: calc(100vw - 28px) !important;
+    max-width: 440px !important;
+    padding: clamp(20px,5vw,30px) !important;
+    border-radius: 24px !important;
+  }
+}
+@media (hover: none) {
+  .dashboard-stat-card:hover { transform: none !important; }
+}
