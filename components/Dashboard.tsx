@@ -26,7 +26,7 @@ const Dashboard: React.FC<{
 
   // Calculate outstanding per party and sort descending
   const outstandingParties = useMemo(() => {
-    return parties.map(p => {
+    return parties.filter(p => !p.is_deleted).map(p => {
       const txs = transactions.filter(tx => tx.party_id === p.id);
       const credit = txs.reduce((sum, tx) => sum + (Number(tx.credit) || 0), 0);
       const payment = txs.reduce((sum, tx) => sum + (Number(tx.payment) || 0), 0);
@@ -36,7 +36,7 @@ const Dashboard: React.FC<{
 
   // Calculate collected per party and sort descending
   const collectedParties = useMemo(() => {
-    return parties.map(p => {
+    return parties.filter(p => !p.is_deleted).map(p => {
       const txs = transactions.filter(tx => tx.party_id === p.id);
       const payment = txs.reduce((sum, tx) => sum + (Number(tx.payment) || 0), 0);
       return { ...p, totalPayment: payment };
@@ -45,7 +45,7 @@ const Dashboard: React.FC<{
 
   // Calculate total credit per party and sort descending
   const totalWorkParties = useMemo(() => {
-    return parties.map(p => {
+    return parties.filter(p => !p.is_deleted).map(p => {
       const txs = transactions.filter(tx => tx.party_id === p.id);
       const credit = txs.reduce((sum, tx) => sum + (Number(tx.credit) || 0), 0);
       return { ...p, totalCredit: credit };
@@ -113,7 +113,7 @@ const Dashboard: React.FC<{
 
   if (viewMode === 'total_work') {
     return (
-      <div className="space-y-6 pt-14 md:pt-0 animate-in fade-in">
+      <div className="space-y-6  animate-in fade-in">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setViewMode('overview')}
@@ -151,7 +151,7 @@ const Dashboard: React.FC<{
 
   if (viewMode === 'outstanding') {
     return (
-      <div className="space-y-6 pt-14 md:pt-0 animate-in fade-in">
+      <div className="space-y-6  animate-in fade-in">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setViewMode('overview')}
@@ -189,7 +189,7 @@ const Dashboard: React.FC<{
 
   if (viewMode === 'collected') {
     return (
-      <div className="space-y-6 pt-14 md:pt-0 animate-in fade-in">
+      <div className="space-y-6  animate-in fade-in">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setViewMode('overview')}
@@ -236,7 +236,7 @@ const Dashboard: React.FC<{
   if (viewMode === 'collected_party') {
     const p = parties.find(p => p.id === selectedCollectedPartyId);
     return (
-      <div className="space-y-6 pt-14 md:pt-0 animate-in fade-in">
+      <div className="space-y-6  animate-in fade-in">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setViewMode('collected')}
@@ -273,7 +273,7 @@ const Dashboard: React.FC<{
   }
 
   return (
-    <div className="space-y-6 pt-14 md:pt-0">
+    <div className="space-y-6 ">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 animate-in fade-in slide-in-from-left-8 duration-700 ease-out">
         <div>
           <div className="text-[9px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-[0.3em] mb-1 px-1">
