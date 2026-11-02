@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Landmark, FileText, Package, ShoppingCart, Receipt, Search, Users, Sun, Moon, LogOut, Menu, X, MoreVertical, Edit2, Trash2, Settings, Plus, RotateCcw } from 'lucide-react';
+import { Landmark, FileText, Search, Users, Sun, Moon, LogOut, Menu, X, MoreVertical, Edit2, Trash2, Settings, Plus, RotateCcw, ClipboardList, Factory, CalendarDays, WalletCards } from 'lucide-react';
 import { Party, TabType } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -44,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const filteredParties = activeParties.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.phone.includes(searchTerm)
+    String(p.phone || '').includes(searchTerm)
   );
 
   const handleAddParty = async (e: React.FormEvent) => {
@@ -102,7 +102,11 @@ const Sidebar: React.FC<SidebarProps> = ({
             {[
               { id: 'dashboard', label: t('dashboard'), icon: <Landmark className="w-5 h-5" /> },
               { id: 'parties', label: t('parties'), icon: <Users className="w-5 h-5" /> },
+              { id: 'job_orders', label: 'Job Orders', icon: <ClipboardList className="w-5 h-5" /> },
+              { id: 'production', label: 'Production', icon: <Factory className="w-5 h-5" /> },
               { id: 'ledger', label: t('ledger'), icon: <FileText className="w-5 h-5" /> },
+              { id: 'monthly_reports', label: t('monthly_reports'), icon: <CalendarDays className="w-5 h-5" /> },
+              { id: 'monthly_collections', label: 'Monthly Collections', icon: <WalletCards className="w-5 h-5" /> },
               { id: 'settings', label: t('settings'), icon: <Settings className="w-5 h-5" /> },
             ].map((item) => (
               <button
@@ -195,9 +199,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                   
                   <button 
                     onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === party.id ? null : party.id); }}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 transition-all z-[75] ${activeMenuId === party.id ? 'opacity-100 bg-slate-100 dark:bg-slate-800 rounded-lg' : 'opacity-0 group-hover:opacity-100'}`}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 transition-all z-[75] rounded-xl ${activeMenuId === party.id ? 'opacity-100 bg-slate-100 dark:bg-slate-800' : 'opacity-100 bg-white/70 dark:bg-slate-900/70 sm:opacity-100'}`}
                   >
-                    <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                    <MoreVertical className="w-4 h-4 text-slate-500 dark:text-slate-300" />
                   </button>
 
                   {activeMenuId === party.id && (
@@ -284,7 +288,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <span className="text-[9px] font-mono text-slate-400">{p.phone}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => onRestoreParty(p.id)} className="p-2 text-primary-600 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all" title="Restore">
+                      <button onClick={async () => { try { await onRestoreParty(p.id); } catch (error) { console.error(error); } }} className="p-2 text-primary-600 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all" title="Restore">
                         <RotateCcw className="w-4 h-4" />
                       </button>
                       <button onClick={() => onPermanentDeleteParty(p.id)} className="p-2 text-rose-600 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all" title="Delete Permanently">
@@ -312,7 +316,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </p>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setShowDeleteConfirm(null)} className="py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all">{t('cancel')}</button>
-              <button onClick={() => { onDeleteParty(showDeleteConfirm.id); setShowDeleteConfirm(null); }} className="py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-500/20 transition-all">{t('delete')}</button>
+              <button onClick={async () => { try { await onDeleteParty(showDeleteConfirm.id); setShowDeleteConfirm(null); } catch (error) { console.error(error); } }} className="py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-500/20 transition-all">{t('delete')}</button>
             </div>
           </div>
         </div>
