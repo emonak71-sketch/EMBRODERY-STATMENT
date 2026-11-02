@@ -180,7 +180,7 @@ try {
   await page.locator('input[aria-label="Rate per piece"]').fill('3.5');
   await page.getByText('৳420').waitFor();
   await page.getByRole('button', { name: 'Save work' }).click();
-  await page.getByText('120 pcs × ৳3.5').waitFor();
+  await page.getByText('120 pcs × ৳3.5').first().waitFor();
   const createdWork = transactions.find(row => row.details === 'QA logo embroidery');
   assert.ok(createdWork, 'Production entry should be saved.');
   assert.equal(Number(createdWork.credit), 420, 'Work amount must equal PCS multiplied by rate.');
