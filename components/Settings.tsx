@@ -151,7 +151,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, setActiveTab
       <div className="p-8 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-[2rem]">
         <h3 className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2 px-1">Security Information</h3>
         <p className="text-xs text-amber-700/80 dark:text-amber-400/80 leading-relaxed font-medium">
-          Your workspace data is end-to-end encrypted and managed via secure Supabase authentication. Any changes to your primary email address will trigger a confirmation link to be sent to both your old and new email for security verification.
+          Your workspace data is stored in Supabase and protected by authenticated access and Row Level Security. Email changes may require confirmation from your current and new email addresses.
         </p>
       </div>
     </div>
