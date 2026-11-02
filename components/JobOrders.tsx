@@ -52,8 +52,8 @@ const JobOrders: React.FC<JobOrdersProps> = ({ parties, transactions, setActiveT
             <p className="page-subtitle">প্রতিটি কাস্টমারের কাজ, ডিজাইন, PCS, Rate ও বিলের হিসাব।</p>
           </div>
         </div>
-        <button type="button" onClick={() => setActiveTab('ledger')} className="secondary-action">
-          <ArrowLeft className="h-4 w-4" /> লেজারে যান
+        <button type="button" onClick={() => setActiveTab('parties')} className="secondary-action">
+          <ArrowLeft className="h-4 w-4" /> নতুন কাজ যোগ করুন
         </button>
       </header>
 
@@ -70,7 +70,7 @@ const JobOrders: React.FC<JobOrdersProps> = ({ parties, transactions, setActiveT
         </div>
 
         {jobs.length === 0 ? (
-          <div className="empty-state"><ClipboardList className="h-9 w-9" /><strong>কোনো কাজের অর্ডার পাওয়া যায়নি</strong><span>লেজার থেকে নতুন Work Entry যোগ করলে এখানে দেখা যাবে।</span><button type="button" onClick={() => setActiveTab('ledger')} className="primary-action">নতুন কাজ যোগ করুন</button></div>
+          <div className="empty-state"><ClipboardList className="h-9 w-9" /><strong>কোনো কাজের অর্ডার পাওয়া যায়নি</strong><span>লেজার থেকে নতুন Work Entry যোগ করলে এখানে দেখা যাবে।</span><button type="button" onClick={() => setActiveTab('parties')} className="primary-action">নতুন কাজ যোগ করুন</button></div>
         ) : (
           <>
             <div className="desktop-table-wrap">
