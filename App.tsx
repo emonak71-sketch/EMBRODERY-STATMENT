@@ -312,6 +312,18 @@ const App: React.FC = () => {
     return await dbService.resetPassword(email);
   };
 
+  const handleVerifyResetCode = async (email: string, code: string) => {
+    setIsResettingPassword(true);
+    try {
+      const result = await dbService.verifyResetCode(email, code);
+      if (!result.success) setIsResettingPassword(false);
+      return result;
+    } catch (error) {
+      setIsResettingPassword(false);
+      throw error;
+    }
+  };
+
   const handleUpdatePassword = async (newPass: string) => {
     const res = await dbService.updatePassword(newPass);
     if (res.success) setIsResettingPassword(false);
@@ -347,8 +359,9 @@ const App: React.FC = () => {
       <Auth 
         onLogin={handleLogin} 
         onSignup={handleSignup} 
-        onResetPassword={handleResetPassword}
-        onUpdatePassword={handleUpdatePassword}
+        onResetপাসওয়ার্ড={handleResetPassword}
+        onVerifyResetCode={handleVerifyResetCode}
+        onUpdateপাসওয়ার্ড={handleUpdatePassword}
         isResetting={isResettingPassword}
       />
     );
