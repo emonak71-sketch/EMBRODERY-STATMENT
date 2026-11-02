@@ -196,12 +196,12 @@ try {
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'CSV', exact: true }).click();
   const download = await downloadPromise;
-  assert.match(download.suggestedFilename(), /_Ledger_.*\\.csv$/);
+  assert.match(download.suggestedFilename(), /_Ledger_.*\.csv$/);
 
   const popupPromise = page.waitForEvent('popup');
   await page.getByRole('button', { name: 'WhatsApp', exact: true }).click();
   const popup = await popupPromise;
-  assert.match(popup.url(), /^https:\\/\\/wa\\.me\\//);
+  assert.match(popup.url(), /^https:\://\/wa\.me\//);
   await popup.close();
 
   // Settings profile save and logout.
