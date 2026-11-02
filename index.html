@@ -7,7 +7,7 @@
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/jpeg" href="/embroidery-statement-logo.jpg">
   <link rel="apple-touch-icon" href="/embroidery-statement-logo.jpg">
-  <meta name="theme-color" content="#0648c8">
+  <meta name="theme-color" content="#08265f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
@@ -86,7 +86,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=3').then(reg => { reg.update(); return reg; }).then(reg => {
+        navigator.serviceWorker.register('/sw.js?v=10').then(reg => { reg.update(); return reg; }).then(reg => {
           console.log('SW registered!', reg);
         }).catch(err => {
           console.log('SW registration failed: ', err);
