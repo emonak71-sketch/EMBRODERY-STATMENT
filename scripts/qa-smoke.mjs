@@ -124,13 +124,13 @@ try {
       return fulfillJson(route, 201, inserted);
     }
     if (request.method() === 'PATCH') {
-      const id = (url.searchParams.get('id') || '').replace(/^eq\\./, '');
+      const id = (url.searchParams.get('id') || '').replace(/^eq\./, '');
       const row = rows.find(item => item.id === id);
       if (row) Object.assign(row, request.postDataJSON() || {});
       return fulfillJson(route, 200, row ? [row] : []);
     }
     if (request.method() === 'DELETE') {
-      const id = (url.searchParams.get('id') || '').replace(/^eq\\./, '');
+      const id = (url.searchParams.get('id') || '').replace(/^eq\./, '');
       const index = rows.findIndex(item => item.id === id);
       if (index >= 0) rows.splice(index, 1);
       return route.fulfill({ status: 204, body: '' });
@@ -201,7 +201,7 @@ try {
   const popupPromise = page.waitForEvent('popup');
   await page.getByRole('button', { name: 'WhatsApp', exact: true }).click();
   const popup = await popupPromise;
-  assert.match(popup.url(), /^https:\://\/wa\.me\//);
+  assert.match(popup.url(), /^https:\/\/wa\.me\//);
   await popup.close();
 
   // Settings profile save and logout.
