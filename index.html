@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Embroidery Statement | Business Management</title>\n  <meta name="description" content="Professional embroidery production, customer ledger and payment management workspace.">
+  <title>Embroidery Statement | Business Management</title>
+  <meta name="description" content="Professional embroidery production, customer ledger and payment management workspace.">
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/jpeg" href="/embroidery-statement-logo.jpg">
   <link rel="apple-touch-icon" href="/embroidery-statement-logo.jpg">
@@ -83,13 +84,14 @@
   
   <script type="module" src="/index.tsx"></script>
   
-  <script>
-    if ('serviceWorker' in navigator) {
+  <script type="module">
+    if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=3').then(reg => { reg.update(); return reg; }).then(reg => {
-          console.log('SW registered!', reg);
-        }).catch(err => {
-          console.log('SW registration failed: ', err);
+        navigator.serviceWorker.register('/sw.js').then(registration => {
+          if (registration && typeof registration.update === 'function') return registration.update();
+          return registration;
+        }).catch(error => {
+          console.warn('Service worker registration skipped:', error);
         });
       });
     }
