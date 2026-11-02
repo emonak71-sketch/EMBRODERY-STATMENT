@@ -75,7 +75,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetপাসওয়�
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 font-sans overflow-hidden">
+    <div className="auth-shell min-h-screen flex flex-col items-center justify-center p-6 font-sans overflow-hidden">
       <div className="w-full max-w-md">
         <div className="text-center mb-10 animate-in fade-in slide-in-from-top-12 duration-1000 ease-out">
           <div className="inline-flex p-4 bg-primary-600 rounded-[2rem] shadow-2xl shadow-primary-500/40 mb-6 hover:scale-110 transition-transform duration-500 cursor-pointer">
@@ -85,7 +85,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onResetপাসওয়�
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] mt-3 animate-in fade-in delay-500 duration-1000">প্রফেশনাল লেজার ওয়ার্কস্পেস</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-8 md:p-10 rounded-[2.5rem] shadow-2xl shadow-black/5 border border-slate-100 dark:border-slate-800 animate-in fade-in zoom-in-95 delay-200 duration-700">
+        <div className="auth-panel bg-white dark:bg-slate-900 p-8 md:p-10 rounded-[2.5rem] shadow-2xl shadow-black/5 border border-slate-100 dark:border-slate-800 animate-in fade-in zoom-in-95 delay-200 duration-700">
           <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-8 text-center">{getTitle()}</h2>
 
           {errorMsg && (
