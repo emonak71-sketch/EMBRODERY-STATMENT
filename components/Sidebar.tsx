@@ -58,6 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       setShowAddParty(false);
     } catch (err) {
       console.error(err);
+      alert(err instanceof Error ? err.message : 'পার্টি যোগ করা যায়নি। আবার চেষ্টা করুন।');
     } finally {
       setIsSubmitting(false);
     }
@@ -142,7 +143,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             {showAddParty && (
               <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-sm animate-in zoom-in-95 relative">
-                  <button onClick={() => setShowAddParty(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all">
+                  <button type="button" aria-label="Close add customer form" onClick={() => setShowAddParty(false)} className="absolute top-4 right-4 min-h-11 min-w-11 grid place-items-center p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all">
                     <X className="w-4 h-4" />
                   </button>
                   <h3 className="text-lg font-black uppercase tracking-tight mb-4 text-slate-900 dark:text-white">{t('add_new_party')}</h3>
