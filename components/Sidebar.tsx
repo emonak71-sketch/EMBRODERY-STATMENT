@@ -76,7 +76,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      <button onClick={() => setIsOpen(true)} className="app-menu-trigger md:hidden fixed top-4 left-4 z-50 p-2.5 rounded-2xl shadow-xl shadow-slate-900/10">
+      <button type="button" aria-label="Open navigation menu" aria-expanded={isOpen} onClick={() => setIsOpen(true)} className="app-menu-trigger md:hidden fixed top-4 left-4 z-50 p-2.5 rounded-2xl shadow-xl shadow-slate-900/10">
         <Menu className="w-6 h-6" />
       </button>
 
@@ -197,22 +197,30 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <span className="text-[8px] opacity-70 font-mono tracking-tighter">{party.phone}</span>
                   </button>
                   
-                  <button 
+                  <button
+                    type="button"
+                    aria-label={`More actions for ${party.name}`}
+                    aria-haspopup="menu"
+                    aria-expanded={activeMenuId === party.id}
                     onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === party.id ? null : party.id); }}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 transition-all z-[75] rounded-xl ${activeMenuId === party.id ? 'opacity-100 bg-slate-100 dark:bg-slate-800' : 'opacity-100 bg-white/70 dark:bg-slate-900/70 sm:opacity-100'}`}
+                    className={`party-action-trigger absolute right-1 top-1/2 -translate-y-1/2 transition-all z-[75] rounded-xl ${activeMenuId === party.id ? 'bg-sky-100 dark:bg-slate-700' : 'bg-white/90 dark:bg-slate-900/90'}`}
                   >
                     <MoreVertical className="w-4 h-4 text-slate-500 dark:text-slate-300" />
                   </button>
 
                   {activeMenuId === party.id && (
-                    <div className="absolute right-0 top-[85%] z-[90] bg-white dark:bg-slate-800 shadow-2xl rounded-xl border border-slate-200 dark:border-slate-700 p-1 min-w-[120px] animate-in zoom-in-95 origin-top-right">
-                      <button 
+                    <div role="menu" className="party-action-menu absolute right-0 top-[85%] z-[90] bg-white dark:bg-slate-800 shadow-2xl rounded-xl border border-slate-200 dark:border-slate-700 p-1 min-w-[120px] animate-in zoom-in-95 origin-top-right">
+                      <button
+                        type="button"
+                        role="menuitem"
                         onClick={(e) => { e.stopPropagation(); setShowEditModal(party); setActiveMenuId(null); }} 
                         className="w-full flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg"
                       >
                         <Edit2 className="w-3.5 h-3.5 text-primary-500" /> Edit
                       </button>
-                      <button 
+                      <button
+                        type="button"
+                        role="menuitem"
                         onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm({ id: party.id, name: party.name }); setActiveMenuId(null); }} 
                         className="w-full flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-lg"
                       >
