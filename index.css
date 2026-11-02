@@ -680,3 +680,34 @@ body {
   .statement-mobile-list { display:none !important; }
   .statement-desktop-table { display:block !important; }
 }
+
+
+/* Mobile navigation and customer action controls */
+@media (max-width: 640px) {
+  .app-menu-trigger {
+    top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
+    left: 14px !important;
+    min-width: 48px;
+    min-height: 48px;
+    display: grid;
+    place-items: center;
+    touch-action: manipulation;
+  }
+  .app-main {
+    padding-top: calc(76px + env(safe-area-inset-top, 0px)) !important;
+  }
+  .party-action-trigger {
+    min-width: 44px;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(125,211,252,.28);
+    box-shadow: 0 5px 14px rgba(8,38,95,.10), inset 0 1px 0 rgba(255,255,255,.85);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+  .party-action-menu {
+    min-width: 144px;
+    max-width: calc(88vw - 24px);
+  }
+}
