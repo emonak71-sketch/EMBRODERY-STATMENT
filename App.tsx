@@ -388,7 +388,7 @@ const App: React.FC = () => {
             onAddTransaction={handleAddTransaction}
             onEditTransaction={handleEditTransaction}
             onDeleteTransaction={handleDeleteTransaction}
-            onSendSMS={sendWhatsAppAlert}
+            onSendAlert={sendWhatsAppAlert}
           />
         )}
         {activeTab === 'monthly_reports' && <MonthlyReports setActiveTab={setActiveTab} transactions={transactions} parties={parties} />}
