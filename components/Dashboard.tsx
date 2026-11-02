@@ -309,7 +309,7 @@ const Dashboard: React.FC<{
               </div>
               <div>
                 <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{card.title}</p>
-                <h2 className={`text-xl font-black tracking-tight dashboard-stat-value ${isNegative ? 'text-emerald-600' : isPositive ? 'text-rose-600' : 'text-slate-900 dark:text-white'}`}>
+                <h2 className={`text-xl font-black tracking-tight ${isNegative ? 'text-emerald-600' : isPositive ? 'text-rose-600' : 'text-slate-900 dark:text-white'}`}>
                   {card.title === t('total_parties') ? card.amount : `৳${card.amount.toLocaleString('en-IN')}`}
                 </h2>
               </div>
