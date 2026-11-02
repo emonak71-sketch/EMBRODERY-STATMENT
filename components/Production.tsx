@@ -12,7 +12,7 @@ const money = (value: number) => `৳${Number(value || 0).toLocaleString('en-IN'
 const Production: React.FC<ProductionProps> = ({ parties, transactions }) => {
   const [query, setQuery] = useState('');
   const production = useMemo(() => {
-    const partyMap = new Map(parties.map(party => [party.id, party]));
+    const partyMap = new Map<string, Party>(parties.map(party => [party.id, party] as [string, Party]));
     const grouped = new Map<string, { design: string; pcs: number; amount: number; orders: number; customers: Set<string> }>();
     transactions.filter(tx => Number(tx.credit) > 0).forEach(tx => {
       const design = (tx.details || '').trim() || 'General Embroidery Work';
