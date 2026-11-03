@@ -46,7 +46,8 @@ These are a dated baseline, not target counts. Legitimate new business entries m
 3. Copy the complete SQL file into the SQL Editor.
 4. Review that the query is being run against the existing project, not a newly created project.
 5. Click **Run** once and wait for the query to finish.
-6. Open `supabase/worker-management-verify.sql` and run it. Confirm the Worker tables exist, RLS is enabled, and the bucket is private. The final result reports signup OTP trigger status separately; it does not require the OTP step to have been run.
+6. Apply `supabase/worker-management-fk-indexes-20261103.sql` (safe, additive covering indexes; this is already applied in the current production project).
+7. Open `supabase/worker-management-verify.sql` and run it. Confirm the Worker tables exist, RLS is enabled, and the bucket is private. The final result reports signup OTP trigger status separately; it does not require the OTP step to have been run.
 
 The migration is additive:
 - Creates `WorkerDocuments`, `WorkerSalaryIncrements`, `WorkerAdvances`, and `WorkerAdvanceRecoveries`.
@@ -106,9 +107,9 @@ In the existing Supabase project:
 
 ### What sends SMS
 
-- Salary: after a payroll row is successfully marked Paid, the app asks the Edge Function to send a salary message.
-- Advance: after an advance record is saved, the app asks the Edge Function to send an advance message.
-- Custom: the SMS composer lets the account owner edit and send a message to a selected worker.
+- Salary: after a payroll row is successfully marked Paid, the app prepares an editable salary-message draft. It is sent only after the account owner reviews it and presses **Send via DNotify**.
+- Advance: after an advance record is saved, the app prepares an editable advance-message draft. It is sent only after the account owner reviews it and presses **Send via DNotify**.
+- Custom: the SMS composer lets the account owner edit and send a message to a selected worker after explicit confirmation.
 - SMS History: lists gateway requests, status, attempt count and errors. Failed requests can be retried.
 - Duplicate protection: salary and advance SMS use their payroll/advance IDs as idempotency references. If DNotify already accepted the request, a repeated action will not send it again.
 
