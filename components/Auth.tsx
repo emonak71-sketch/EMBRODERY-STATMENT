@@ -5,19 +5,21 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
-type AuthMode = 'login' | 'signup' | 'forgot' | 'verify' | 'reset';
-interface AuthResult { success: boolean; message?: string; }
+type AuthMode = 'login' | 'signup' | 'forgot' | 'verify' | 'verify-signup' | 'reset';
+interface AuthResult { success: boolean; message?: string; requiresVerification?: boolean; }
 interface AuthProps {
   onLogin: (email: string, pass: string) => Promise<AuthResult>;
   onSignup: (email: string, pass: string, biz: string) => Promise<AuthResult>;
   onResetPassword: (email: string) => Promise<AuthResult>;
+  onResendSignupCode: (email: string) => Promise<AuthResult>;
+  onVerifySignupCode: (email: string, code: string) => Promise<AuthResult>;
   onVerifyResetCode: (email: string, code: string) => Promise<AuthResult>;
   onUpdatePassword: (pass: string) => Promise<AuthResult>;
   isResetting?: boolean;
 }
 
 const Auth: React.FC<AuthProps> = ({
-  onLogin, onSignup, onResetPassword, onVerifyResetCode, onUpdatePassword,
+  onLogin, onSignup, onResetPassword, onResendSignupCode, onVerifySignupCode, onVerifyResetCode, onUpdatePassword,
   isResetting = false
 }) => {
   const { language, setLanguage } = useLanguage();
@@ -81,10 +83,16 @@ const Auth: React.FC<AuthProps> = ({
         if (!result.success) setErrorMsg(result.message || tr('অ্যাকাউন্ট তৈরি করা যায়নি।', 'Could not create the account.'));
         else {
           localStorage.setItem('saved_email', cleanEmail);
-          setMode('login');
           setPass('');
           setConfirmPass('');
-          setInfoMsg(result.message || tr('অ্যাকাউন্ট তৈরি হয়েছে। এখন লগ-ইন করুন।', 'Account created. You can now sign in.'));
+          setOtp('');
+          if (result.requiresVerification) {
+            setMode('verify-signup');
+            setInfoMsg(result.message || tr('আপনার Gmail-এ ৬ সংখ্যার OTP পাঠানো হয়েছে। কোডটি যাচাই করুন।', 'A 6-digit OTP has been sent to your Gmail. Verify the code to activate your account.'));
+          } else {
+            setMode('login');
+            setInfoMsg(result.message || tr('অ্যাকাউন্ট তৈরি হয়েছে। এখন লগ-ইন করুন।', 'Account created. You can now sign in.'));
+          }
         }
       } else if (mode === 'forgot') {
         const result = await onResetPassword(cleanEmail);
@@ -94,19 +102,25 @@ const Auth: React.FC<AuthProps> = ({
           setOtp('');
           setInfoMsg(result.message || tr('আপনার ইমেইলে ৬ সংখ্যার কোড পাঠানো হয়েছে।', 'A 6-digit verification code has been sent to your email.'));
         }
-      } else if (mode === 'verify') {
+      } else if (mode === 'verify' || mode === 'verify-signup') {
         const code = otp.replace(/\D/g, '');
         if (!/^\d{6}$/.test(code)) {
           setErrorMsg(tr('৬ সংখ্যার সঠিক কোডটি লিখুন।', 'Enter the valid 6-digit code.'));
           return;
         }
-        const result = await onVerifyResetCode(cleanEmail, code);
-        if (!result.success) setErrorMsg(result.message || tr('কোডটি সঠিক নয় অথবা মেয়াদ শেষ হয়েছে।', 'The code is invalid or has expired.'));
-        else {
-          setMode('reset');
-          setPass('');
-          setConfirmPass('');
-          setInfoMsg(tr('কোড যাচাই হয়েছে। এখন নতুন পাসওয়ার্ড দিন।', 'Code verified. Set your new password.'));
+        if (mode === 'verify-signup') {
+          const result = await onVerifySignupCode(cleanEmail, code);
+          if (!result.success) setErrorMsg(result.message || tr('কোডটি সঠিক নয় অথবা মেয়াদ শেষ হয়েছে।', 'The code is invalid or has expired.'));
+          else setInfoMsg(result.message || tr('Gmail যাচাই হয়েছে। আপনার অ্যাকাউন্ট চালু হয়েছে।', 'Email verified. Your account is now active.'));
+        } else {
+          const result = await onVerifyResetCode(cleanEmail, code);
+          if (!result.success) setErrorMsg(result.message || tr('কোডটি সঠিক নয় অথবা মেয়াদ শেষ হয়েছে।', 'The code is invalid or has expired.'));
+          else {
+            setMode('reset');
+            setPass('');
+            setConfirmPass('');
+            setInfoMsg(tr('কোড যাচাই হয়েছে। এখন নতুন পাসওয়ার্ড দিন।', 'Code verified. Set your new password.'));
+          }
         }
       } else if (mode === 'reset') {
         if (pass.length < 8) {
@@ -134,9 +148,11 @@ const Auth: React.FC<AuthProps> = ({
     setResending(true);
     clearMessages();
     try {
-      const result = await onResetPassword(cleanEmail);
+      const result = mode === 'verify-signup'
+        ? await onResendSignupCode(cleanEmail)
+        : await onResetPassword(cleanEmail);
       if (!result.success) setErrorMsg(result.message || tr('নতুন কোড পাঠানো যায়নি।', 'Could not send a new code.'));
-      else setInfoMsg(tr('নতুন ৬ সংখ্যার কোড পাঠানোর অনুরোধ সফল হয়েছে।', 'A new 6-digit code has been requested.'));
+      else setInfoMsg(result.message || tr('নতুন ৬ সংখ্যার কোড পাঠানোর অনুরোধ সফল হয়েছে।', 'A new 6-digit code has been requested.'));
     } catch {
       setErrorMsg(tr('কোড পুনরায় পাঠানো যায়নি। আবার চেষ্টা করুন।', 'Could not resend the code. Please try again.'));
     } finally {
@@ -149,6 +165,7 @@ const Auth: React.FC<AuthProps> = ({
     signup: tr('নতুন অ্যাকাউন্ট তৈরি করুন', 'Create your account'),
     forgot: tr('পাসওয়ার্ড রিসেট করুন', 'Reset your password'),
     verify: tr('ইমেইল কোড যাচাই করুন', 'Verify your email code'),
+    'verify-signup': tr('Gmail যাচাই করুন', 'Verify your Gmail'),
     reset: tr('নতুন পাসওয়ার্ড সেট করুন', 'Set a new password')
   };
   const subtitle: Record<AuthMode, string> = {
@@ -156,6 +173,7 @@ const Auth: React.FC<AuthProps> = ({
     signup: tr('আপনার ব্যবসার জন্য নিরাপদ Workspace তৈরি করুন।', 'Create a secure workspace for your business.'),
     forgot: tr('আপনার অ্যাকাউন্টের ইমেইল দিন। আমরা ৬ সংখ্যার কোড পাঠাব।', 'Enter your account email. We will send a 6-digit code.'),
     verify: tr('ইমেইলে পাওয়া ৬ সংখ্যার কোডটি এখানে লিখুন।', 'Enter the 6-digit code sent to your email.'),
+    'verify-signup': tr('অ্যাকাউন্ট চালু করতে Gmail-এ পাঠানো ৬ সংখ্যার OTP লিখুন।', 'Enter the 6-digit OTP sent to your Gmail to activate your account.'),
     reset: tr('যাচাইকরণ সম্পন্ন হয়েছে। এখন নতুন পাসওয়ার্ড তৈরি করুন।', 'Verification complete. Create a new password.')
   };
   const buttonText: Record<AuthMode, string> = {
@@ -163,6 +181,7 @@ const Auth: React.FC<AuthProps> = ({
     signup: tr('অ্যাকাউন্ট তৈরি করুন', 'Create account'),
     forgot: tr('৬ সংখ্যার কোড পাঠান', 'Send 6-digit code'),
     verify: tr('কোড যাচাই করুন', 'Verify code'),
+    'verify-signup': tr('Gmail যাচাই করে অ্যাকাউন্ট চালু করুন', 'Verify Gmail and activate account'),
     reset: tr('নতুন পাসওয়ার্ড সংরক্ষণ করুন', 'Save new password')
   };
 
@@ -194,7 +213,7 @@ const Auth: React.FC<AuthProps> = ({
           <div key={mode} className={`auth-mode-content ${transitionPhase === 'out' ? 'is-exiting' : transitionPhase === 'in' ? 'is-entering' : ''} ${mode === 'signup' ? 'is-signup' : 'is-login'}`}>
           <div className="mb-6 pt-5 text-center">
             <div className="auth-icon mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl">
-              {mode === 'verify' ? <KeyRound className="h-6 w-6" /> : mode === 'forgot' || mode === 'reset' ? <ShieldCheck className="h-6 w-6" /> : <LockKeyhole className="h-6 w-6" />}
+              {mode === 'verify' || mode === 'verify-signup' ? <KeyRound className="h-6 w-6" /> : mode === 'forgot' || mode === 'reset' ? <ShieldCheck className="h-6 w-6" /> : <LockKeyhole className="h-6 w-6" />}
             </div>
             <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-blue-600">{tr('নিরাপদ ব্যবসায়িক অ্যাক্সেস', 'SECURE BUSINESS ACCESS')}</p>
             <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-[1.85rem]">{title[mode]}</h1>
@@ -222,11 +241,11 @@ const Auth: React.FC<AuthProps> = ({
             {showEmail && (
               <label className="auth-field block space-y-2">
                 <span><Mail className="inline h-4 w-4" /> {tr('ইমেইল ঠিকানা', 'Email address')}</span>
-                <input type="email" required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={email} onChange={event => setEmail(event.target.value)} className="auth-input" placeholder={tr('আপনার ইমেইল লিখুন', 'name@example.com')} />
+                <input type="email" required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} readOnly={mode === 'verify' || mode === 'verify-signup'} value={email} onChange={event => setEmail(event.target.value)} className="auth-input" placeholder={tr('আপনার ইমেইল লিখুন', 'name@example.com')} />
               </label>
             )}
 
-            {mode === 'verify' && (
+            {(mode === 'verify' || mode === 'verify-signup') && (
               <label className="auth-field block space-y-2">
                 <span><KeyRound className="inline h-4 w-4" /> {tr('৬ সংখ্যার OTP', '6-digit verification code')}</span>
                 <input type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={otp} onChange={event => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} className="auth-input auth-otp-input text-center text-2xl font-black" placeholder="••••••" />
@@ -273,7 +292,7 @@ const Auth: React.FC<AuthProps> = ({
           <div className="mt-6 border-t border-slate-200/80 pt-5 text-center">
             {mode === 'reset' ? (
               <p className="text-xs font-semibold text-slate-500">{tr('নতুন পাসওয়ার্ড সংরক্ষণ হলে আপনি অ্যাপে প্রবেশ করতে পারবেন।', 'You can sign in after saving your new password.')}</p>
-            ) : mode === 'forgot' || mode === 'verify' ? (
+            ) : mode === 'forgot' || mode === 'verify' || mode === 'verify-signup' ? (
               <button type="button" onClick={() => switchMode('login')} className="auth-back-link"><ArrowLeft className="h-4 w-4" /> {tr('লগ-ইন-এ ফিরে যান', 'Back to sign in')}</button>
             ) : (
               <p className="text-xs font-medium text-slate-500">{tr('আপনার তথ্য এনক্রিপ্টেড ও সুরক্ষিত থাকে।', 'Your account information stays protected.')}</p>
