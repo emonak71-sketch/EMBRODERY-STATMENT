@@ -8,6 +8,12 @@
   "theme_color": "#0648c8",
   "icons": [
     {
+      "src": "/embroidery-statement-logo-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "/embroidery-statement-logo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
