@@ -243,6 +243,224 @@ export const dbService = {
     if(error) throw handleDbError(error,'saving payroll'); return data?.[0];
   },
 
+  // Worker documents are stored in a private account-scoped bucket.
+  // Send SMS through the authenticated DNotify Edge Function. API tokens never enter the browser.
+  sendWorkerSms: async (payload: {
+    worker_id: string;
+    event_type: 'salary_paid' | 'advance_paid' | 'custom';
+    related_id?: string;
+    idempotency_key?: string;
+    message: string;
+  }) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.functions.invoke('send-worker-sms', {
+      body: payload,
+      headers: { Authorization: 'Bearer ' + session.access_token }
+    });
+    if (error) throw new Error(error.message || 'DNotify SMS request failed.');
+    if (!data?.ok && !data?.duplicate) throw new Error(data?.error || 'DNotify did not accept the SMS.');
+    return data;
+  },
+
+  getWorkerSmsLogs: async (limit = 100) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase
+      .from('WorkerSmsLogs')
+      .select('id, worker_id, event_type, related_id, idempotency_key, mobile, message, sms_mode, sender_id, status, error_message, attempts, created_at, accepted_at')
+      .eq('user_id', uid)
+      .order('created_at', { ascending: false })
+      .limit(Math.max(1, Math.min(limit, 200)));
+    if (error) throw handleDbError(error, 'loading SMS history');
+    return data || [];
+  },
+
+  getWorkerDocuments: async (workerId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase
+      .from('WorkerDocuments')
+      .select('*')
+      .eq('user_id', uid)
+      .eq('worker_id', workerId)
+      .order('uploaded_at', { ascending: false });
+    if (error) throw handleDbError(error, 'loading worker documents');
+    return data || [];
+  },
+
+  uploadWorkerDocument: async (
+    workerId: string,
+    documentType: 'profile_photo' | 'nid_front' | 'nid_back' | 'birth_certificate' | 'driving_license' | 'passport' | 'other',
+    file: File
+  ) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!allowed.includes(file.type)) throw new Error('Use JPG, PNG, WEBP or PDF files only.');
+    if (file.size <= 0 || file.size > 10 * 1024 * 1024) throw new Error('File size must be 10 MB or less.');
+
+    const { data: workerRow, error: workerCheckError } = await supabase
+      .from('Workers')
+      .select('id')
+      .eq('id', workerId)
+      .eq('user_id', uid)
+      .maybeSingle();
+    if (workerCheckError) throw handleDbError(workerCheckError, 'checking worker document ownership');
+    if (!workerRow) throw new Error('Worker not found in this account.');
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100) || 'document';
+    const uniquePart = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : String(Date.now()) + '-' + Math.random().toString(36).slice(2, 9);
+    const filePath = uid + '/' + workerId + '/' + documentType + '/' + uniquePart + '-' + safeName;
+
+    const { error: uploadError } = await supabase.storage
+      .from('worker-documents')
+      .upload(filePath, file, { contentType: file.type, upsert: false });
+    if (uploadError) throw handleDbError(uploadError, 'uploading worker document');
+
+    const { data, error } = await supabase
+      .from('WorkerDocuments')
+      .insert([{
+        user_id: uid,
+        worker_id: workerId,
+        document_type: documentType,
+        file_path: filePath,
+        file_name: file.name,
+        mime_type: file.type,
+        file_size: file.size
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      // Keep the uploaded object rather than risking deletion of a document.
+      throw handleDbError(error, 'saving worker document details');
+    }
+    return data;
+  },
+
+  getWorkerDocumentSignedUrl: async (filePath: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    if (!filePath.startsWith(uid + '/')) throw new Error('This document does not belong to the current account.');
+    const { data, error } = await supabase.storage
+      .from('worker-documents')
+      .createSignedUrl(filePath, 60 * 60);
+    if (error) throw handleDbError(error, 'opening worker document');
+    return data.signedUrl;
+  },
+
+  getWorkerSalaryIncrements: async (workerId?: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    let query = supabase.from('WorkerSalaryIncrements').select('*').eq('user_id', uid);
+    if (workerId) query = query.eq('worker_id', workerId);
+    const { data, error } = await query.order('effective_date', { ascending: false });
+    if (error) throw handleDbError(error, 'loading salary increment history');
+    return data || [];
+  },
+
+  addWorkerSalaryIncrement: async (increment: {
+    worker_id: string;
+    previous_salary: number;
+    increment_amount: number;
+    increment_percentage: number;
+    new_salary: number;
+    effective_date: string;
+    reason: string;
+    notes?: string;
+    approved_by?: string;
+  }) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase
+      .from('WorkerSalaryIncrements')
+      .insert([{ ...increment, user_id: uid }])
+      .select()
+      .single();
+    if (error) throw handleDbError(error, 'saving salary increment');
+    return data;
+  },
+
+  getWorkerAdvances: async (workerId?: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    let query = supabase.from('WorkerAdvances').select('*').eq('user_id', uid);
+    if (workerId) query = query.eq('worker_id', workerId);
+    const { data, error } = await query.order('request_date', { ascending: false });
+    if (error) throw handleDbError(error, 'loading worker advances');
+    return data || [];
+  },
+
+  addWorkerAdvance: async (advance: {
+    worker_id: string;
+    amount: number;
+    request_date: string;
+    deduct_from_month: string;
+    reason: string;
+  }) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase
+      .from('WorkerAdvances')
+      .insert([{
+        ...advance,
+        user_id: uid,
+        outstanding_amount: advance.amount,
+        status: 'outstanding',
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+    if (error) throw handleDbError(error, 'recording worker advance');
+    return data;
+  },
+
+  getWorkerPayrollForYear: async (year: number) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const start = year + '-01-01T00:00:00+06:00';
+    const end = (year + 1) + '-01-01T00:00:00+06:00';
+    const { data, error } = await supabase
+      .from('WorkerPayroll')
+      .select('*')
+      .eq('user_id', uid)
+      .eq('status', 'paid')
+      .gte('paid_at', start)
+      .lt('paid_at', end)
+      .order('paid_at', { ascending: true });
+    if (error) throw handleDbError(error, 'loading annual salary report');
+    return data || [];
+  },
+
+  getWorkerAdvancesForYear: async (year: number) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const start = year + '-01-01';
+    const end = (year + 1) + '-01-01';
+    const { data, error } = await supabase
+      .from('WorkerAdvances')
+      .select('*')
+      .eq('user_id', uid)
+      .gte('request_date', start)
+      .lt('request_date', end)
+      .order('request_date', { ascending: true });
+    if (error) throw handleDbError(error, 'loading annual advance report');
+    return data || [];
+  },
+
   resetPassword: async (email: string) => {
     if (!isConfigured()) return { success: false, message: 'Supabase configuration is missing.' };
     const cleanEmail = email.trim().toLowerCase();
