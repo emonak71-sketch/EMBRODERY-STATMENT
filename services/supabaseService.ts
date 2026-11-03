@@ -244,6 +244,39 @@ export const dbService = {
   },
 
   // Worker documents are stored in a private account-scoped bucket.
+  // Send SMS through the authenticated DNotify Edge Function. API tokens never enter the browser.
+  sendWorkerSms: async (payload: {
+    worker_id: string;
+    event_type: 'salary_paid' | 'advance_paid' | 'custom';
+    related_id?: string;
+    idempotency_key?: string;
+    message: string;
+  }) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.functions.invoke('send-worker-sms', {
+      body: payload,
+      headers: { Authorization: 'Bearer ' + session.access_token }
+    });
+    if (error) throw new Error(error.message || 'DNotify SMS request failed.');
+    if (!data?.ok && !data?.duplicate) throw new Error(data?.error || 'DNotify did not accept the SMS.');
+    return data;
+  },
+
+  getWorkerSmsLogs: async (limit = 100) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase
+      .from('WorkerSmsLogs')
+      .select('id, worker_id, event_type, mobile, message, sms_mode, sender_id, status, error_message, attempts, created_at, accepted_at')
+      .eq('user_id', uid)
+      .order('created_at', { ascending: false })
+      .limit(Math.max(1, Math.min(limit, 200)));
+    if (error) throw handleDbError(error, 'loading SMS history');
+    return data || [];
+  },
+
   getWorkerDocuments: async (workerId: string) => {
     const { data: { session } } = await supabase.auth.getSession();
     const uid = session?.user?.id;
