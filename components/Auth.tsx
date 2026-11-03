@@ -283,7 +283,7 @@ const Auth: React.FC<AuthProps> = ({
             </button>
           </form>
 
-          {mode === 'verify' && (
+          {(mode === 'verify' || mode === 'verify-signup') && (
             <button type="button" onClick={handleResendCode} disabled={resending || loading} className="auth-link mt-4 w-full text-center disabled:opacity-50">
               {resending ? tr('কোড পাঠানো হচ্ছে...', 'Sending code...') : tr('কোড পাননি? আবার পাঠান', 'Did not receive a code? Resend')}
             </button>
