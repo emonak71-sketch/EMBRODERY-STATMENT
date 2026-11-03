@@ -338,6 +338,9 @@ create table if not exists public."WorkerAdvanceRecoveries" (
 create index if not exists worker_advance_recoveries_payroll_idx
   on public."WorkerAdvanceRecoveries"(user_id, payroll_id);
 
+create index if not exists worker_advance_recoveries_worker_idx
+  on public."WorkerAdvanceRecoveries"(user_id, worker_id);
+
 alter table public."WorkerAdvanceRecoveries" enable row level security;
 grant select on public."WorkerAdvanceRecoveries" to authenticated;
 
@@ -632,6 +635,9 @@ create table if not exists public."WorkerSmsLogs" (
 
 create index if not exists worker_sms_logs_history_idx
   on public."WorkerSmsLogs"(user_id, created_at desc);
+
+create index if not exists worker_sms_logs_worker_idx
+  on public."WorkerSmsLogs"(user_id, worker_id);
 
 alter table public."WorkerSmsLogs" enable row level security;
 grant select on public."WorkerSmsLogs" to authenticated;
