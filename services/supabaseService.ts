@@ -448,15 +448,15 @@ export const dbService = {
     const { data: { session } } = await supabase.auth.getSession();
     const uid = session?.user?.id;
     if (!uid) throw new Error('Please sign in again.');
-    const start = year + '-01-01T00:00:00+06:00';
-    const end = (year + 1) + '-01-01T00:00:00+06:00';
+    const start = year + '-01-01';
+    const end = (year + 1) + '-01-01';
     const { data, error } = await supabase
       .from('WorkerAdvances')
       .select('*')
       .eq('user_id', uid)
-      .gte('disbursed_at', start)
-      .lt('disbursed_at', end)
-      .order('disbursed_at', { ascending: true });
+      .gte('request_date', start)
+      .lt('request_date', end)
+      .order('request_date', { ascending: true });
     if (error) throw handleDbError(error, 'loading annual advance report');
     return data || [];
   },
