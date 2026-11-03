@@ -255,6 +255,10 @@ begin
   end if;
 end $$;
 
+-- The composite foreign key below needs a unique (user_id, id) key on the existing payroll table.
+create unique index if not exists worker_payroll_user_id_id_uidx
+  on public."WorkerPayroll"(user_id, id);
+
 create table if not exists public."WorkerAdvanceRecoveries" (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete restrict,
@@ -411,9 +415,9 @@ as $$
 declare
   v_advance record;
 begin
-  if new.status = 'paid'
-     and (tg_op = 'INSERT' or old.status is distinct from 'paid') then
-    for v_advance in
+  if new.status = 'paid' then
+    if tg_op = 'INSERT' or old.status is distinct from 'paid' then
+      for v_advance in
       select a.id, a.worker_id, a.outstanding_amount
         from public."WorkerAdvances" a
        where a.user_id = new.user_id
@@ -437,7 +441,8 @@ begin
              updated_at = now()
        where id = v_advance.id
          and user_id = new.user_id;
-    end loop;
+      end loop;
+    end if;
   end if;
 
   return new;
