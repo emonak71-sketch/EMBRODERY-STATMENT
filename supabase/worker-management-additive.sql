@@ -525,6 +525,51 @@ begin
   end if;
 end $$;
 
+
+-- 6) DNotify SMS audit trail. Only the authenticated account owner can read it.
+-- Writes are performed by the authenticated Edge Function using the server key.
+create table if not exists public."WorkerSmsLogs" (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete restrict,
+  worker_id uuid not null,
+  event_type text not null check (event_type in ('salary_paid', 'advance_paid', 'custom')),
+  related_id uuid,
+  idempotency_key text not null,
+  mobile text not null,
+  message text not null,
+  sms_mode text not null default 'non-masking' check (sms_mode in ('non-masking', 'masking')),
+  sender_id text,
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'failed')),
+  provider_response jsonb,
+  error_message text,
+  attempts integer not null default 1 check (attempts >= 1),
+  created_at timestamptz not null default now(),
+  accepted_at timestamptz,
+  constraint worker_sms_logs_worker_fk
+    foreign key (user_id, worker_id)
+    references public."Workers"(user_id, id) on delete restrict,
+  constraint worker_sms_logs_idempotency_unique unique (user_id, idempotency_key)
+);
+
+create index if not exists worker_sms_logs_history_idx
+  on public."WorkerSmsLogs"(user_id, created_at desc);
+
+alter table public."WorkerSmsLogs" enable row level security;
+grant select on public."WorkerSmsLogs" to authenticated;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='WorkerSmsLogs'
+      and policyname='WorkerSmsLogs owner select'
+  ) then
+    create policy "WorkerSmsLogs owner select" on public."WorkerSmsLogs"
+      for select to authenticated
+      using ((select auth.uid()) = user_id);
+  end if;
+end $$;
+
 commit;
 
 -- Verification (read-only): expected tables and private bucket should now exist.
@@ -534,7 +579,7 @@ where table_schema = 'public'
   and table_name in (
     'Workers', 'WorkerAttendance', 'WorkerPayroll',
     'WorkerDocuments', 'WorkerSalaryIncrements',
-    'WorkerAdvances', 'WorkerAdvanceRecoveries'
+    'WorkerAdvances', 'WorkerAdvanceRecoveries', 'WorkerSmsLogs'
   )
 order by table_name;
 
