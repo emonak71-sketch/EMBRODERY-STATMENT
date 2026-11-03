@@ -67,7 +67,7 @@ Deploy the application changes only after the SQL has completed successfully. Th
 5. Use **Salary Increments** to record a dated increment. The current salary and unpaid draft payrolls from the effective salary month onward update atomically; paid payroll is never changed.
 6. Use **Salary Advances** to record an advance and choose the salary month for recovery. When the first eligible payroll at or after that month is marked Paid, the outstanding advance is deducted automatically and recorded once.
 7. Use **Annual Report** to export salary/advance cash outflow by year.
-8. Use **Payslips** to print or export a salary statement. A payment SMS can be prepared only after payroll is marked Paid; the phone's SMS app still requires the user to press Send.
+8. Use **Payslips** to print or export a salary statement. Salary and advance events send through DNotify after the corresponding payment/advance record is saved. Custom SMS can be sent from the composer.
 
 ## Account and file safety
 
@@ -81,3 +81,37 @@ Deploy the application changes only after the SQL has completed successfully. Th
 ## Important
 
 Do not run any older SQL script that contains `DROP TABLE`, `TRUNCATE`, or broad `DELETE` statements. If a SQL error occurs, stop and share the exact error before retrying; do not improvise a partial schema change.
+
+## DNotify SMS Backend Setup
+
+The app calls the Supabase Edge Function `send-worker-sms`. The DNotify API token is never stored in the browser, app bundle, or GitHub.
+
+### Required secret
+
+In the existing Supabase project:
+
+1. Open **Edge Functions → Secrets**.
+2. Add the key `DNOTIFY_API_TOKEN`.
+3. Paste the API token from DNotify into the Value field.
+4. Save the secret. Do not paste it into ChatGPT, source code, GitHub, or a frontend environment variable.
+
+### Optional configuration
+
+- `DNOTIFY_SMS_MODE`: set to `non-masking` (default) or `masking`. Non-masking is the default and uses the sender ID configured in the DNotify account.
+- `DNOTIFY_SID`: optional assigned Sender ID / masking name. Leave unset to use the DNotify account default.
+
+### What sends SMS
+
+- Salary: after a payroll row is successfully marked Paid, the app asks the Edge Function to send a salary message.
+- Advance: after an advance record is saved, the app asks the Edge Function to send an advance message.
+- Custom: the SMS composer lets the account owner edit and send a message to a selected worker.
+- SMS History: lists gateway requests, status, attempt count and errors. Failed requests can be retried.
+- Duplicate protection: salary and advance SMS use their payroll/advance IDs as idempotency references. If DNotify already accepted the request, a repeated action will not send it again.
+
+### Status meaning
+
+`accepted` means DNotify accepted the API request. It does not independently prove that the handset received the SMS. The app does not claim delivery confirmation unless a future DNotify delivery-status integration is added.
+
+### Billing
+
+DNotify deducts the applicable rate from the DNotify wallet when it accepts the message. Check wallet balance and per-SMS rates before enabling automatic salary/advance SMS.
