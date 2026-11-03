@@ -174,6 +174,10 @@ begin
     raise exception 'Worker account mismatch.';
   end if;
 
+  if new.effective_date > current_date then
+    raise exception 'Future-dated salary increments are not enabled. Use the effective date when the increment is applied.';
+  end if;
+
   select monthly_salary
     into v_current_salary
     from public."Workers"
