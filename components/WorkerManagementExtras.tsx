@@ -11,6 +11,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 type Worker = {
   id: string; worker_code: string; full_name: string; phone: string;
   designation: string; joining_date: string; monthly_salary: number; is_active: boolean;
+  active_salary_month?: string;
 };
 type WorkerDocument = {
   id: string; worker_id: string; document_type: string; file_path: string;
@@ -195,7 +196,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
   const [advances, setAdvances] = useState<Advance[]>([]);
   const [advanceAmount, setAdvanceAmount] = useState('');
   const [advanceDate, setAdvanceDate] = useState(today());
-  const [deductMonth, setDeductMonth] = useState(monthShift(today().slice(0, 7), -1));
+  const [deductMonth, setDeductMonth] = useState(today().slice(0, 7));
   const [advanceReason, setAdvanceReason] = useState('');
 
   const [year, setYear] = useState(new Date().getFullYear());
@@ -372,24 +373,12 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
     } finally { setSaving(false); }
   };
 
-  const findNextUnpaidMonth = async (workerId: string, requestDate: string) => {
-    let candidate = monthShift(requestDate.slice(0, 7), -1);
-    for (let i = 0; i < 12; i++) {
-      const rows = await dbService.getWorkerPayroll(candidate) as Payroll[];
-      if (!rows.some(p => p.worker_id === workerId && p.status === 'paid')) return candidate;
-      candidate = monthShift(candidate, 1);
-    }
-    return requestDate.slice(0, 7);
-  };
-
   useEffect(() => {
-    if (!selectedWorkerId) return;
-    let active = true;
-    findNextUnpaidMonth(selectedWorkerId, advanceDate)
-      .then(value => { if (active) setDeductMonth(value); })
-      .catch(() => { if (active) setDeductMonth(monthShift(advanceDate.slice(0, 7), -1)); });
-    return () => { active = false; };
-  }, [selectedWorkerId, advanceDate]);
+    if (!selectedWorker) return;
+    // Advances stay on this worker's active salary cycle until that month's
+    // payroll is actually marked Paid. Calendar date alone never changes it.
+    setDeductMonth(selectedWorker.active_salary_month || today().slice(0, 7));
+  }, [selectedWorkerId, selectedWorker?.active_salary_month]);
 
   const submitAdvance = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -663,10 +652,10 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <label className="text-xs font-bold">{tr('টাকার পরিমাণ', 'Amount (BDT)')}<input type="number" min="1" step="0.01" required value={advanceAmount} onChange={e => setAdvanceAmount(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800" /></label>
                   <label className="text-xs font-bold">{tr('অগ্রিম দেওয়ার তারিখ', 'Advance date')}<input type="date" required value={advanceDate} onChange={e => setAdvanceDate(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800" /></label>
-                  <label className="text-xs font-bold">{tr('যে মাসের বেতন থেকে কাটবে', 'Deduct from salary month')}<input type="month" required value={deductMonth} onChange={e => setDeductMonth(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800" /></label>
+                  <label className="text-xs font-bold">{tr('যে মাসের বেতন থেকে কাটবে', 'Deduct from salary month')}<input type="month" required value={deductMonth} readOnly className="mt-1 w-full cursor-not-allowed rounded-xl bg-slate-100 p-3 text-slate-700 dark:bg-slate-800 dark:text-slate-200" /></label>
                   <label className="text-xs font-bold">{tr('কারণ', 'Reason')}<input value={advanceReason} onChange={e => setAdvanceReason(e.target.value)} placeholder={tr('যেমন: ব্যক্তিগত প্রয়োজন', 'e.g. Personal need')} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800" /></label>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">{tr('সিস্টেম আগের মাসের প্রথম বকেয়া Salary Cycle নির্বাচন করে। ইতোমধ্যে Paid মাস নির্বাচন করা যাবে না।', 'The system defaults to the earliest unpaid salary month. A month already marked Paid cannot be selected.')}</p>
+                <p className="mt-2 text-xs text-slate-500">{tr('এই কর্মীর বর্তমান Salary Cycle দেখানো হচ্ছে। নভেম্বরের বেতন ডিসেম্বরের যেদিনই Paid করবেন, তার আগে দেওয়া সব Advance নভেম্বর থেকেই কাটবে। বেতন Paid হলেই পরবর্তী মাসের Cycle স্বয়ংক্রিয়ভাবে চালু হবে।', 'This worker’s active salary cycle is shown here. Advances recorded before the November payroll is marked Paid remain assigned to November, even when payment happens in December. The next cycle starts automatically only after payroll is marked Paid.')}</p>
                 <div className="mt-3 flex justify-end"><button disabled={saving} className="rounded-xl bg-blue-700 px-5 py-3 text-xs font-black text-white disabled:opacity-50">{saving ? tr('সংরক্ষণ হচ্ছে...', 'Saving...') : tr('অগ্রিম সংরক্ষণ ও SMS প্রস্তুত', 'Save advance & prepare SMS')}</button></div>
               </form>
               <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="p-4 font-black">{tr('অগ্রিমের খতিয়ান', 'Advance Ledger')}</div><table className="w-full min-w-[700px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500 dark:bg-slate-800"><tr>{['Date','Amount','Outstanding','Salary Month','Status','Reason'].map(x => <th key={x} className="p-3">{x}</th>)}</tr></thead><tbody>{advances.filter(a => a.worker_id === selectedWorker.id).map(a => <tr key={a.id} className="border-t dark:border-slate-800"><td className="p-3">{dateLabel(a.request_date)}</td><td className="p-3 font-bold">{money(a.amount)}</td><td className="p-3">{money(a.outstanding_amount)}</td><td className="p-3">{a.deduct_from_month}</td><td className="p-3">{a.status === 'recovered' ? tr('সমন্বয় হয়েছে', 'Recovered') : tr('বকেয়া', 'Outstanding')}</td><td className="p-3">{a.reason}</td></tr>)}</tbody></table>{advances.filter(a => a.worker_id === selectedWorker.id).length === 0 && <p className="p-5 text-sm text-slate-500">{tr('কোনো Advance নেই।', 'No advances recorded.')}</p>}</div>
