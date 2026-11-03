@@ -41,7 +41,7 @@ join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
   and c.relname in (
     'WorkerDocuments', 'WorkerSalaryIncrements',
-    'WorkerAdvances', 'WorkerAdvanceRecoveries'
+    'WorkerAdvances', 'WorkerAdvanceRecoveries', 'WorkerSmsLogs'
   )
 order by c.relname;
 
