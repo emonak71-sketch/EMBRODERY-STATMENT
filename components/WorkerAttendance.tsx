@@ -16,7 +16,6 @@ const WorkerAttendance:React.FC<{userId:string;companyName:string}>=({userId,com
  const [smsSending,setSmsSending]=useState(false);
  const [workers,setWorkers]=useState<Worker[]>([]),[attendance,setAttendance]=useState<Attendance[]>([]),[monthAttendance,setMonthAttendance]=useState<Attendance[]>([]),[payroll,setPayroll]=useState<Payroll[]>([]);
  const [date,setDate]=useState(today()),[month,setMonth]=useState(today().slice(0,7)),[search,setSearch]=useState('');
- const [monthInitialized,setMonthInitialized]=useState(false);
  const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [editing,setEditing]=useState<Worker|null>(null),[showForm,setShowForm]=useState(false);
  const [form,setForm]=useState({worker_code:'',full_name:'',phone:'',designation:'',joining_date:today(),monthly_salary:''});
@@ -29,12 +28,6 @@ const WorkerAttendance:React.FC<{userId:string;companyName:string}>=({userId,com
  const loadMonthAttendance=useCallback(async()=>{try{setMonthAttendance(await dbService.getWorkerAttendanceForMonth(month) as Attendance[]);}catch(e:any){setError(e.message||'Could not load monthly attendance.');}},[month]);
  const loadPayroll=useCallback(async()=>{try{const rows=await dbService.getWorkerPayroll(month) as Payroll[];setPayroll(rows);const next:typeof payDraft={};workers.forEach(w=>{const p=rows.find(x=>x.worker_id===w.id);next[w.id]={overtime_hours:String(p?.overtime_hours??0),overtime_amount:String(p?.overtime_amount??0),bonus:String(p?.bonus??0),deduction:String(p?.deduction??0)};});setPayDraft(next);}catch(e:any){setError(e.message||'Could not load payroll.');}},[month,workers]);
  useEffect(()=>{loadWorkers();},[loadWorkers]);
- useEffect(()=>{
-  if(monthInitialized||workers.length===0)return;
-  const cycles=Array.from(new Set(workers.map(w=>w.active_salary_month).filter(Boolean)));
-  if(cycles.length===1)setMonth(cycles[0]);
-  setMonthInitialized(true);
- },[workers,monthInitialized]);
  useEffect(()=>{loadAttendance();},[loadAttendance]);
  useEffect(()=>{loadMonthAttendance();},[loadMonthAttendance]);
  useEffect(()=>{loadPayroll();},[loadPayroll]);
