@@ -9,19 +9,29 @@ This change is designed for the existing Embroidery Statement Supabase project. 
 3. Confirm the existing two Auth accounts can still sign in. Do not delete, recreate, or merge users.
 4. The current project check found no Supabase Storage buckets or Storage objects. Existing relational data remains in the existing tables; this migration does not move or delete it.
 
-## Apply the SQL
+## Enable the requested email OTP for new signups
 
-1. In the existing Supabase project, open **SQL Editor → New query**.
+The live database has a legacy `auto_confirm_user_trigger` on `auth.users`. It automatically marks every new signup as confirmed, which bypasses the six-digit signup OTP in the app.
+
+1. Open **Authentication → Providers → Email** and enable **Confirm email**.
+2. In **SQL Editor → New query**, run the complete contents of `supabase/enable-signup-email-otp.sql`.
+3. This removes only the auto-confirm trigger. It does not update, delete, recreate, or unconfirm any existing account. The old trigger function is intentionally left in place but is no longer called.
+4. For the password-reset email template, follow `supabase/IN_PLACE_UPDATE.md`; the Worker migration does not change password recovery.
+
+## Apply the Worker SQL
+
+1. In the same existing Supabase project, open **SQL Editor → New query**.
 2. Open `supabase/worker-management-additive.sql` in this repository.
 3. Copy the complete SQL file into the SQL Editor.
 4. Review that the query is being run against the existing project, not a newly created project.
 5. Click **Run** once and wait for the query to finish.
-6. The final two read-only SELECT statements list the Worker tables and the private `worker-documents` bucket. Confirm they appear.
+6. Open `supabase/worker-management-verify.sql` and run it. Confirm the Worker tables exist, RLS is enabled, the bucket is private, and the auto-confirm trigger query returns zero rows.
 
 The migration is additive:
 - Creates `WorkerDocuments`, `WorkerSalaryIncrements`, `WorkerAdvances`, and `WorkerAdvanceRecoveries`.
 - Adds new optional payroll columns to the existing `WorkerPayroll` table.
 - Adds an automatic Worker ID sequence and safe salary/advance processing triggers.
+- Signup OTP is handled separately by `enable-signup-email-otp.sql`; the Worker migration itself does not change Auth.
 - Creates a private Storage bucket for new worker documents.
 - Adds account-scoped RLS policies.
 
