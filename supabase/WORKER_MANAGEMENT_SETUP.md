@@ -18,6 +18,23 @@ The live database has a legacy `auto_confirm_user_trigger` on `auth.users`. It a
 3. This removes only the auto-confirm trigger. It does not update, delete, recreate, or unconfirm any existing account. The old trigger function is intentionally left in place but is no longer called.
 4. For the password-reset email template, follow `supabase/IN_PLACE_UPDATE.md`; the Worker migration does not change password recovery.
 
+## Pre-migration data snapshot
+
+The read-only check on 3 November 2026 recorded the following baseline in the live project:
+
+| Table / storage | Rows |
+|---|---:|
+| Auth accounts | 2 |
+| Parties | 7 |
+| Transactions | 84 |
+| Products, Expenses, Sales | 0 each |
+| Workers, WorkerAttendance, WorkerPayroll | 0 each |
+| Supabase Storage buckets / objects | 0 / 0 |
+
+Ownership check: six Parties and all 84 Transactions belong to one existing account; one Party has a NULL `user_id`. No Transaction points to that ownerless Party, no Transaction has a missing Party, and no cross-account Party/Transaction mismatch was found. The second Auth account has no Party or Transaction rows in this snapshot.
+
+These are a dated baseline, not target counts. Legitimate new business entries made after the snapshot should increase counts; do not delete or edit data to force a match. The verification script reports current counts and ownership checks.
+
 ## Apply the Worker SQL
 
 1. In the same existing Supabase project, open **SQL Editor → New query**.
