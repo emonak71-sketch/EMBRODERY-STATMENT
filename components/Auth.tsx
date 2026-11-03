@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, Loader2, AlertCircle, ShieldCheck, Mail,
   KeyRound, Eye, EyeOff, Languages, LockKeyhole, Building2, Sparkles
@@ -35,17 +35,27 @@ const Auth: React.FC<AuthProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
+  const [transitionPhase, setTransitionPhase] = useState<'idle' | 'out' | 'in'>('idle');
+  const transitionTimer = useRef<number | null>(null);
 
   useEffect(() => { if (isResetting) setMode('reset'); }, [isResetting]);
+  useEffect(() => () => { if (transitionTimer.current !== null) window.clearTimeout(transitionTimer.current); }, []);
 
   const cleanEmail = email.trim().toLowerCase();
   const clearMessages = () => { setErrorMsg(null); setInfoMsg(null); };
   const switchMode = (next: AuthMode) => {
+    if (next === mode) return;
     clearMessages();
     setOtp('');
     setPass('');
     setConfirmPass('');
-    setMode(next);
+    if (transitionTimer.current !== null) window.clearTimeout(transitionTimer.current);
+    setTransitionPhase('out');
+    transitionTimer.current = window.setTimeout(() => {
+      setMode(next);
+      setTransitionPhase('in');
+      transitionTimer.current = window.setTimeout(() => setTransitionPhase('idle'), 760);
+    }, 180);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -181,6 +191,7 @@ const Auth: React.FC<AuthProps> = ({
             <button type="button" onClick={() => setLanguage('bn')} className={bn ? 'active' : ''} aria-pressed={bn}>বাংলা</button>
           </div>
 
+          <div key={mode} className={`auth-mode-content ${transitionPhase === 'out' ? 'is-exiting' : transitionPhase === 'in' ? 'is-entering' : ''} ${mode === 'signup' ? 'is-signup' : 'is-login'}`}>
           <div className="mb-6 pt-5 text-center">
             <div className="auth-icon mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl">
               {mode === 'verify' ? <KeyRound className="h-6 w-6" /> : mode === 'forgot' || mode === 'reset' ? <ShieldCheck className="h-6 w-6" /> : <LockKeyhole className="h-6 w-6" />}
@@ -200,7 +211,7 @@ const Auth: React.FC<AuthProps> = ({
           {errorMsg && <div role="alert" className="auth-message auth-message-error mb-4 flex items-start gap-3 rounded-2xl p-3 text-sm font-semibold"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0" /><span>{errorMsg}</span></div>}
           {infoMsg && <div role="status" className="auth-message auth-message-info mb-4 flex items-start gap-3 rounded-2xl p-3 text-sm font-semibold"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" /><span>{infoMsg}</span></div>}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="auth-form-stage space-y-4">
             {mode === 'signup' && (
               <label className="auth-field block space-y-2">
                 <span><Building2 className="inline h-4 w-4" /> {tr('ব্যবসার নাম', 'Business name')}</span>
@@ -267,6 +278,7 @@ const Auth: React.FC<AuthProps> = ({
             ) : (
               <p className="text-xs font-medium text-slate-500">{tr('আপনার তথ্য এনক্রিপ্টেড ও সুরক্ষিত থাকে।', 'Your account information stays protected.')}</p>
             )}
+          </div>
           </div>
         </section>
 
