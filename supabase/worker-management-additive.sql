@@ -243,7 +243,9 @@ create index if not exists worker_advances_disbursed_idx
   on public."WorkerAdvances"(user_id, disbursed_at);
 
 alter table public."WorkerAdvances" enable row level security;
-grant select, insert, update on public."WorkerAdvances" to authenticated;
+grant select, insert on public."WorkerAdvances" to authenticated;
+grant update (outstanding_amount, status, recovered_at, updated_at)
+  on public."WorkerAdvances" to authenticated;
 
 do $$
 begin
@@ -363,7 +365,8 @@ begin
 
   if tg_op = 'UPDATE' then
     if old.status = 'paid' then
-      if new.worker_id is distinct from old.worker_id
+      if new.status is distinct from old.status
+        or new.worker_id is distinct from old.worker_id
         or new.month_key is distinct from old.month_key
         or new.basic_salary is distinct from old.basic_salary
         or new.overtime_hours is distinct from old.overtime_hours
@@ -385,7 +388,7 @@ begin
       from public."WorkerAdvances" a
      where a.user_id = new.user_id
        and a.worker_id = new.worker_id
-       and a.deduct_from_month = new.month_key
+       and a.deduct_from_month <= new.month_key
        and a.status = 'outstanding'
        and a.outstanding_amount > 0;
 
@@ -428,7 +431,7 @@ begin
         from public."WorkerAdvances" a
        where a.user_id = new.user_id
          and a.worker_id = new.worker_id
-         and a.deduct_from_month = new.month_key
+         and a.deduct_from_month <= new.month_key
          and a.status = 'outstanding'
          and a.outstanding_amount > 0
        order by a.request_date, a.created_at
