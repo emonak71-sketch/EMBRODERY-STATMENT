@@ -269,7 +269,7 @@ export const dbService = {
     if (!uid) throw new Error('Please sign in again.');
     const { data, error } = await supabase
       .from('WorkerSmsLogs')
-      .select('id, worker_id, event_type, related_id, mobile, message, sms_mode, sender_id, status, error_message, attempts, created_at, accepted_at')
+      .select('id, worker_id, event_type, related_id, idempotency_key, mobile, message, sms_mode, sender_id, status, error_message, attempts, created_at, accepted_at')
       .eq('user_id', uid)
       .order('created_at', { ascending: false })
       .limit(Math.max(1, Math.min(limit, 200)));
