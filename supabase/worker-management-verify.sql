@@ -14,6 +14,7 @@ union all select 'WorkerDocuments', count(*) from public."WorkerDocuments"
 union all select 'WorkerSalaryIncrements', count(*) from public."WorkerSalaryIncrements"
 union all select 'WorkerAdvances', count(*) from public."WorkerAdvances"
 union all select 'WorkerAdvanceRecoveries', count(*) from public."WorkerAdvanceRecoveries"
+union all select 'WorkerSmsLogs', count(*) from public."WorkerSmsLogs"
 order by object_name;
 
 -- Existing legacy integrity checks. The ownerless Party row is intentionally preserved.
