@@ -401,7 +401,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
   const annualRows = useMemo(() => Array.from({ length: 12 }, (_, index) => {
     const monthKey = year + '-' + String(index + 1).padStart(2, '0');
     const payrollRows = annualPayrolls.filter(p => monthInDhaka(p.paid_at) === monthKey);
-    const advanceRows = annualAdvances.filter(a => monthInDhaka(a.disbursed_at) === monthKey);
+    const advanceRows = annualAdvances.filter(a => String(a.request_date || '').slice(0, 7) === monthKey);
     const gross = payrollRows.reduce((sum, p) => sum + Number(p.basic_salary || 0) + Number(p.overtime_amount || 0) + Number(p.bonus || 0), 0);
     const netPaid = payrollRows.reduce((sum, p) => sum + Number(p.net_salary || 0), 0);
     const advancesGiven = advanceRows.reduce((sum, a) => sum + Number(a.amount || 0), 0);
@@ -439,7 +439,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
     [workers, slipWorkerId]
   );
   const requestSlipSms = () => {
-    if (!selectedSlip || !slipWorker) return;
+    if (!selectedSlip || !slipWorker || selectedSlip.status !== 'paid') return;
     setSmsDraft({
       worker: slipWorker,
       message: tr(
@@ -574,7 +574,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <label className="text-xs font-bold">{tr('বৃদ্ধির হিসাব', 'Increment mode')}<select value={incrementMode} onChange={e => setIncrementMode(e.target.value as 'amount' | 'percentage')} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><option value="amount">{tr('টাকার পরিমাণ', 'Fixed amount')}</option><option value="percentage">{tr('শতকরা হার', 'Percentage')}</option></select></label>
                   <label className="text-xs font-bold">{incrementMode === 'amount' ? tr('কত টাকা বাড়বে', 'Increment amount') : tr('কত শতাংশ বাড়বে', 'Increment percentage')}<input type="number" min="0.01" step="0.01" required value={incrementValue} onChange={e => setIncrementValue(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800" /></label>
-                  <label className="text-xs font-bold">{tr('কার্যকর হওয়ার তারিখ', 'Effective date')}<input type="date" required value={incrementDate} max={today()} onChange={e => setIncrementDate(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800" /></label>
+                  <label className="text-xs font-bold">{tr('কার্যকর হওয়ার তারিখ', 'Effective date')}<input type="date" max={today()} required value={incrementDate} max={today()} onChange={e => setIncrementDate(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800" /></label>
                   <label className="text-xs font-bold">{tr('কারণ', 'Reason')}<select value={incrementReason} onChange={e => setIncrementReason(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><option value="annual_appraisal">{tr('বার্ষিক মূল্যায়ন', 'Annual appraisal')}</option><option value="promotion">{tr('পদোন্নতি', 'Promotion')}</option><option value="performance">{tr('কর্মদক্ষতা', 'Performance')}</option><option value="market_adjustment">{tr('বাজার সমন্বয়', 'Market adjustment')}</option><option value="special">{tr('বিশেষ', 'Special')}</option></select></label>
                   <label className="text-xs font-bold sm:col-span-2">{tr('নোট (ঐচ্ছিক)', 'Notes (optional)')}<input value={incrementNotes} onChange={e => setIncrementNotes(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800" /></label>
                 </div>
@@ -630,9 +630,9 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
               </div>
               {selectedSlip && slipWorker ? (
                 <>
-                  <div className="flex flex-wrap gap-2"><button onClick={() => exportElement(slipRef.current, 'Salary-Slip-' + slipWorker.worker_code + '-' + slipMonth, 'print')} className="rounded-lg border px-3 py-2 text-xs font-bold dark:border-slate-700"><Printer size={13} className="mr-1 inline" />{tr('প্রিন্ট', 'Print')}</button><button onClick={() => exportElement(slipRef.current, 'Salary-Slip-' + slipWorker.worker_code + '-' + slipMonth, 'pdf')} className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-bold text-white"><Download size={13} className="mr-1 inline" />PDF</button><button onClick={() => exportElement(slipRef.current, 'Salary-Slip-' + slipWorker.worker_code + '-' + slipMonth, 'png')} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold dark:bg-slate-800">PNG</button><button onClick={requestSlipSms} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white"><MessageSquare size={13} className="mr-1 inline" />{tr('SMS তৈরি করুন', 'Customize SMS')}</button></div>
+                  <div className="flex flex-wrap gap-2"><button onClick={() => exportElement(slipRef.current, 'Salary-Slip-' + slipWorker.worker_code + '-' + slipMonth, 'print')} className="rounded-lg border px-3 py-2 text-xs font-bold dark:border-slate-700"><Printer size={13} className="mr-1 inline" />{tr('প্রিন্ট', 'Print')}</button><button onClick={() => exportElement(slipRef.current, 'Salary-Slip-' + slipWorker.worker_code + '-' + slipMonth, 'pdf')} className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-bold text-white"><Download size={13} className="mr-1 inline" />PDF</button><button onClick={() => exportElement(slipRef.current, 'Salary-Slip-' + slipWorker.worker_code + '-' + slipMonth, 'png')} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold dark:bg-slate-800">PNG</button>{selectedSlip.status === 'paid' && <button onClick={requestSlipSms} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white"><MessageSquare size={13} className="mr-1 inline" />{tr('SMS তৈরি করুন', 'Customize SMS')}</button>}</div>
                   <div className="overflow-x-auto rounded-xl bg-slate-100 p-4 dark:bg-slate-950"><div ref={slipRef} className="mx-auto w-[620px] max-w-full rounded-2xl border border-slate-200 bg-white p-7 text-slate-900 shadow-xl">
-                    <div className="flex items-start justify-between border-b-2 border-blue-800 pb-4"><div><div className="text-2xl font-black">{companyName || 'Embroidery Statement'}</div><div className="mt-1 text-xs uppercase tracking-[.2em] text-blue-700">Salary Payment Receipt</div></div><div className="rounded-xl bg-blue-50 p-3 text-blue-800"><FileText size={26} /></div></div>
+                    <div className="flex items-start justify-between border-b-2 border-blue-800 pb-4"><div><div className="text-2xl font-black">{companyName || 'Embroidery Statement'}</div><div className="mt-1 text-xs uppercase tracking-[.2em] text-blue-700">{selectedSlip.status === 'paid' ? 'Salary Payment Receipt' : 'Salary Statement — Not Paid'}</div></div><div className="rounded-xl bg-blue-50 p-3 text-blue-800"><FileText size={26} /></div></div>
                     <div className="mt-5 grid grid-cols-2 gap-3 text-sm"><div><span className="text-xs text-slate-500">Worker</span><div className="font-black">{slipWorker.full_name}</div></div><div><span className="text-xs text-slate-500">Worker ID</span><div className="font-black">{slipWorker.worker_code}</div></div><div><span className="text-xs text-slate-500">Salary Month</span><div className="font-bold">{slipMonth}</div></div><div><span className="text-xs text-slate-500">Payment Date</span><div className="font-bold">{dateLabel(selectedSlip.paid_at)}</div></div></div>
                     <table className="mt-6 w-full text-sm"><tbody>
                       <tr className="border-b"><td className="py-3">Basic salary</td><td className="py-3 text-right font-bold">{money(selectedSlip.basic_salary)}</td></tr>
@@ -640,7 +640,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
                       <tr className="border-b"><td className="py-3">Bonus</td><td className="py-3 text-right font-bold">{money(selectedSlip.bonus)}</td></tr>
                       <tr className="border-b"><td className="py-3">Other deductions</td><td className="py-3 text-right font-bold">−{money(selectedSlip.deduction)}</td></tr>
                       <tr className="border-b"><td className="py-3">Advance recovery</td><td className="py-3 text-right font-bold">−{money(selectedSlip.advance_deduction || 0)}</td></tr>
-                      <tr><td className="py-4 text-base font-black">Net paid</td><td className="py-4 text-right text-xl font-black text-emerald-700">{money(selectedSlip.net_salary)}</td></tr>
+                      <tr><td className="py-4 text-base font-black">{selectedSlip.status === 'paid' ? 'Net paid' : 'Net salary due'}</td><td className="py-4 text-right text-xl font-black text-emerald-700">{money(selectedSlip.net_salary)}</td></tr>
                     </tbody></table>
                     <div className="mt-8 flex justify-between gap-8 text-xs text-slate-500"><div className="border-t border-slate-300 pt-2">{tr('কর্মীর স্বাক্ষর', 'Worker signature')}</div><div className="border-t border-slate-300 pt-2">{tr('কর্তৃপক্ষের স্বাক্ষর', 'Authorized signature')}</div></div>
                     <div className="mt-5 border-t border-dashed pt-3 text-center text-[10px] text-slate-400">{companyName || 'Embroidery Statement'} · {tr('বেতন পরিশোধের রসিদ', 'Official salary payment receipt')}</div>
