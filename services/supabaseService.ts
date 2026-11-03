@@ -421,9 +421,9 @@ export const dbService = {
       .from('WorkerAdvances')
       .select('*')
       .eq('user_id', uid)
-      .gte('request_date', start.slice(0, 10))
-      .lt('request_date', end.slice(0, 10))
-      .order('request_date', { ascending: true });
+      .gte('disbursed_at', start)
+      .lt('disbursed_at', end)
+      .order('disbursed_at', { ascending: true });
     if (error) throw handleDbError(error, 'loading annual advance report');
     return data || [];
   },
