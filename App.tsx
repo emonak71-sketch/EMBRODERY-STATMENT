@@ -66,7 +66,7 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    const splashTimer = window.setTimeout(() => setSplashComplete(true), 8200);
+    const splashTimer = window.setTimeout(() => setSplashComplete(true), 5000);
     return () => window.clearTimeout(splashTimer);
   }, []);
 

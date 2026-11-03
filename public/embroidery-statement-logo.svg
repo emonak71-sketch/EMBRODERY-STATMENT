@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Embroidery Statement embroidered logo</title>
+  <desc id="desc">A navy and red embroidery thread emblem with a needle and spool on cream woven fabric.</desc>
+  <defs>
+    <linearGradient id="fabric" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffdf8"/><stop offset="1" stop-color="#eee2cf"/>
+    </linearGradient>
+    <linearGradient id="navyThread" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#294a79"/><stop offset=".5" stop-color="#0d2347"/><stop offset="1" stop-color="#42658f"/>
+    </linearGradient>
+    <linearGradient id="redThread" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff5962"/><stop offset=".48" stop-color="#c51f35"/><stop offset="1" stop-color="#861a2c"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fbff"/><stop offset=".38" stop-color="#8fa5bc"/><stop offset=".62" stop-color="#fff"/><stop offset="1" stop-color="#526982"/>
+    </linearGradient>
+    <pattern id="weave" width="10" height="10" patternUnits="userSpaceOnUse">
+      <path d="M0 2H10M0 7H10" stroke="#9b866c" stroke-opacity=".09" stroke-width="1"/>
+      <path d="M2 0V10M7 0V10" stroke="#fff" stroke-opacity=".55" stroke-width="1"/>
+    </pattern>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="7"/><feOffset dy="7"/><feComponentTransfer><feFuncA type="linear" slope=".2"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect x="12" y="12" width="488" height="488" rx="104" fill="url(#fabric)" stroke="#d7c4a6" stroke-width="8"/>
+  <rect x="22" y="22" width="468" height="468" rx="94" fill="url(#weave)" opacity=".9"/>
+  <rect x="34" y="34" width="444" height="444" rx="82" fill="none" stroke="#b9a78d" stroke-width="3" stroke-dasharray="2 12" stroke-linecap="round"/>
+  <circle cx="256" cy="244" r="166" fill="none" stroke="#d8c7ad" stroke-width="5" opacity=".75"/>
+  <path d="M116 258C125 155 203 91 291 101C342 107 379 137 398 181" fill="none" stroke="url(#navyThread)" stroke-width="24" stroke-linecap="round" filter="url(#softShadow)"/>
+  <path d="M119 258C128 157 205 98 291 108C340 114 370 139 391 179" fill="none" stroke="#a8c0dc" stroke-opacity=".7" stroke-width="3" stroke-dasharray="3 9" stroke-linecap="round"/>
+  <path d="M105 269C165 302 228 296 281 248C311 221 328 194 349 163" fill="none" stroke="url(#redThread)" stroke-width="19" stroke-linecap="round" filter="url(#softShadow)"/>
+  <path d="M111 269C170 297 229 290 277 245C306 217 324 190 345 164" fill="none" stroke="#ffd5d5" stroke-opacity=".8" stroke-width="3" stroke-dasharray="3 8" stroke-linecap="round"/>
+  <g transform="translate(357 92)" filter="url(#softShadow)">
+    <rect x="0" y="15" width="52" height="104" rx="13" fill="url(#redThread)" stroke="#8d2032" stroke-width="4"/>
+    <path d="M4 31H48M4 43H48M4 55H48M4 67H48M4 79H48M4 91H48M4 103H48" stroke="#ffadb1" stroke-width="4" stroke-linecap="round" opacity=".75"/>
+    <path d="M-5 14H57M-5 118H57" stroke="#7f1d2d" stroke-width="9" stroke-linecap="round"/>
+    <path d="M-2 11H54M-2 121H54" stroke="#f8c7c9" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <g transform="rotate(34 245 210)" filter="url(#softShadow)">
+    <path d="M245 98L245 296" stroke="url(#steel)" stroke-width="13" stroke-linecap="round"/>
+    <path d="M245 105L245 286" stroke="#fff" stroke-opacity=".82" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M237 288L245 318L253 288" fill="url(#steel)" stroke="#5e7187" stroke-width="2"/>
+    <ellipse cx="245" cy="293" rx="3.4" ry="5" fill="#172d4d"/>
+  </g>
+  <path d="M119 270C153 287 181 287 205 278" fill="none" stroke="#c51f35" stroke-width="6" stroke-linecap="round"/>
+  <path d="M121 276C154 293 181 293 205 284" fill="none" stroke="#ffb2b7" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round"/>
+  <path d="M132 374C184 420 326 424 380 371" fill="none" stroke="url(#navyThread)" stroke-width="22" stroke-linecap="round"/>
+  <path d="M132 374C184 420 326 424 380 371" fill="none" stroke="#a8c0dc" stroke-width="3" stroke-dasharray="3 9" stroke-linecap="round"/>
+  <path d="M256 402C298 399 342 386 380 371" fill="none" stroke="url(#redThread)" stroke-width="22" stroke-linecap="round"/>
+  <path d="M256 402C298 399 342 386 380 371" fill="none" stroke="#ffd5d5" stroke-width="3" stroke-dasharray="3 9" stroke-linecap="round"/>
+  <circle cx="116" cy="257" r="7" fill="#f7f1e7" stroke="#c51f35" stroke-width="4"/>
+  <circle cx="397" cy="182" r="6" fill="#fff7ed" stroke="#17345e" stroke-width="4"/>
+</svg>

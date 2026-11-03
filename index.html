@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Embroidery Statement | Business Management</title>
   <link rel="manifest" href="/manifest.json">
-  <link rel="icon" type="image/jpeg" href="/embroidery-statement-logo.jpg">
-  <link rel="apple-touch-icon" href="/embroidery-statement-logo.jpg">
+  <link rel="icon" type="image/svg+xml" href="/embroidery-statement-logo.svg?v=1">
+  <link rel="apple-touch-icon" href="/embroidery-statement-logo.svg?v=1">
   <meta name="theme-color" content="#0648c8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -86,7 +86,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=3').then(reg => { reg.update(); return reg; }).then(reg => {
+        navigator.serviceWorker.register('/sw.js?v=4').then(reg => { reg.update(); return reg; }).then(reg => {
           console.log('SW registered!', reg);
         }).catch(err => {
           console.log('SW registration failed: ', err);
