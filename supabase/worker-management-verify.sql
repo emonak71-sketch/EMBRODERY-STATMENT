@@ -21,7 +21,13 @@ select
   (select count(*) from public."Parties" where user_id is null) as parties_without_owner,
   (select count(*) from public."Transactions" t
      left join public."Parties" p on p.id = t.party_id
-    where p.id is null) as transactions_without_party;
+    where p.id is null) as transactions_without_party,
+  (select count(*) from public."Transactions" t
+     join public."Parties" p on p.id = t.party_id
+    where p.user_id is null) as transactions_linked_to_ownerless_party,
+  (select count(*) from public."Transactions" t
+     join public."Parties" p on p.id = t.party_id
+    where p.user_id is distinct from t.user_id) as cross_account_party_mismatches;
 
 -- Private worker file bucket must be private.
 select id, name, public, file_size_limit
