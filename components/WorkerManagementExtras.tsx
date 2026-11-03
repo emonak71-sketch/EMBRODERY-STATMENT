@@ -455,7 +455,8 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
     const baseDate = latest?.effective_date || worker.joining_date;
     const due = new Date(baseDate + 'T00:00:00');
     due.setFullYear(due.getFullYear() + 1);
-    return { dueDate: due, eligible: new Date(today() + 'T00:00:00') >= due, latest };
+    const dueDate = [due.getFullYear(), String(due.getMonth() + 1).padStart(2, '0'), String(due.getDate()).padStart(2, '0')].join('-');
+    return { dueDate, eligible: new Date(today() + 'T00:00:00') >= due, latest };
   };
 
   const noWorkers = !loading && workers.length === 0;
@@ -567,7 +568,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs text-slate-500">{tr('বর্তমান মাসিক বেতন', 'Current monthly salary')}</div><div className="mt-1 text-xl font-black">{money(selectedWorker.monthly_salary)}</div></div>
                 <div className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs text-slate-500">{tr('যোগদানের তারিখ', 'Joining date')}</div><div className="mt-1 text-xl font-black">{dateLabel(selectedWorker.joining_date)}</div></div>
-                <div className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs text-slate-500">{tr('পরবর্তী Increment Review', 'Next increment review')}</div><div className="mt-1 text-xl font-black">{dateLabel(dueInfo(selectedWorker).dueDate.toISOString().slice(0, 10))}</div><div className="text-xs text-slate-500">{dueInfo(selectedWorker).eligible ? tr('এক বছর পূর্ণ হয়েছে', 'One-year review due') : tr('এখনো সময় হয়নি', 'Not due yet')}</div></div>
+                <div className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs text-slate-500">{tr('পরবর্তী Increment Review', 'Next increment review')}</div><div className="mt-1 text-xl font-black">{dateLabel(dueInfo(selectedWorker).dueDate)}</div><div className="text-xs text-slate-500">{dueInfo(selectedWorker).eligible ? tr('এক বছর পূর্ণ হয়েছে', 'One-year review due') : tr('এখনো সময় হয়নি', 'Not due yet')}</div></div>
               </div>
               <form onSubmit={submitIncrement} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                 <h3 className="mb-3 flex items-center gap-2 font-black"><TrendingUp size={18} className="text-emerald-600" />{tr('নতুন বেতন বৃদ্ধি যোগ করুন', 'Record a Salary Increment')}</h3>
@@ -608,7 +609,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
 
           {tab === 'annual' && (
             <section className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div><h3 className="font-black">{tr('বার্ষিক বেতন ও নগদ খরচ', 'Annual Salary & Cash Outflow')}</h3><p className="text-xs text-slate-500">{tr('Salary Payment Month এবং Advance দেওয়ার প্রকৃত তারিখ অনুযায়ী হিসাব।', 'Grouped by actual salary payment date and advance disbursement date.')}</p></div><div className="flex gap-2"><select value={year} onChange={e => setYear(Number(e.target.value))} className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800">{Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 10 + i).map(y => <option key={y} value={y}>{y}</option>)}</select><button onClick={exportAnnualCsv} className="rounded-xl bg-blue-700 px-3 py-2 text-xs font-bold text-white"><Download size={13} className="mr-1 inline" />CSV</button></div></div>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div><h3 className="font-black">{tr('বার্ষিক বেতন ও নগদ খরচ', 'Annual Salary & Cash Outflow')}</h3><p className="text-xs text-slate-500">{tr('বেতন পরিশোধের তারিখ এবং অগ্রিম দেওয়ার নির্বাচিত তারিখ অনুযায়ী হিসাব।', 'Grouped by actual salary payment date and the selected advance date.')}</p></div><div className="flex gap-2"><select value={year} onChange={e => setYear(Number(e.target.value))} className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800">{Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 10 + i).map(y => <option key={y} value={y}>{y}</option>)}</select><button onClick={exportAnnualCsv} className="rounded-xl bg-blue-700 px-3 py-2 text-xs font-bold text-white"><Download size={13} className="mr-1 inline" />CSV</button></div></div>
               {annualLoading ? <p className="p-5 text-sm text-slate-500"><Loader2 className="mr-2 inline animate-spin" size={15} />Loading annual report...</p> : (
                 <>
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
