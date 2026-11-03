@@ -58,7 +58,7 @@ export const dbService = {
     return { id: data.user.id, email: data.user.email!, business_name: data.user.user_metadata?.business_name || businessName };
   },
 
-  logout: async () => { if (isConfigured()) await supabase.auth.signOut(); },
+  logout: async () => { if (isConfigured()) await supabase.auth.signOut({ scope: 'local' }); },
 
   getInitialData: async () => {
     if (!isConfigured()) return { parties: [], transactions: [], products: [], expenses: [], sales: [] };
