@@ -5,18 +5,22 @@ This change is designed for the existing Embroidery Statement Supabase project. 
 ## Before touching the live database
 
 1. Open the existing Supabase project: `utyhcyjdvzezvagrmbxg`.
-2. In Supabase Dashboard, open **Database → Backups** and confirm a recent backup is available. If your plan does not provide a restorable backup, export the database before proceeding. Keep the backup outside this repository.
+2. This project is on the Supabase Free plan, which does not include scheduled/restorable project backups. The owner has exported the existing `Parties` (7 rows) and `Transactions` (84 rows) tables to CSV on a separate local drive. These CSVs preserve those table rows but are not a complete database restore. The Worker migration is additive and does not update or delete those business rows. Do not claim that the CSVs are a full database backup.
 3. Confirm the existing two Auth accounts can still sign in. Do not delete, recreate, or merge users.
 4. The current project check found no Supabase Storage buckets or Storage objects. Existing relational data remains in the existing tables; this migration does not move or delete it.
 
-## Enable the requested email OTP for new signups
+## Separate signup OTP step (not part of the Worker migration)
 
 The live database has a legacy `auto_confirm_user_trigger` on `auth.users`. It automatically marks every new signup as confirmed, which bypasses the six-digit signup OTP in the app.
+
+When completing the signup OTP setup, do this as a separate, explicitly approved step:
 
 1. Open **Authentication → Providers → Email** and enable **Confirm email**.
 2. In **SQL Editor → New query**, run the complete contents of `supabase/enable-signup-email-otp.sql`.
 3. This removes only the auto-confirm trigger. It does not update, delete, recreate, or unconfirm any existing account. The old trigger function is intentionally left in place but is no longer called.
-4. For the password-reset email template, follow `supabase/IN_PLACE_UPDATE.md`; the Worker migration does not change password recovery.
+4. For the password-reset email template, follow `supabase/IN_PLACE_UPDATE.md`; neither the Worker migration nor the OTP trigger script changes existing account rows.
+
+This step is independent of Worker Management and must not be bundled into the Worker migration.
 
 ## Pre-migration data snapshot
 
@@ -42,7 +46,7 @@ These are a dated baseline, not target counts. Legitimate new business entries m
 3. Copy the complete SQL file into the SQL Editor.
 4. Review that the query is being run against the existing project, not a newly created project.
 5. Click **Run** once and wait for the query to finish.
-6. Open `supabase/worker-management-verify.sql` and run it. Confirm the Worker tables exist, RLS is enabled, the bucket is private, and the auto-confirm trigger query returns zero rows.
+6. Open `supabase/worker-management-verify.sql` and run it. Confirm the Worker tables exist, RLS is enabled, and the bucket is private. The final result reports signup OTP trigger status separately; it does not require the OTP step to have been run.
 
 The migration is additive:
 - Creates `WorkerDocuments`, `WorkerSalaryIncrements`, `WorkerAdvances`, and `WorkerAdvanceRecoveries`.
