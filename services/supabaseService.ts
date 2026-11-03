@@ -304,7 +304,9 @@ export const dbService = {
 
   getWorkerDocumentSignedUrl: async (filePath: string) => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.id) throw new Error('Please sign in again.');
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    if (!filePath.startsWith(uid + '/')) throw new Error('This document does not belong to the current account.');
     const { data, error } = await supabase.storage
       .from('worker-documents')
       .createSignedUrl(filePath, 60 * 60);
@@ -404,15 +406,15 @@ export const dbService = {
     const { data: { session } } = await supabase.auth.getSession();
     const uid = session?.user?.id;
     if (!uid) throw new Error('Please sign in again.');
-    const start = year + '-01-01T00:00:00';
-    const end = (year + 1) + '-01-01T00:00:00';
+    const start = year + '-01-01T00:00:00+06:00';
+    const end = (year + 1) + '-01-01T00:00:00+06:00';
     const { data, error } = await supabase
       .from('WorkerAdvances')
       .select('*')
       .eq('user_id', uid)
-      .gte('disbursed_at', start)
-      .lt('disbursed_at', end)
-      .order('disbursed_at', { ascending: true });
+      .gte('request_date', start.slice(0, 10))
+      .lt('request_date', end.slice(0, 10))
+      .order('request_date', { ascending: true });
     if (error) throw handleDbError(error, 'loading annual advance report');
     return data || [];
   },
