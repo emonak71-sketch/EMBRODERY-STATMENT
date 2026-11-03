@@ -33,7 +33,7 @@ type Payroll = {
   paid_at?: string | null; payment_method?: string | null; payment_reference?: string | null;
 };
 type SmsLog = {
-  id: string; worker_id: string; event_type: 'salary_paid' | 'advance_paid' | 'custom'; related_id?: string | null;
+  id: string; worker_id: string; event_type: 'salary_paid' | 'advance_paid' | 'custom'; related_id?: string | null; idempotency_key: string;
   mobile: string; message: string; sms_mode: 'non-masking' | 'masking';
   sender_id?: string | null; status: 'pending' | 'accepted' | 'failed';
   error_message?: string | null; attempts: number; created_at: string; accepted_at?: string | null;
@@ -42,6 +42,7 @@ type SmsDraft = {
   worker: Worker; message: string;
   eventType: 'salary_paid' | 'advance_paid' | 'custom';
   relatedId?: string;
+  idempotencyKey?: string;
 };
 type ExtraTab = 'documents' | 'idcard' | 'increments' | 'advances' | 'annual' | 'payslip' | 'sms';
 type DocumentType = 'profile_photo' | 'nid_front' | 'nid_back' | 'birth_certificate' | 'driving_license' | 'passport' | 'other';
@@ -478,6 +479,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
     setSmsDraft({
       worker: slipWorker,
       eventType: 'custom',
+      idempotencyKey: crypto.randomUUID(),
       message: tr(
         slipWorker.full_name + ', ' + slipMonth + ' মাসের বেতন ' + money(selectedSlip.net_salary) + ' টাকা পরিশোধ করা হয়েছে। ধন্যবাদ। - ' + companyName,
         'Dear ' + slipWorker.full_name + ', your ' + slipMonth + ' salary of ' + money(selectedSlip.net_salary) + ' has been paid. Thank you. - ' + companyName
@@ -496,7 +498,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
         worker_id: smsDraft.worker.id,
         event_type: smsDraft.eventType,
         related_id: smsDraft.relatedId,
-        idempotency_key: smsDraft.eventType === 'custom' ? crypto.randomUUID() : undefined,
+        idempotency_key: smsDraft.eventType === 'custom' ? (smsDraft.idempotencyKey || crypto.randomUUID()) : undefined,
         message: smsDraft.message
       });
       setNotice(result.duplicate
@@ -692,7 +694,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
                 <div><h3 className="font-black">{tr('SMS পাঠানোর ইতিহাস', 'SMS Sending History')}</h3><p className="text-xs text-slate-500">{tr('Accepted মানে DNotify অনুরোধ গ্রহণ করেছে; এটি মোবাইলে Delivered হওয়ার নিশ্চয়তা নয়।', 'Accepted means DNotify accepted the request; it is not a handset delivery confirmation.')}</p></div>
                 <div className="flex gap-2">
                   <button onClick={loadSmsLogs} disabled={smsLogsLoading} className="rounded-lg border px-3 py-2 text-xs font-bold dark:border-slate-700"><RefreshCw size={13} className="mr-1 inline" />{tr('রিফ্রেশ', 'Refresh')}</button>
-                  <button onClick={() => selectedWorker && setSmsDraft({ worker: selectedWorker, message: '', eventType: 'custom' })} disabled={!selectedWorker?.phone} className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"><MessageSquare size={13} className="mr-1 inline" />{tr('Custom SMS', 'Compose SMS')}</button>
+                  <button onClick={() => selectedWorker && setSmsDraft({ worker: selectedWorker, message: '', eventType: 'custom', idempotencyKey: crypto.randomUUID() })} disabled={!selectedWorker?.phone} className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"><MessageSquare size={13} className="mr-1 inline" />{tr('Custom SMS', 'Compose SMS')}</button>
                 </div>
               </div>
               {smsLogsLoading ? <p className="py-8 text-center text-sm text-slate-500"><Loader2 size={16} className="mr-2 inline animate-spin" />{tr('লোড হচ্ছে...', 'Loading...')}</p> : (
@@ -709,7 +711,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
                         <td className="p-3">{log.sms_mode}</td>
                         <td className="p-3"><span className={'rounded-full px-2 py-1 text-[10px] font-black ' + (log.status === 'accepted' ? 'bg-emerald-50 text-emerald-700' : log.status === 'failed' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700')}>{log.status === 'accepted' ? tr('Gateway Accepted', 'Gateway Accepted') : log.status}</span></td>
                         <td className="p-3">{log.attempts}</td>
-                        <td className="p-3 text-xs"><div className="max-w-[240px] truncate" title={log.message}>{log.message}</div>{log.error_message && <div className="mt-1 text-rose-600">{log.error_message}</div>}{log.status === 'failed' && <button onClick={() => { const target = workers.find(w => w.id === log.worker_id); if (target) setSmsDraft({ worker: target, message: log.message, eventType: log.event_type, relatedId: log.related_id || undefined }); }} className="mt-1 rounded-md bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-700">{tr('আবার চেষ্টা', 'Retry')}</button>}</td>
+                        <td className="p-3 text-xs"><div className="max-w-[240px] truncate" title={log.message}>{log.message}</div>{log.error_message && <div className="mt-1 text-rose-600">{log.error_message}</div>}{log.status === 'failed' && <button onClick={() => { const target = workers.find(w => w.id === log.worker_id); if (target) setSmsDraft({ worker: target, message: log.message, eventType: log.event_type, relatedId: log.related_id || undefined, idempotencyKey: log.idempotency_key }); }} className="mt-1 rounded-md bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-700">{tr('আবার চেষ্টা', 'Retry')}</button>}</td>
                       </tr>;
                     })}</tbody>
                   </table>
