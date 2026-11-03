@@ -324,8 +324,8 @@ const App: React.FC = () => {
     }
   };
 
-  const handleResetPassword = async (email: string) => {
-    return await dbService.resetPassword(email);
+  const handleResetPassword = async (email: string, captchaToken: string) => {
+    return await dbService.resetPassword(email, captchaToken);
   };
 
   const handleVerifyResetCode = async (email: string, code: string) => {

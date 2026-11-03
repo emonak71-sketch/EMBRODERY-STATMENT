@@ -6,13 +6,22 @@ import {
 import { useLanguage } from '../contexts/LanguageContext';
 
 type AuthMode = 'login' | 'signup' | 'signup-verify' | 'forgot' | 'verify' | 'reset';
-interface AuthResult { success: boolean; message?: string; requiresVerification?: boolean; }
+interface AuthResult { success: boolean; message?: string; code?: string; requiresVerification?: boolean; }
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: HTMLElement, options: Record<string, unknown>) => string;
+      reset: (widgetId?: string) => void;
+      remove: (widgetId: string) => void;
+    };
+  }
+}
 interface AuthProps {
   onLogin: (email: string, pass: string) => Promise<AuthResult>;
   onSignup: (email: string, pass: string, biz: string) => Promise<AuthResult>;
   onVerifySignupCode: (email: string, code: string) => Promise<AuthResult>;
   onResendSignupCode: (email: string) => Promise<AuthResult>;
-  onResetPassword: (email: string) => Promise<AuthResult>;
+  onResetPassword: (email: string, captchaToken: string) => Promise<AuthResult>;
   onVerifyResetCode: (email: string, code: string) => Promise<AuthResult>;
   onUpdatePassword: (pass: string) => Promise<AuthResult>;
   isResetting?: boolean;
@@ -39,15 +48,114 @@ const Auth: React.FC<AuthProps> = ({
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
   const [transitionPhase, setTransitionPhase] = useState<'idle' | 'out' | 'in'>('idle');
   const transitionTimer = useRef<number | null>(null);
+  const captchaContainerRef = useRef<HTMLDivElement | null>(null);
+  const captchaWidgetRef = useRef<string | null>(null);
+  const captchaSiteKey = (import.meta as any).env?.VITE_TURNSTILE_SITE_KEY || '';
+  const [captchaToken, setCaptchaToken] = useState('');
 
   useEffect(() => { if (isResetting) setMode('reset'); }, [isResetting]);
   useEffect(() => () => { if (transitionTimer.current !== null) window.clearTimeout(transitionTimer.current); }, []);
 
+  useEffect(() => {
+    if (mode !== 'forgot' && mode !== 'verify') return;
+    if (!captchaSiteKey) return;
+
+    let active = true;
+    const renderWidget = () => {
+      if (!active || !window.turnstile || !captchaContainerRef.current) return;
+      if (captchaWidgetRef.current) {
+        window.turnstile.remove(captchaWidgetRef.current);
+        captchaWidgetRef.current = null;
+      }
+      captchaWidgetRef.current = window.turnstile.render(captchaContainerRef.current, {
+        sitekey: captchaSiteKey,
+        theme: 'light',
+        size: 'flexible',
+        callback: (token: string) => setCaptchaToken(token),
+        'expired-callback': () => setCaptchaToken(''),
+        'error-callback': () => setCaptchaToken('')
+      });
+    };
+
+    if (window.turnstile) {
+      renderWidget();
+    } else {
+      let script = document.querySelector<HTMLScriptElement>('script[data-turnstile-script="true"]');
+      if (!script) {
+        script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.dataset.turnstileScript = 'true';
+        document.head.appendChild(script);
+      }
+      script.addEventListener('load', renderWidget, { once: true });
+    }
+
+    return () => {
+      active = false;
+      if (captchaWidgetRef.current && window.turnstile) {
+        window.turnstile.remove(captchaWidgetRef.current);
+        captchaWidgetRef.current = null;
+      }
+    };
+  }, [mode, captchaSiteKey]);
+
   const cleanEmail = email.trim().toLowerCase();
   const clearMessages = () => { setErrorMsg(null); setInfoMsg(null); };
+  const resetCaptcha = () => {
+    setCaptchaToken('');
+    if (captchaWidgetRef.current && window.turnstile) window.turnstile.reset(captchaWidgetRef.current);
+  };
+  const recoveryErrorMessage = (result: AuthResult) => {
+    if (result.code === 'ACCOUNT_NOT_FOUND') {
+      return tr(
+        'এই Gmail ঠিকানা দিয়ে কোনো অ্যাকাউন্ট তৈরি করা হয়নি। অনুগ্রহ করে সঠিক Gmail ঠিকানা লিখুন।',
+        'No account was created with this Gmail address. Please enter the correct Gmail address.'
+      );
+    }
+    if (result.code === 'RATE_LIMITED') {
+      return tr(
+        'অনেকবার চেষ্টা করা হয়েছে। কিছুক্ষণ অপেক্ষা করে আবার চেষ্টা করুন।',
+        'Too many attempts. Please wait a while and try again.'
+      );
+    }
+    if (result.code === 'CAPTCHA_INVALID') {
+      return tr(
+        'নিরাপত্তা যাচাই সম্পন্ন হয়নি বা মেয়াদ শেষ হয়েছে। আবার যাচাই করুন।',
+        'The security check failed or expired. Please complete it again.'
+      );
+    }
+    if (result.code === 'RECOVERY_CHECK_NOT_CONFIGURED') {
+      return tr(
+        'নিরাপত্তা যাচাই এখনো সেটআপ করা হয়নি।',
+        'Security verification has not been configured yet.'
+      );
+    }
+    if (result.code === 'INVALID_EMAIL') {
+      return tr(
+        'সঠিক ইমেইল ঠিকানা লিখুন।',
+        'Please enter a valid email address.'
+      );
+    }
+    if (result.code === 'EMAIL_SEND_FAILED') {
+      return tr(
+        'কোড পাঠানো যায়নি। ইমেইল সার্ভারের সেটিংস পরীক্ষা করে আবার চেষ্টা করুন।',
+        'The code could not be sent. Check the email delivery settings and try again.'
+      );
+    }
+    if (result.code === 'RECOVERY_CHECK_FAILED') {
+      return tr(
+        'Gmail ঠিকানা যাচাই করা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
+        'The email address could not be checked. Check your connection and try again.'
+      );
+    }
+    return result.message || tr('কোড পাঠানো যায়নি। আবার চেষ্টা করুন।', 'Could not send the code. Please try again.');
+  };
   const switchMode = (next: AuthMode) => {
     if (next === mode) return;
     clearMessages();
+    resetCaptcha();
     setOtp('');
     setPass('');
     setConfirmPass('');
@@ -99,8 +207,17 @@ const Auth: React.FC<AuthProps> = ({
         if (!result.success) setErrorMsg(result.message || tr('কোডটি ভুল অথবা মেয়াদ শেষ হয়েছে। নতুন কোড নিন।', 'The code is invalid or has expired. Request a new code.'));
         else setInfoMsg(result.message || tr('ইমেইল যাচাই সফল হয়েছে। আপনার অ্যাকাউন্টে প্রবেশ করা হচ্ছে।', 'Email verified. Signing you in.'));
       } else if (mode === 'forgot') {
-        const result = await onResetPassword(cleanEmail);
-        if (!result.success) setErrorMsg(result.message || tr('কোড পাঠানো যায়নি। আবার চেষ্টা করুন।', 'Could not send the code. Please try again.'));
+        if (!captchaSiteKey) {
+          setErrorMsg(tr('নিরাপত্তা যাচাই এখনো সেটআপ করা হয়নি।', 'Security verification has not been configured yet.'));
+          return;
+        }
+        if (!captchaToken) {
+          setErrorMsg(tr('অনুগ্রহ করে আগে নিরাপত্তা যাচাই সম্পন্ন করুন।', 'Please complete the security check first.'));
+          return;
+        }
+        const result = await onResetPassword(cleanEmail, captchaToken);
+        resetCaptcha();
+        if (!result.success) setErrorMsg(recoveryErrorMessage(result));
         else {
           setMode('verify');
           setOtp('');
@@ -146,10 +263,19 @@ const Auth: React.FC<AuthProps> = ({
     setResending(true);
     clearMessages();
     try {
+      if (mode !== 'signup-verify' && (!captchaSiteKey || !captchaToken)) {
+        setErrorMsg(tr('অনুগ্রহ করে আগে নিরাপত্তা যাচাই সম্পন্ন করুন।', 'Please complete the security check first.'));
+        return;
+      }
       const result = mode === 'signup-verify'
         ? await onResendSignupCode(cleanEmail)
-        : await onResetPassword(cleanEmail);
-      if (!result.success) setErrorMsg(result.message || tr('নতুন কোড পাঠানো যায়নি।', 'Could not send a new code.'));
+        : await onResetPassword(cleanEmail, captchaToken);
+      if (mode !== 'signup-verify') resetCaptcha();
+      if (!result.success) {
+        setErrorMsg(mode === 'signup-verify'
+          ? result.message || tr('নতুন কোড পাঠানো যায়নি।', 'Could not send a new code.')
+          : recoveryErrorMessage(result));
+      }
       else setInfoMsg(tr('নতুন ৬ সংখ্যার কোড পাঠানোর অনুরোধ সফল হয়েছে।', 'A new 6-digit code has been requested.'));
     } catch {
       setErrorMsg(tr('কোড পুনরায় পাঠানো যায়নি। আবার চেষ্টা করুন।', 'Could not resend the code. Please try again.'));
@@ -241,6 +367,19 @@ const Auth: React.FC<AuthProps> = ({
                 <span><Mail className="inline h-4 w-4" /> {tr('ইমেইল ঠিকানা', 'Email address')}</span>
                 <input type="email" required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={email} readOnly={mode === 'verify' || mode === 'signup-verify'} onChange={event => setEmail(event.target.value)} className="auth-input" placeholder={tr('আপনার ইমেইল লিখুন', 'name@example.com')} />
               </label>
+            )}
+
+            {(mode === 'forgot' || mode === 'verify') && (
+              <div className="auth-field block space-y-2">
+                <span>{tr('নিরাপত্তা যাচাই', 'Security verification')}</span>
+                {captchaSiteKey ? (
+                  <div ref={captchaContainerRef} className="flex min-h-[65px] justify-center" />
+                ) : (
+                  <p className="rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-800">
+                    {tr('নিরাপত্তা যাচাই এখনো সেটআপ করা হয়নি।', 'Security verification has not been configured yet.')}
+                  </p>
+                )}
+              </div>
             )}
 
             {(mode === 'verify' || mode === 'signup-verify') && (
