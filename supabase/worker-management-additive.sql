@@ -33,14 +33,19 @@ create or replace function public.assign_worker_code()
 returns trigger
 language plpgsql
 set search_path = public, pg_temp
-as $$
+as $
+declare
+  v_worker_number bigint;
+  v_worker_text text;
 begin
   if new.worker_code is null or btrim(new.worker_code) = '' then
-    new.worker_code := 'EMP-' || lpad(nextval('public.worker_code_seq')::text, 4, '0');
+    v_worker_number := nextval('public.worker_code_seq');
+    v_worker_text := v_worker_number::text;
+    new.worker_code := 'EMP-' || lpad(v_worker_text, greatest(4, length(v_worker_text)), '0');
   end if;
   return new;
 end;
-$$;
+$;
 
 do $$
 begin
