@@ -461,7 +461,7 @@ export const dbService = {
     return data || [];
   },
 
-  resetPassword: async (email: string) => {
+  resetPassword: async (email: string, captchaToken: string) => {
     if (!isConfigured()) return { success: false, code: 'RECOVERY_CHECK_FAILED' };
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || cleanEmail.length > 254) {
@@ -472,7 +472,7 @@ export const dbService = {
     // The Edge Function uses the service-role key server-side; no privileged key reaches the browser.
     const { data: accountCheck, error: checkError } = await supabase.functions.invoke(
       'check-password-recovery',
-      { body: { email: cleanEmail } }
+      { body: { email: cleanEmail, captchaToken } }
     );
 
     if (checkError) {
@@ -480,7 +480,7 @@ export const dbService = {
       const status = (checkError as any)?.context?.status;
       return {
         success: false,
-        code: status === 429 ? 'RATE_LIMITED' : 'RECOVERY_CHECK_FAILED'
+        code: status === 429 ? 'RATE_LIMITED' : status === 400 ? 'CAPTCHA_INVALID' : 'RECOVERY_CHECK_FAILED'
       };
     }
 
