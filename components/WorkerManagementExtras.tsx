@@ -555,7 +555,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
                         <div className="text-xs text-slate-600"><b>Phone:</b> {selectedWorker.phone || '—'}</div>
                       </div>
                     </div>
-                    <div className="mt-4 flex items-end justify-between border-t border-slate-100 pt-3 text-[9px] text-slate-500"><span>Issued by {companyName || 'Employer'}</span><span className="font-bold uppercase tracking-widest">Official Staff Card</span></div>
+                    <div className="mt-4 flex items-end justify-between border-t border-slate-100 pt-3 text-[9px] text-slate-500"><span>{tr('এই কার্ডধারী কর্মী প্রতিষ্ঠানে কর্মরত আছেন।', 'This card confirms that the holder is employed by this company.')}</span><span className="font-bold uppercase tracking-widest">Official Staff Card</span></div>
                   </div>
                 </div>
               </div>
