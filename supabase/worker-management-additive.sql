@@ -414,9 +414,15 @@ set search_path = public, pg_temp
 as $$
 declare
   v_advance record;
+  v_should_recover boolean := false;
 begin
-  if new.status = 'paid' then
-    if tg_op = 'INSERT' or old.status is distinct from 'paid' then
+  if tg_op = 'INSERT' then
+    v_should_recover := true;
+  else
+    v_should_recover := old.status is distinct from 'paid';
+  end if;
+
+  if new.status = 'paid' and v_should_recover then
       for v_advance in
       select a.id, a.worker_id, a.outstanding_amount
         from public."WorkerAdvances" a
@@ -442,14 +448,13 @@ begin
        where id = v_advance.id
          and user_id = new.user_id;
       end loop;
-    end if;
   end if;
 
   return new;
 end;
-$$;
+$;
 
-do $$
+do $
 begin
   if not exists (
     select 1 from pg_trigger
