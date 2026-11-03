@@ -316,6 +316,14 @@ const App: React.FC = () => {
     }
   };
 
+  const handleResendSignupCode = async (email: string) => {
+    return await dbService.resendSignupCode(email);
+  };
+
+  const handleVerifySignupCode = async (email: string, code: string) => {
+    return await dbService.verifySignupCode(email, code);
+  };
+
   const handleResetPassword = async (email: string) => {
     return await dbService.resetPassword(email);
   };
@@ -366,7 +374,9 @@ const App: React.FC = () => {
     return (
       <Auth 
         onLogin={handleLogin} 
-        onSignup={handleSignup} 
+        onSignup={handleSignup}
+        onResendSignupCode={handleResendSignupCode}
+        onVerifySignupCode={handleVerifySignupCode}
         onResetPassword={handleResetPassword}
         onVerifyResetCode={handleVerifyResetCode}
         onUpdatePassword={handleUpdatePassword}
