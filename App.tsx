@@ -211,6 +211,14 @@ const App: React.FC = () => {
     return res;
   };
 
+  const handleVerifySignupCode = async (email: string, code: string) => {
+    return await dbService.verifySignupCode(email, code);
+  };
+
+  const handleResendSignupCode = async (email: string) => {
+    return await dbService.resendSignupCode(email);
+  };
+
   const handleLogout = async () => {
     await dbService.logout();
     setUser(null);
@@ -321,15 +329,10 @@ const App: React.FC = () => {
   };
 
   const handleVerifyResetCode = async (email: string, code: string) => {
-    setIsResettingPassword(true);
-    try {
-      const result = await dbService.verifyResetCode(email, code);
-      if (!result.success) setIsResettingPassword(false);
-      return result;
-    } catch (error) {
-      setIsResettingPassword(false);
-      throw error;
-    }
+    const result = await dbService.verifyResetCode(email, code);
+    // Keep the Auth screen open for password creation only after the recovery OTP is valid.
+    if (result.success) setIsResettingPassword(true);
+    return result;
   };
 
   const handleUpdatePassword = async (newPass: string) => {
@@ -367,6 +370,8 @@ const App: React.FC = () => {
       <Auth 
         onLogin={handleLogin} 
         onSignup={handleSignup} 
+        onVerifySignupCode={handleVerifySignupCode}
+        onResendSignupCode={handleResendSignupCode}
         onResetPassword={handleResetPassword}
         onVerifyResetCode={handleVerifyResetCode}
         onUpdatePassword={handleUpdatePassword}
