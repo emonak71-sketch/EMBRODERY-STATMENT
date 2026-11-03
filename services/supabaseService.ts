@@ -38,17 +38,63 @@ export const dbService = {
   
   signup: async (email: string, pass: string, businessName: string) => {
     if (!isConfigured()) return { success: false, message: 'Supabase ব্যাকএন্ড কনফিগার করা নেই।' };
-    const { data, error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password: pass, options: { data: { business_name: businessName } } });
+    const cleanEmail = email.trim().toLowerCase();
+    const { data, error } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password: pass,
+      options: { data: { business_name: businessName } }
+    });
     if (error) {
       let msg = error.message;
       if (error.message.includes('User already registered') || error.message.includes('already exists')) {
         msg = 'এই ইমেইল দিয়ে ইতোমধ্যে একটি একাউন্ট খোলা আছে। লগ-ইন করার চেষ্টা করুন।';
       } else if (error.message.includes('Password should be at least')) {
-        msg = 'পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে।';
+        msg = 'পাসওয়ার্ড অন্তত ৮ অক্ষরের হতে হবে।';
       }
       return { success: false, message: msg };
     }
-    return { success: true, user: { id: data.user!.id, email: data.user!.email!, business_name: businessName }, message: data.session ? null : 'অ্যাকাউন্ট তৈরি সফল হয়েছে! দয়া করে লগ-ইন করুন।' };
+    if (!data.user || (data.user.identities && data.user.identities.length === 0)) {
+      return { success: false, message: 'এই Gmail দিয়ে ইতোমধ্যে একটি অ্যাকাউন্ট আছে। লগ-ইন করুন অথবা পাসওয়ার্ড ভুলে গেলে Forgot Password ব্যবহার করুন।' };
+    }
+    if (!data.session) {
+      return {
+        success: true,
+        requiresVerification: true,
+        message: 'আপনার Gmail-এ ৬ সংখ্যার OTP পাঠানো হয়েছে। কোডটি যাচাই করলে অ্যাকাউন্ট চালু হবে।'
+      };
+    }
+    return {
+      success: true,
+      requiresVerification: false,
+      user: { id: data.user.id, email: data.user.email!, business_name: businessName },
+      message: 'অ্যাকাউন্ট তৈরি হয়েছে।'
+    };
+  },
+
+  resendSignupCode: async (email: string) => {
+    if (!isConfigured()) return { success: false, message: 'Supabase ব্যাকএন্ড কনফিগার করা নেই।' };
+    const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim().toLowerCase() });
+    if (error) {
+      console.error('Signup OTP resend failed:', error);
+      return { success: false, message: 'নতুন OTP পাঠানো যায়নি। কিছুক্ষণ পর আবার চেষ্টা করুন।' };
+    }
+    return { success: true, message: 'নতুন ৬ সংখ্যার OTP আপনার Gmail-এ পাঠানো হয়েছে।' };
+  },
+
+  verifySignupCode: async (email: string, token: string) => {
+    if (!isConfigured()) return { success: false, message: 'Supabase ব্যাকএন্ড কনফিগার করা নেই।' };
+    const cleanToken = token.replace(/\\D/g, '');
+    if (!/^\\d{6}$/.test(cleanToken)) return { success: false, message: '৬ সংখ্যার সঠিক OTP লিখুন।' };
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: cleanToken,
+      type: 'signup'
+    });
+    if (error) {
+      console.error('Signup OTP verification failed:', error);
+      return { success: false, message: 'OTP ভুল অথবা মেয়াদ শেষ হয়েছে। নতুন OTP নিয়ে আবার চেষ্টা করুন।' };
+    }
+    return { success: true, message: 'Gmail যাচাই সফল হয়েছে। আপনার অ্যাকাউন্ট চালু হয়েছে।' };
   },
 
   updateProfile: async (email: string, businessName: string) => {
