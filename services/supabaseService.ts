@@ -83,8 +83,8 @@ export const dbService = {
 
   verifySignupCode: async (email: string, token: string) => {
     if (!isConfigured()) return { success: false, message: 'Supabase ব্যাকএন্ড কনফিগার করা নেই।' };
-    const cleanToken = token.replace(/\\D/g, '');
-    if (!/^\\d{6}$/.test(cleanToken)) return { success: false, message: '৬ সংখ্যার সঠিক OTP লিখুন।' };
+    const cleanToken = token.replace(/\D/g, '');
+    if (!/^\d{6}$/.test(cleanToken)) return { success: false, message: '৬ সংখ্যার সঠিক OTP লিখুন।' };
     const { error } = await supabase.auth.verifyOtp({
       email: email.trim().toLowerCase(),
       token: cleanToken,
