@@ -165,6 +165,7 @@ end $$;
 create or replace function public.apply_worker_salary_increment()
 returns trigger
 language plpgsql
+security definer
 set search_path = public, pg_temp
 as $$
 declare
@@ -417,6 +418,7 @@ $$;
 create or replace function public.recover_worker_advances_after_payroll()
 returns trigger
 language plpgsql
+security definer
 set search_path = public, pg_temp
 as $$
 declare
