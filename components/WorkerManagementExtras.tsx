@@ -396,19 +396,8 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
       );
       setAdvanceAmount('');
       setAdvanceReason('');
-      try {
-        await dbService.sendWorkerSms({
-          worker_id: selectedWorker.id,
-          event_type: 'advance_paid',
-          related_id: advanceRow.id,
-          message: advanceMessage
-        });
-        setNotice(tr('অগ্রিম সংরক্ষিত হয়েছে এবং DNotify SMS Gateway অনুরোধ গ্রহণ করেছে।', 'Advance saved and DNotify accepted the SMS request.'));
-        await loadSmsLogs();
-      } catch (smsError: any) {
-        setSmsDraft({ worker: selectedWorker, message: advanceMessage, eventType: 'advance_paid', relatedId: advanceRow.id });
-        setError(tr('অগ্রিম সংরক্ষিত হয়েছে, কিন্তু SMS পাঠানো যায়নি: ', 'Advance saved, but SMS was not sent: ') + (smsError.message || 'Unknown SMS error'));
-      }
+      setSmsDraft({ worker: selectedWorker, message: advanceMessage, eventType: 'advance_paid', relatedId: advanceRow.id });
+      setNotice(tr('অগ্রিম সংরক্ষিত হয়েছে। SMS পাঠাতে চাইলে বার্তাটি যাচাই করে Send চাপুন।', 'Advance saved. Review the editable SMS draft and press Send only if you want to notify the worker.'));
     } catch (e: any) {
       setError(e.message || 'Advance could not be recorded. Check the salary month; it may already be paid.');
     } finally { setSaving(false); }
