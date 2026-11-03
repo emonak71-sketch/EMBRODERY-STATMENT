@@ -296,8 +296,7 @@ export const dbService = {
       .single();
 
     if (error) {
-      // Only remove the just-created object if its metadata insert failed.
-      await supabase.storage.from('worker-documents').remove([filePath]);
+      // Keep the uploaded object rather than risking deletion of a document.
       throw handleDbError(error, 'saving worker document details');
     }
     return data;
@@ -387,8 +386,8 @@ export const dbService = {
     const { data: { session } } = await supabase.auth.getSession();
     const uid = session?.user?.id;
     if (!uid) throw new Error('Please sign in again.');
-    const start = year + '-01-01T00:00:00';
-    const end = (year + 1) + '-01-01T00:00:00';
+    const start = year + '-01-01T00:00:00+06:00';
+    const end = (year + 1) + '-01-01T00:00:00+06:00';
     const { data, error } = await supabase
       .from('WorkerPayroll')
       .select('*')
