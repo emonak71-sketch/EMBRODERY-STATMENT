@@ -65,7 +65,7 @@ Deploy the application changes only after the SQL has completed successfully. Th
 3. Upload a photo, NID front/back, birth certificate, passport, driving licence, or other PDF/image. New uploads are saved as new versions; existing uploads are not overwritten.
 4. Use **Company ID Card** to print or export a worker ID card.
 5. Use **Salary Increments** to record a dated increment. The current salary and unpaid draft payrolls from the effective salary month onward update atomically; paid payroll is never changed.
-6. Use **Salary Advances** to record an advance and choose the salary month for recovery. When the first eligible payroll at or after that month is marked Paid, the outstanding advance is deducted automatically and recorded once.
+6. Use **Salary Advances** to record an advance. Each worker has an **active salary cycle**: it starts in the current Bangladesh calendar month and stays open until that worker's payroll for the month is marked Paid. Therefore, November advances—including advances recorded in December before November salary is paid—remain assigned to November. After November payroll is marked Paid, that worker's active cycle automatically advances to December. All outstanding advances assigned to the active cycle are deducted together in full, once.
 7. Use **Annual Report** to export salary/advance cash outflow by year.
 8. Use **Payslips** to print or export a salary statement. Salary and advance events send through DNotify after the corresponding payment/advance record is saved. Custom SMS can be sent from the composer.
 
