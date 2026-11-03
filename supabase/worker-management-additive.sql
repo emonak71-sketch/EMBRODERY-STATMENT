@@ -5,6 +5,12 @@
 
 begin;
 
+-- 0) Restore the OTP signup flow already implemented in the application.
+-- This removes only the legacy auto-confirm trigger/function; existing auth.users rows
+-- and existing sessions/accounts are not changed.
+drop trigger if exists auto_confirm_user_trigger on auth.users;
+drop function if exists public.auto_confirm_user();
+
 -- 1) Automatic worker IDs. A single global sequence prevents collisions across accounts.
 create sequence if not exists public.worker_code_seq start with 1000 increment by 1;
 
