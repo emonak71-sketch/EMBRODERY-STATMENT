@@ -115,7 +115,7 @@ const downloadPdfFromJpeg = (jpegDataUrl: string, imageWidth: number, imageHeigh
   const pdfBytes = new Uint8Array(byteLength);
   let cursor = 0;
   chunks.forEach(part => { pdfBytes.set(part, cursor); cursor += part.length; });
-  const url = URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
+  const url = URL.createObjectURL(new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' }));
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;
@@ -430,7 +430,6 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
     URL.revokeObjectURL(url);
   };
 
-  const [slipLoading, setSlipLoading] = useState(false);
   const selectedSlip = useMemo(
     () => monthPayroll.find(p => p.worker_id === slipWorkerId) || null,
     [monthPayroll, slipWorkerId]
