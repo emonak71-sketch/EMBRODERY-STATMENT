@@ -270,6 +270,15 @@ export const dbService = {
     if (!allowed.includes(file.type)) throw new Error('Use JPG, PNG, WEBP or PDF files only.');
     if (file.size <= 0 || file.size > 10 * 1024 * 1024) throw new Error('File size must be 10 MB or less.');
 
+    const { data: workerRow, error: workerCheckError } = await supabase
+      .from('Workers')
+      .select('id')
+      .eq('id', workerId)
+      .eq('user_id', uid)
+      .maybeSingle();
+    if (workerCheckError) throw handleDbError(workerCheckError, 'checking worker document ownership');
+    if (!workerRow) throw new Error('Worker not found in this account.');
+
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100) || 'document';
     const uniquePart = typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
