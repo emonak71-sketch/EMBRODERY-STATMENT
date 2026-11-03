@@ -208,6 +208,17 @@ begin
          updated_at = now()
    where id = new.worker_id and user_id = new.user_id;
 
+  -- Keep every still-unpaid draft in the effective salary month and later months
+  -- aligned with the newly approved monthly salary. Paid payroll is never changed.
+  update public."WorkerPayroll"
+     set basic_salary = new.new_salary,
+         net_salary = round(new.new_salary + overtime_amount + bonus - deduction, 2),
+         updated_at = now()
+   where user_id = new.user_id
+     and worker_id = new.worker_id
+     and status = 'draft'
+     and month_key >= to_char(new.effective_date, 'YYYY-MM');
+
   return new;
 end;
 $$;
@@ -394,6 +405,17 @@ begin
   end if;
 
   if new.status = 'paid' then
+    -- Lock outstanding advances first so two concurrent payroll payments
+    -- cannot deduct the same advance twice.
+    perform 1
+      from public."WorkerAdvances" a
+     where a.user_id = new.user_id
+       and a.worker_id = new.worker_id
+       and a.deduct_from_month <= new.month_key
+       and a.status = 'outstanding'
+       and a.outstanding_amount > 0
+       for update;
+
     select coalesce(sum(a.outstanding_amount), 0)
       into v_advance_total
       from public."WorkerAdvances" a
