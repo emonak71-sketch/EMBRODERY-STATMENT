@@ -13,6 +13,7 @@ import MonthlyCollections from './components/MonthlyCollections';
 import PartiesList from './components/PartiesList';
 import { BiometricLock } from './components/BiometricLock';
 import WorkerAttendance from './components/WorkerAttendance';
+import SplashScreen from './components/SplashScreen';
 
 const sendSMSAlert = async (phone: string, message: string) => {
   try {
@@ -51,6 +52,7 @@ const App: React.FC = () => {
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [loading, setLoading] = useState(true);
+  const [splashComplete, setSplashComplete] = useState(false);
   const [isMisconfigured, setIsMisconfigured] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
@@ -62,6 +64,11 @@ const App: React.FC = () => {
     monthlyWork: 0,
           monthlyCollected: 0
   });
+
+  useEffect(() => {
+    const splashTimer = window.setTimeout(() => setSplashComplete(true), 2300);
+    return () => window.clearTimeout(splashTimer);
+  }, []);
 
   const refreshData = useCallback(async () => {
     if (!user) return;
@@ -331,11 +338,11 @@ const App: React.FC = () => {
     return res;
   };
 
+  if (!splashComplete) return <SplashScreen />;
+
   if (loading && !user && !isMisconfigured) {
     return (
-      <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
+      <SplashScreen />
     );
   }
 

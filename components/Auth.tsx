@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, Loader2, AlertCircle, ShieldCheck, Mail, KeyRound, Eye, EyeOff } from 'lucide-react';
+import {
+  ArrowLeft, ArrowRight, Loader2, AlertCircle, ShieldCheck, Mail,
+  KeyRound, Eye, EyeOff, Languages, LockKeyhole, Building2, Sparkles
+} from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 type AuthMode = 'login' | 'signup' | 'forgot' | 'verify' | 'reset';
-
-interface AuthResult {
-  success: boolean;
-  message?: string;
-}
-
+interface AuthResult { success: boolean; message?: string; }
 interface AuthProps {
   onLogin: (email: string, pass: string) => Promise<AuthResult>;
   onSignup: (email: string, pass: string, biz: string) => Promise<AuthResult>;
@@ -18,13 +17,13 @@ interface AuthProps {
 }
 
 const Auth: React.FC<AuthProps> = ({
-  onLogin,
-  onSignup,
-  onResetPassword,
-  onVerifyResetCode,
-  onUpdatePassword,
+  onLogin, onSignup, onResetPassword, onVerifyResetCode, onUpdatePassword,
   isResetting = false
 }) => {
+  const { language, setLanguage } = useLanguage();
+  const bn = language === 'bn';
+  const tr = (bangla: string, english: string) => bn ? bangla : english;
+
   const [mode, setMode] = useState<AuthMode>(isResetting ? 'reset' : 'login');
   const [email, setEmail] = useState(() => localStorage.getItem('saved_email') || '');
   const [pass, setPass] = useState('');
@@ -37,84 +36,84 @@ const Auth: React.FC<AuthProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isResetting) setMode('reset');
-  }, [isResetting]);
+  useEffect(() => { if (isResetting) setMode('reset'); }, [isResetting]);
 
   const cleanEmail = email.trim().toLowerCase();
+  const clearMessages = () => { setErrorMsg(null); setInfoMsg(null); };
+  const switchMode = (next: AuthMode) => {
+    clearMessages();
+    setOtp('');
+    setPass('');
+    setConfirmPass('');
+    setMode(next);
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (loading) return;
-
     setLoading(true);
-    setErrorMsg(null);
-    setInfoMsg(null);
-
+    clearMessages();
     try {
       if (mode === 'login') {
         const result = await onLogin(cleanEmail, pass);
-        if (!result.success) setErrorMsg(result.message || 'ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।');
+        if (!result.success) setErrorMsg(result.message || tr('ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।', 'The email or password is incorrect.'));
         else localStorage.setItem('saved_email', cleanEmail);
       } else if (mode === 'signup') {
         if (pass.length < 8) {
-          setErrorMsg('নিরাপত্তার জন্য পাসওয়ার্ড অন্তত ৮ অক্ষরের দিন।');
+          setErrorMsg(tr('পাসওয়ার্ড অন্তত ৮ অক্ষরের হতে হবে।', 'Password must be at least 8 characters.'));
           return;
         }
         if (pass !== confirmPass) {
-          setErrorMsg('দুটি পাসওয়ার্ড মিলছে না।');
+          setErrorMsg(tr('দুটি পাসওয়ার্ড মিলছে না।', 'The passwords do not match.'));
           return;
         }
         const result = await onSignup(cleanEmail, pass, businessName.trim());
-        if (!result.success) {
-          setErrorMsg(result.message || 'অ্যাকাউন্ট তৈরি করা যায়নি।');
-        } else {
+        if (!result.success) setErrorMsg(result.message || tr('অ্যাকাউন্ট তৈরি করা যায়নি।', 'Could not create the account.'));
+        else {
           localStorage.setItem('saved_email', cleanEmail);
           setMode('login');
           setPass('');
           setConfirmPass('');
-          setInfoMsg(result.message || 'অ্যাকাউন্ট তৈরি হয়েছে। এখন লগ-ইন করুন।');
+          setInfoMsg(result.message || tr('অ্যাকাউন্ট তৈরি হয়েছে। এখন লগ-ইন করুন।', 'Account created. You can now sign in.'));
         }
       } else if (mode === 'forgot') {
         const result = await onResetPassword(cleanEmail);
-        if (!result.success) {
-          setErrorMsg(result.message || 'কোড পাঠানো যায়নি। আবার চেষ্টা করুন।');
-        } else {
+        if (!result.success) setErrorMsg(result.message || tr('কোড পাঠানো যায়নি। আবার চেষ্টা করুন।', 'Could not send the code. Please try again.'));
+        else {
           setMode('verify');
           setOtp('');
-          setInfoMsg(result.message || 'আপনার ইমেইলে ৬ সংখ্যার কোড পাঠানো হয়েছে।');
+          setInfoMsg(result.message || tr('আপনার ইমেইলে ৬ সংখ্যার কোড পাঠানো হয়েছে।', 'A 6-digit verification code has been sent to your email.'));
         }
       } else if (mode === 'verify') {
         const code = otp.replace(/\D/g, '');
         if (!/^\d{6}$/.test(code)) {
-          setErrorMsg('৬ সংখ্যার সঠিক কোডটি লিখুন।');
+          setErrorMsg(tr('৬ সংখ্যার সঠিক কোডটি লিখুন।', 'Enter the valid 6-digit code.'));
           return;
         }
         const result = await onVerifyResetCode(cleanEmail, code);
-        if (!result.success) {
-          setErrorMsg(result.message || 'কোডটি সঠিক নয় অথবা মেয়াদ শেষ হয়েছে।');
-        } else {
+        if (!result.success) setErrorMsg(result.message || tr('কোডটি সঠিক নয় অথবা মেয়াদ শেষ হয়েছে।', 'The code is invalid or has expired.'));
+        else {
           setMode('reset');
           setPass('');
           setConfirmPass('');
-          setInfoMsg('কোড যাচাই হয়েছে। এখন নতুন পাসওয়ার্ড দিন।');
+          setInfoMsg(tr('কোড যাচাই হয়েছে। এখন নতুন পাসওয়ার্ড দিন।', 'Code verified. Set your new password.'));
         }
       } else if (mode === 'reset') {
         if (pass.length < 8) {
-          setErrorMsg('নতুন পাসওয়ার্ড অন্তত ৮ অক্ষরের হতে হবে।');
+          setErrorMsg(tr('নতুন পাসওয়ার্ড অন্তত ৮ অক্ষরের হতে হবে।', 'New password must be at least 8 characters.'));
           return;
         }
         if (pass !== confirmPass) {
-          setErrorMsg('নতুন পাসওয়ার্ড দুটি মিলছে না।');
+          setErrorMsg(tr('নতুন পাসওয়ার্ড দুটি মিলছে না।', 'The new passwords do not match.'));
           return;
         }
         const result = await onUpdatePassword(pass);
-        if (!result.success) setErrorMsg(result.message || 'পাসওয়ার্ড আপডেট করা যায়নি।');
-        else setInfoMsg(result.message || 'পাসওয়ার্ড পরিবর্তন হয়েছে।');
+        if (!result.success) setErrorMsg(result.message || tr('পাসওয়ার্ড আপডেট করা যায়নি।', 'Could not update the password.'));
+        else setInfoMsg(result.message || tr('পাসওয়ার্ড পরিবর্তন হয়েছে।', 'Your password has been updated.'));
       }
     } catch (error) {
       console.error('Authentication flow failed:', error);
-      setErrorMsg('একটি সমস্যা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।');
+      setErrorMsg(tr('একটি সমস্যা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।', 'Something went wrong. Please try again shortly.'));
     } finally {
       setLoading(false);
     }
@@ -123,175 +122,121 @@ const Auth: React.FC<AuthProps> = ({
   const handleResendCode = async () => {
     if (!cleanEmail || resending) return;
     setResending(true);
-    setErrorMsg(null);
-    setInfoMsg(null);
+    clearMessages();
     try {
       const result = await onResetPassword(cleanEmail);
-      if (!result.success) setErrorMsg(result.message || 'নতুন কোড পাঠানো যায়নি।');
-      else setInfoMsg('নতুন ৬ সংখ্যার কোড পাঠানোর অনুরোধ সফল হয়েছে।');
+      if (!result.success) setErrorMsg(result.message || tr('নতুন কোড পাঠানো যায়নি।', 'Could not send a new code.'));
+      else setInfoMsg(tr('নতুন ৬ সংখ্যার কোড পাঠানোর অনুরোধ সফল হয়েছে।', 'A new 6-digit code has been requested.'));
     } catch {
-      setErrorMsg('কোড পুনরায় পাঠানো যায়নি। আবার চেষ্টা করুন।');
+      setErrorMsg(tr('কোড পুনরায় পাঠানো যায়নি। আবার চেষ্টা করুন।', 'Could not resend the code. Please try again.'));
     } finally {
       setResending(false);
     }
   };
 
   const title: Record<AuthMode, string> = {
-    login: 'আপনার অ্যাকাউন্টে প্রবেশ করুন',
-    signup: 'নতুন অ্যাকাউন্ট তৈরি করুন',
-    forgot: 'পাসওয়ার্ড রিসেট করুন',
-    verify: 'ইমেইল কোড যাচাই করুন',
-    reset: 'নতুন পাসওয়ার্ড সেট করুন'
+    login: tr('আপনার অ্যাকাউন্টে প্রবেশ করুন', 'Welcome back'),
+    signup: tr('নতুন অ্যাকাউন্ট তৈরি করুন', 'Create your account'),
+    forgot: tr('পাসওয়ার্ড রিসেট করুন', 'Reset your password'),
+    verify: tr('ইমেইল কোড যাচাই করুন', 'Verify your email code'),
+    reset: tr('নতুন পাসওয়ার্ড সেট করুন', 'Set a new password')
   };
-
+  const subtitle: Record<AuthMode, string> = {
+    login: tr('আপনার Embroidery ব্যবসার হিসাব নিরাপদে পরিচালনা করুন।', 'Sign in to manage your embroidery business workspace.'),
+    signup: tr('আপনার ব্যবসার জন্য নিরাপদ Workspace তৈরি করুন।', 'Create a secure workspace for your business.'),
+    forgot: tr('আপনার অ্যাকাউন্টের ইমেইল দিন। আমরা ৬ সংখ্যার কোড পাঠাব।', 'Enter your account email. We will send a 6-digit code.'),
+    verify: tr('ইমেইলে পাওয়া ৬ সংখ্যার কোডটি এখানে লিখুন।', 'Enter the 6-digit code sent to your email.'),
+    reset: tr('যাচাইকরণ সম্পন্ন হয়েছে। এখন নতুন পাসওয়ার্ড তৈরি করুন।', 'Verification complete. Create a new password.')
+  };
   const buttonText: Record<AuthMode, string> = {
-    login: 'নিরাপদে লগ-ইন করুন',
-    signup: 'অ্যাকাউন্ট তৈরি করুন',
-    forgot: '৬ সংখ্যার কোড পাঠান',
-    verify: 'কোড যাচাই করুন',
-    reset: 'নতুন পাসওয়ার্ড সংরক্ষণ করুন'
+    login: tr('নিরাপদে লগ-ইন করুন', 'Sign in securely'),
+    signup: tr('অ্যাকাউন্ট তৈরি করুন', 'Create account'),
+    forgot: tr('৬ সংখ্যার কোড পাঠান', 'Send 6-digit code'),
+    verify: tr('কোড যাচাই করুন', 'Verify code'),
+    reset: tr('নতুন পাসওয়ার্ড সংরক্ষণ করুন', 'Save new password')
   };
 
   const showEmail = mode !== 'reset';
   const showPasswordField = mode === 'login' || mode === 'signup' || mode === 'reset';
 
   return (
-    <main className="auth-shell min-h-screen flex flex-col items-center justify-center px-4 py-8 sm:px-6 font-sans">
-      <div className="w-full max-w-[440px]">
-        <div className="text-center mb-7 auth-brand-enter">
-          <img
-            src="/embroidery-statement-logo.jpg"
-            alt="Embroidery Statement"
-            className="mx-auto mb-4 w-36 sm:w-44 max-w-full rounded-2xl auth-logo"
-            fetchPriority="high"
-          />
-          <p className="text-sm font-bold tracking-[0.18em] text-slate-500 dark:text-slate-400">
-            EMBROIDERY BUSINESS WORKSPACE
-          </p>
-        </div>
+    <main className="auth-shell min-h-screen flex items-center justify-center px-4 py-8 sm:px-6 font-sans">
+      <div className="auth-ambient auth-ambient-one" aria-hidden="true" />
+      <div className="auth-ambient auth-ambient-two" aria-hidden="true" />
+      <div className="auth-grid" aria-hidden="true" />
+      <div className="auth-layout relative z-10 w-full max-w-[480px]">
+        <header className="auth-brand-enter mb-5 text-center">
+          <div className="auth-logo-halo mx-auto mb-3">
+            <img src="/embroidery-statement-logo.jpg" alt="Embroidery Statement" className="auth-logo" fetchPriority="high" />
+          </div>
+          <div className="auth-wordmark">EMBROIDERY <span>STATEMENT</span></div>
+          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.28em] text-slate-400 sm:text-xs">BUSINESS MANAGEMENT WORKSPACE</p>
+        </header>
 
-        <section className="auth-panel rounded-[2rem] p-6 sm:p-9">
-          <div className="mb-7 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl auth-icon">
-              {mode === 'verify' ? <KeyRound className="h-7 w-7" /> : mode === 'forgot' || mode === 'reset' ? <ShieldCheck className="h-7 w-7" /> : <Mail className="h-7 w-7" />}
-            </div>
-            <h1 className="text-2xl sm:text-[1.7rem] font-black tracking-tight text-slate-900 dark:text-white">{title[mode]}</h1>
-            <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-              {mode === 'login' && 'আপনার ব্যবসার হিসাব নিরাপদে পরিচালনা করুন।'}
-              {mode === 'signup' && 'আপনার ব্যবসার জন্য নতুন Workspace খুলুন।'}
-              {mode === 'forgot' && 'আপনার অ্যাকাউন্টের ইমেইল দিন। আমরা ৬ সংখ্যার যাচাইকরণ কোড পাঠাব।'}
-              {mode === 'verify' && 'ইমেইলে পাওয়া ৬ সংখ্যার কোডটি এখানে লিখুন।'}
-              {mode === 'reset' && 'কোড যাচাই সম্পন্ন হয়েছে। এখন নতুন পাসওয়ার্ড তৈরি করুন।'}
-            </p>
+        <section className="auth-panel auth-panel-enter relative rounded-[2rem] p-6 sm:p-8">
+          <div className="auth-language-switch" role="group" aria-label="Choose language">
+            <Languages className="h-4 w-4 text-blue-600" />
+            <button type="button" onClick={() => setLanguage('en')} className={bn ? '' : 'active'} aria-pressed={!bn}>EN</button>
+            <span aria-hidden="true" />
+            <button type="button" onClick={() => setLanguage('bn')} className={bn ? 'active' : ''} aria-pressed={bn}>বাংলা</button>
           </div>
 
-          {errorMsg && (
-            <div role="alert" className="mb-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50/90 p-4 text-sm font-semibold text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-              <span>{errorMsg}</span>
+          <div className="mb-6 pt-5 text-center">
+            <div className="auth-icon mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl">
+              {mode === 'verify' ? <KeyRound className="h-6 w-6" /> : mode === 'forgot' || mode === 'reset' ? <ShieldCheck className="h-6 w-6" /> : <LockKeyhole className="h-6 w-6" />}
+            </div>
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-blue-600">{tr('নিরাপদ ব্যবসায়িক অ্যাক্সেস', 'SECURE BUSINESS ACCESS')}</p>
+            <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-[1.85rem]">{title[mode]}</h1>
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">{subtitle[mode]}</p>
+          </div>
+
+          {(mode === 'login' || mode === 'signup') && (
+            <div className="auth-mode-switch mb-5 grid grid-cols-2 rounded-2xl p-1">
+              <button type="button" onClick={() => switchMode('login')} className={mode === 'login' ? 'active' : ''}>{tr('লগ-ইন', 'Sign in')}</button>
+              <button type="button" onClick={() => switchMode('signup')} className={mode === 'signup' ? 'active' : ''}>{tr('নতুন অ্যাকাউন্ট', 'Sign up')}</button>
             </div>
           )}
 
-          {infoMsg && (
-            <div role="status" className="mb-5 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50/90 p-4 text-sm font-semibold text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
-              <span>{infoMsg}</span>
-            </div>
-          )}
+          {errorMsg && <div role="alert" className="auth-message auth-message-error mb-4 flex items-start gap-3 rounded-2xl p-3 text-sm font-semibold"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0" /><span>{errorMsg}</span></div>}
+          {infoMsg && <div role="status" className="auth-message auth-message-info mb-4 flex items-start gap-3 rounded-2xl p-3 text-sm font-semibold"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" /><span>{infoMsg}</span></div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'signup' && (
-              <label className="block space-y-2">
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">ব্যবসার নাম</span>
-                <input
-                  type="text"
-                  required
-                  autoComplete="organization"
-                  value={businessName}
-                  onChange={event => setBusinessName(event.target.value)}
-                  className="auth-input"
-                  placeholder="যেমন: Emon Embroidery"
-                />
+              <label className="auth-field block space-y-2">
+                <span><Building2 className="inline h-4 w-4" /> {tr('ব্যবসার নাম', 'Business name')}</span>
+                <input type="text" required autoComplete="organization" value={businessName} onChange={event => setBusinessName(event.target.value)} className="auth-input" placeholder={tr('যেমন: Emon Embroidery', 'e.g. Emon Embroidery')} />
               </label>
             )}
 
             {showEmail && (
-              <label className="block space-y-2">
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">ইমেইল ঠিকানা</span>
-                <input
-                  type="email"
-                  required
-                  autoComplete="email"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  value={email}
-                  onChange={event => setEmail(event.target.value)}
-                  className="auth-input"
-                  placeholder="name@gmail.com"
-                />
+              <label className="auth-field block space-y-2">
+                <span><Mail className="inline h-4 w-4" /> {tr('ইমেইল ঠিকানা', 'Email address')}</span>
+                <input type="email" required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={email} onChange={event => setEmail(event.target.value)} className="auth-input" placeholder={tr('আপনার ইমেইল লিখুন', 'name@example.com')} />
               </label>
             )}
 
             {mode === 'verify' && (
-              <label className="block space-y-2">
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">৬ সংখ্যার OTP</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  required
-                  value={otp}
-                  onChange={event => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="auth-input text-center text-2xl font-black tracking-[0.55em]"
-                  placeholder="••••••"
-                />
+              <label className="auth-field block space-y-2">
+                <span><KeyRound className="inline h-4 w-4" /> {tr('৬ সংখ্যার OTP', '6-digit verification code')}</span>
+                <input type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={otp} onChange={event => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} className="auth-input auth-otp-input text-center text-2xl font-black" placeholder="••••••" />
               </label>
             )}
 
             {showPasswordField && (
               <>
-                <label className="block space-y-2">
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                    {mode === 'reset' ? 'নতুন পাসওয়ার্ড' : 'পাসওয়ার্ড'}
-                  </span>
+                <label className="auth-field block space-y-2">
+                  <span><LockKeyhole className="inline h-4 w-4" /> {mode === 'reset' ? tr('নতুন পাসওয়ার্ড', 'New password') : tr('পাসওয়ার্ড', 'Password')}</span>
                   <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      minLength={mode === 'login' ? 6 : 8}
-                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                      value={pass}
-                      onChange={event => setPass(event.target.value)}
-                      className="auth-input pr-12"
-                      placeholder="কমপক্ষে ৮ অক্ষর"
-                    />
-                    <button
-                      type="button"
-                      className="auth-password-toggle"
-                      onClick={() => setShowPassword(value => !value)}
-                      aria-label={showPassword ? 'পাসওয়ার্ড লুকান' : 'পাসওয়ার্ড দেখান'}
-                    >
+                    <input type={showPassword ? 'text' : 'password'} required minLength={mode === 'login' ? 6 : 8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={pass} onChange={event => setPass(event.target.value)} className="auth-input pr-12" placeholder={tr('আপনার পাসওয়ার্ড লিখুন', 'Enter your password')} />
+                    <button type="button" className="auth-password-toggle" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? tr('পাসওয়ার্ড লুকান', 'Hide password') : tr('পাসওয়ার্ড দেখান', 'Show password')}>
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
                 </label>
-
                 {(mode === 'signup' || mode === 'reset') && (
-                  <label className="block space-y-2">
-                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">পাসওয়ার্ড নিশ্চিত করুন</span>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      minLength={8}
-                      autoComplete="new-password"
-                      value={confirmPass}
-                      onChange={event => setConfirmPass(event.target.value)}
-                      className="auth-input"
-                      placeholder="আবার পাসওয়ার্ড লিখুন"
-                    />
+                  <label className="auth-field block space-y-2">
+                    <span><LockKeyhole className="inline h-4 w-4" /> {tr('পাসওয়ার্ড নিশ্চিত করুন', 'Confirm password')}</span>
+                    <input type={showPassword ? 'text' : 'password'} required minLength={8} autoComplete="new-password" value={confirmPass} onChange={event => setConfirmPass(event.target.value)} className="auth-input" placeholder={tr('আবার পাসওয়ার্ড লিখুন', 'Re-enter your password')} />
                   </label>
                 )}
               </>
@@ -299,51 +244,37 @@ const Auth: React.FC<AuthProps> = ({
 
             {mode === 'login' && (
               <div className="flex justify-end">
-                <button type="button" onClick={() => { setMode('forgot'); setErrorMsg(null); setInfoMsg(null); }} className="text-sm font-bold text-primary-600 hover:text-primary-700 dark:text-primary-300">
-                  পাসওয়ার্ড ভুলে গেছেন?
-                </button>
+                <button type="button" onClick={() => switchMode('forgot')} className="auth-link">{tr('পাসওয়ার্ড ভুলে গেছেন?', 'Forgot password?')}</button>
               </div>
             )}
 
             <button type="submit" disabled={loading} className="auth-submit">
-              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <>{buttonText[mode]} <ArrowRight className="h-5 w-5" /></>}
+              {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> {tr('অপেক্ষা করুন...', 'Please wait...')}</> : <>{buttonText[mode]} <ArrowRight className="h-5 w-5" /></>}
             </button>
           </form>
 
           {mode === 'verify' && (
-            <button type="button" onClick={handleResendCode} disabled={resending || loading} className="mt-4 w-full text-sm font-bold text-primary-600 hover:text-primary-700 disabled:opacity-50 dark:text-primary-300">
-              {resending ? 'কোড পাঠানো হচ্ছে…' : 'কোড পাননি? আবার পাঠান'}
+            <button type="button" onClick={handleResendCode} disabled={resending || loading} className="auth-link mt-4 w-full text-center disabled:opacity-50">
+              {resending ? tr('কোড পাঠানো হচ্ছে...', 'Sending code...') : tr('কোড পাননি? আবার পাঠান', 'Did not receive a code? Resend')}
             </button>
           )}
 
-          <div className="mt-6 border-t border-slate-200/70 pt-5 text-center dark:border-white/10">
+          <div className="mt-6 border-t border-slate-200/80 pt-5 text-center">
             {mode === 'reset' ? (
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">নতুন পাসওয়ার্ড সংরক্ষণ হলে আপনি অ্যাপে প্রবেশ করতে পারবেন।</p>
+              <p className="text-xs font-semibold text-slate-500">{tr('নতুন পাসওয়ার্ড সংরক্ষণ হলে আপনি অ্যাপে প্রবেশ করতে পারবেন।', 'You can sign in after saving your new password.')}</p>
+            ) : mode === 'forgot' || mode === 'verify' ? (
+              <button type="button" onClick={() => switchMode('login')} className="auth-back-link"><ArrowLeft className="h-4 w-4" /> {tr('লগ-ইন-এ ফিরে যান', 'Back to sign in')}</button>
             ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setErrorMsg(null);
-                  setInfoMsg(null);
-                  setOtp('');
-                  setPass('');
-                  setConfirmPass('');
-                  if (mode === 'forgot' || mode === 'verify') setMode('login');
-                  else setMode(mode === 'login' ? 'signup' : 'login');
-                }}
-                className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-primary-700 dark:text-slate-300 dark:hover:text-primary-300"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                {mode === 'login' ? 'নতুন অ্যাকাউন্ট তৈরি করুন' : mode === 'signup' ? 'লগ-ইন-এ ফিরে যান' : 'লগ-ইন-এ ফিরে যান'}
-              </button>
+              <p className="text-xs font-medium text-slate-500">{tr('আপনার তথ্য এনক্রিপ্টেড ও সুরক্ষিত থাকে।', 'Your account information stays protected.')}</p>
             )}
           </div>
         </section>
 
-        <div className="mt-6 flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
-          <ShieldCheck className="h-4 w-4 text-emerald-500" />
-          Secure Supabase Authentication
-        </div>
+        <footer className="mt-5 flex items-center justify-center gap-2 text-xs font-semibold text-slate-400">
+          <ShieldCheck className="h-4 w-4 text-emerald-400" />
+          {tr('নিরাপদ Supabase Authentication', 'Secure Supabase Authentication')}
+          <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+        </footer>
       </div>
     </main>
   );
