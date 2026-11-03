@@ -254,11 +254,13 @@ grant update (outstanding_amount, status, recovered_at, updated_at)
 
 do $$
 begin
-  if not exists (select 1 from pg_policies where schemaname='public' and tablename='WorkerAdvances' and policyname='WorkerAdvances owner access') then
-    create policy "WorkerAdvances owner access" on public."WorkerAdvances"
-      for all to authenticated
-      using ((select auth.uid()) = user_id)
-      with check ((select auth.uid()) = user_id);
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='WorkerAdvances' and policyname='WorkerAdvances owner select') then
+    create policy "WorkerAdvances owner select" on public."WorkerAdvances"
+      for select to authenticated using ((select auth.uid()) = user_id);
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='WorkerAdvances' and policyname='WorkerAdvances owner insert') then
+    create policy "WorkerAdvances owner insert" on public."WorkerAdvances"
+      for insert to authenticated with check ((select auth.uid()) = user_id);
   end if;
 end $$;
 
@@ -290,7 +292,7 @@ create index if not exists worker_advance_recoveries_payroll_idx
   on public."WorkerAdvanceRecoveries"(user_id, payroll_id);
 
 alter table public."WorkerAdvanceRecoveries" enable row level security;
-grant select, insert on public."WorkerAdvanceRecoveries" to authenticated;
+grant select on public."WorkerAdvanceRecoveries" to authenticated;
 
 do $$
 begin
@@ -298,10 +300,7 @@ begin
     create policy "WorkerAdvanceRecoveries owner select" on public."WorkerAdvanceRecoveries"
       for select to authenticated using ((select auth.uid()) = user_id);
   end if;
-  if not exists (select 1 from pg_policies where schemaname='public' and tablename='WorkerAdvanceRecoveries' and policyname='WorkerAdvanceRecoveries owner insert') then
-    create policy "WorkerAdvanceRecoveries owner insert" on public."WorkerAdvanceRecoveries"
-      for insert to authenticated with check ((select auth.uid()) = user_id);
-  end if;
+
 end $$;
 
 -- Do not allow a new advance to be assigned to a salary month already paid.
@@ -370,7 +369,8 @@ begin
 
   if tg_op = 'UPDATE' then
     if old.status = 'paid' then
-      if new.status is distinct from old.status
+      if new.id is distinct from old.id
+        or new.status is distinct from old.status
         or new.worker_id is distinct from old.worker_id
         or new.month_key is distinct from old.month_key
         or new.basic_salary is distinct from old.basic_salary
@@ -425,6 +425,10 @@ declare
   v_advance record;
   v_should_recover boolean := false;
 begin
+  if auth.uid() is distinct from new.user_id then
+    raise exception 'Payroll account mismatch.';
+  end if;
+
   if tg_op = 'INSERT' then
     v_should_recover := true;
   else
