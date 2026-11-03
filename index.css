@@ -847,3 +847,46 @@ body {
     animation:none !important;opacity:1 !important;transform:none !important;filter:none !important;
   }
 }
+
+
+/* Authentication readability fix: keep the light glass card paired with dark, high-contrast text. */
+.auth-panel {
+  color: #12203c !important;
+  background: linear-gradient(145deg, rgba(250,252,255,.98), rgba(229,241,253,.97)) !important;
+  border: 1px solid rgba(255,255,255,.94) !important;
+}
+.auth-panel h1,
+.auth-panel .text-slate-900 { color: #10234f !important; }
+.auth-panel .text-slate-500 { color: #475569 !important; }
+.auth-panel .text-slate-400 { color: #64748b !important; }
+.auth-panel .text-blue-600 { color: #075dbd !important; }
+.auth-panel .auth-field > span { color: #1e2c47 !important; }
+.auth-panel .auth-field > span svg { color: #2468d8 !important; }
+.auth-panel .auth-input {
+  color: #152542 !important;
+  background: linear-gradient(180deg, #fff, #f3f7ff) !important;
+  border: 1px solid #c9d8ed !important;
+}
+.auth-panel .auth-input::placeholder { color: #71839b !important; opacity: 1; }
+.auth-panel .auth-password-toggle { color: #536987 !important; }
+.auth-panel .auth-mode-switch {
+  background: #eaf1fb !important;
+  border: 1px solid #d5e2f3 !important;
+}
+.auth-panel .auth-mode-switch button { color: #52627a !important; }
+.auth-panel .auth-mode-switch button.active { color: #fff !important; }
+.auth-panel .auth-link { color: #155bd0 !important; }
+.auth-panel .auth-link:hover { color: #087fae !important; }
+.auth-panel .auth-back-link { color: #53647f !important; }
+.auth-panel .auth-back-link:hover { color: #155bd0 !important; }
+.auth-panel .auth-message-error {
+  color: #b4233d !important;
+  background: #fff0f2 !important;
+  border-color: #ffd4dc !important;
+}
+.auth-panel .auth-message-info {
+  color: #075985 !important;
+  background: #eff9ff !important;
+  border-color: #c8edff !important;
+}
+.auth-panel .border-t { border-color: rgba(71,85,105,.18) !important; }
