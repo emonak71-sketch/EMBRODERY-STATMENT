@@ -33,7 +33,7 @@ type Payroll = {
   paid_at?: string | null; payment_method?: string | null; payment_reference?: string | null;
 };
 type SmsLog = {
-  id: string; worker_id: string; event_type: 'salary_paid' | 'advance_paid' | 'custom';
+  id: string; worker_id: string; event_type: 'salary_paid' | 'advance_paid' | 'custom'; related_id?: string | null;
   mobile: string; message: string; sms_mode: 'non-masking' | 'masking';
   sender_id?: string | null; status: 'pending' | 'accepted' | 'failed';
   error_message?: string | null; attempts: number; created_at: string; accepted_at?: string | null;
@@ -709,7 +709,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
                         <td className="p-3">{log.sms_mode}</td>
                         <td className="p-3"><span className={'rounded-full px-2 py-1 text-[10px] font-black ' + (log.status === 'accepted' ? 'bg-emerald-50 text-emerald-700' : log.status === 'failed' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700')}>{log.status === 'accepted' ? tr('Gateway Accepted', 'Gateway Accepted') : log.status}</span></td>
                         <td className="p-3">{log.attempts}</td>
-                        <td className="p-3 text-xs text-rose-600">{log.error_message || '—'}</td>
+                        <td className="p-3 text-xs"><div className="max-w-[240px] truncate" title={log.message}>{log.message}</div>{log.error_message && <div className="mt-1 text-rose-600">{log.error_message}</div>}{log.status === 'failed' && <button onClick={() => { const target = workers.find(w => w.id === log.worker_id); if (target) setSmsDraft({ worker: target, message: log.message, eventType: log.event_type, relatedId: log.related_id || undefined }); }} className="mt-1 rounded-md bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-700">{tr('আবার চেষ্টা', 'Retry')}</button>}</td>
                       </tr>;
                     })}</tbody>
                   </table>
