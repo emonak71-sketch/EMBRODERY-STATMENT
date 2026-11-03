@@ -120,6 +120,24 @@ const Auth: React.FC<AuthProps> = ({
         'Too many attempts. Please wait a while and try again.'
       );
     }
+    if (result.code === 'CAPTCHA_INVALID') {
+      return tr(
+        'নিরাপত্তা যাচাই সম্পন্ন হয়নি বা মেয়াদ শেষ হয়েছে। আবার যাচাই করুন।',
+        'The security check failed or expired. Please complete it again.'
+      );
+    }
+    if (result.code === 'RECOVERY_CHECK_NOT_CONFIGURED') {
+      return tr(
+        'নিরাপত্তা যাচাই এখনো সেটআপ করা হয়নি।',
+        'Security verification has not been configured yet.'
+      );
+    }
+    if (result.code === 'INVALID_EMAIL') {
+      return tr(
+        'সঠিক ইমেইল ঠিকানা লিখুন।',
+        'Please enter a valid email address.'
+      );
+    }
     if (result.code === 'EMAIL_SEND_FAILED') {
       return tr(
         'কোড পাঠানো যায়নি। ইমেইল সার্ভারের সেটিংস পরীক্ষা করে আবার চেষ্টা করুন।',
