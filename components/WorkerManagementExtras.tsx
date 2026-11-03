@@ -32,7 +32,18 @@ type Payroll = {
   advance_deduction?: number; net_salary: number; status: 'draft' | 'paid';
   paid_at?: string | null; payment_method?: string | null; payment_reference?: string | null;
 };
-type ExtraTab = 'documents' | 'idcard' | 'increments' | 'advances' | 'annual' | 'payslip';
+type SmsLog = {
+  id: string; worker_id: string; event_type: 'salary_paid' | 'advance_paid' | 'custom';
+  mobile: string; message: string; sms_mode: 'non-masking' | 'masking';
+  sender_id?: string | null; status: 'pending' | 'accepted' | 'failed';
+  error_message?: string | null; attempts: number; created_at: string; accepted_at?: string | null;
+};
+type SmsDraft = {
+  worker: Worker; message: string;
+  eventType: 'salary_paid' | 'advance_paid' | 'custom';
+  relatedId?: string;
+};
+type ExtraTab = 'documents' | 'idcard' | 'increments' | 'advances' | 'annual' | 'payslip' | 'sms';
 type DocumentType = 'profile_photo' | 'nid_front' | 'nid_back' | 'birth_certificate' | 'driving_license' | 'passport' | 'other';
 
 const today = () => {
@@ -194,7 +205,10 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
   const [slipMonth, setSlipMonth] = useState(today().slice(0, 7));
   const [slipWorkerId, setSlipWorkerId] = useState('');
   const [monthPayroll, setMonthPayroll] = useState<Payroll[]>([]);
-  const [smsDraft, setSmsDraft] = useState<{ worker: Worker; message: string } | null>(null);
+  const [smsDraft, setSmsDraft] = useState<SmsDraft | null>(null);
+  const [smsSending, setSmsSending] = useState(false);
+  const [smsLogs, setSmsLogs] = useState<SmsLog[]>([]);
+  const [smsLogsLoading, setSmsLogsLoading] = useState(false);
 
   const selectedWorker = useMemo(
     () => workers.find(w => w.id === selectedWorkerId) || null,
@@ -273,7 +287,19 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
   useEffect(() => { loadIncrements(); }, [loadIncrements]);
   useEffect(() => { loadAdvances(); }, [loadAdvances]);
   useEffect(() => { loadAnnual(); }, [loadAnnual]);
+  const loadSmsLogs = useCallback(async () => {
+    setSmsLogsLoading(true);
+    try {
+      setSmsLogs(await dbService.getWorkerSmsLogs() as SmsLog[]);
+    } catch (e: any) {
+      setError(e.message || 'Could not load SMS history. Apply the worker SMS SQL setup first.');
+    } finally {
+      setSmsLogsLoading(false);
+    }
+  }, []);
+
   useEffect(() => { loadMonthPayroll(); }, [loadMonthPayroll]);
+  useEffect(() => { if (tab === 'sms') loadSmsLogs(); }, [tab, loadSmsLogs]);
 
   const refreshAll = async () => {
     await Promise.all([loadWorkers(), loadDocuments(), loadIncrements(), loadAdvances(), loadAnnual(), loadMonthPayroll()]);
@@ -371,7 +397,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
     if (!Number.isFinite(amount) || amount <= 0) { setError(tr('সঠিক অগ্রিম টাকার পরিমাণ দিন।', 'Enter a valid advance amount.')); return; }
     setSaving(true); setError(''); setNotice('');
     try {
-      await dbService.addWorkerAdvance({
+      const advanceRow = await dbService.addWorkerAdvance({
         worker_id: selectedWorker.id,
         amount,
         request_date: advanceDate,
@@ -379,16 +405,25 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
         reason: advanceReason.trim() || 'Salary advance'
       });
       await loadAdvances();
-      setNotice(tr('অগ্রিম টাকার রেকর্ড সংরক্ষিত হয়েছে। বেতন দেওয়ার সময় নির্ধারিত মাসে সম্পূর্ণ বকেয়া সমন্বয় হবে।', 'Advance recorded. The full outstanding amount will be recovered when the selected salary month is paid.'));
-      setSmsDraft({
-        worker: selectedWorker,
-        message: tr(
-          selectedWorker.full_name + ', ' + companyName + ' থেকে আপনাকে ' + money(amount) + ' টাকা অগ্রিম দেওয়া হয়েছে। এটি ' + deductMonth + ' মাসের বেতন থেকে সমন্বয় হবে।',
-          'Dear ' + selectedWorker.full_name + ', ' + money(amount) + ' advance has been issued by ' + companyName + '. It will be adjusted from your ' + deductMonth + ' salary.'
-        )
-      });
+      const advanceMessage = tr(
+        selectedWorker.full_name + ', ' + companyName + ' থেকে আপনাকে ' + money(amount) + ' টাকা অগ্রিম দেওয়া হয়েছে। এটি ' + deductMonth + ' মাসের বেতন থেকে সমন্বয় হবে।',
+        'Dear ' + selectedWorker.full_name + ', ' + money(amount) + ' advance has been issued by ' + companyName + '. It will be adjusted from your ' + deductMonth + ' salary.'
+      );
       setAdvanceAmount('');
       setAdvanceReason('');
+      try {
+        await dbService.sendWorkerSms({
+          worker_id: selectedWorker.id,
+          event_type: 'advance_paid',
+          related_id: advanceRow.id,
+          message: advanceMessage
+        });
+        setNotice(tr('অগ্রিম সংরক্ষিত হয়েছে এবং DNotify SMS Gateway অনুরোধ গ্রহণ করেছে।', 'Advance saved and DNotify accepted the SMS request.'));
+        await loadSmsLogs();
+      } catch (smsError: any) {
+        setSmsDraft({ worker: selectedWorker, message: advanceMessage, eventType: 'advance_paid', relatedId: advanceRow.id });
+        setError(tr('অগ্রিম সংরক্ষিত হয়েছে, কিন্তু SMS পাঠানো যায়নি: ', 'Advance saved, but SMS was not sent: ') + (smsError.message || 'Unknown SMS error'));
+      }
     } catch (e: any) {
       setError(e.message || 'Advance could not be recorded. Check the salary month; it may already be paid.');
     } finally { setSaving(false); }
@@ -442,11 +477,39 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
     if (!selectedSlip || !slipWorker || selectedSlip.status !== 'paid') return;
     setSmsDraft({
       worker: slipWorker,
+      eventType: 'custom',
       message: tr(
         slipWorker.full_name + ', ' + slipMonth + ' মাসের বেতন ' + money(selectedSlip.net_salary) + ' টাকা পরিশোধ করা হয়েছে। ধন্যবাদ। - ' + companyName,
         'Dear ' + slipWorker.full_name + ', your ' + slipMonth + ' salary of ' + money(selectedSlip.net_salary) + ' has been paid. Thank you. - ' + companyName
       )
     });
+  };
+
+  const sendSmsDraft = async () => {
+    if (!smsDraft) return;
+    if (!smsDraft.worker.phone) { setError(tr('এই কর্মীর মোবাইল নম্বর নেই।', 'This worker has no mobile number.')); return; }
+    setSmsSending(true);
+    setError('');
+    setNotice('');
+    try {
+      const result = await dbService.sendWorkerSms({
+        worker_id: smsDraft.worker.id,
+        event_type: smsDraft.eventType,
+        related_id: smsDraft.relatedId,
+        idempotency_key: smsDraft.eventType === 'custom' ? crypto.randomUUID() : undefined,
+        message: smsDraft.message
+      });
+      setNotice(result.duplicate
+        ? tr('এই SMS আগে থেকেই DNotify গ্রহণ করেছে; আবার পাঠানো হয়নি।', 'DNotify already accepted this SMS; it was not sent again.')
+        : tr('DNotify SMS পাঠানোর অনুরোধ গ্রহণ করেছে।', 'DNotify accepted the SMS request.'));
+      setSmsDraft(null);
+      await loadSmsLogs();
+    } catch (e: any) {
+      setError(e.message || 'DNotify SMS could not be sent. Check SMS History and retry.');
+      await loadSmsLogs();
+    } finally {
+      setSmsSending(false);
+    }
   };
 
   const dueInfo = (worker: Worker) => {
@@ -484,7 +547,8 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
           ['increments', tr('বেতন বৃদ্ধি', 'Salary Increments'), TrendingUp],
           ['advances', tr('অগ্রিম বেতন', 'Salary Advances'), Wallet],
           ['annual', tr('বার্ষিক রিপোর্ট', 'Annual Report'), CalendarDays],
-          ['payslip', tr('পে-স্লিপ', 'Payslips'), FileImage]
+          ['payslip', tr('পে-স্লিপ', 'Payslips'), FileImage],
+          ['sms', tr('SMS হিস্ট্রি', 'SMS History'), MessageSquare]
         ] as const).map(([id, label, Icon]) => (
           <button key={id} onClick={() => setTab(id)} className={'flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold transition ' + (tab === id ? 'bg-blue-700 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800')}>
             <Icon size={15} />{label}
@@ -622,6 +686,39 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
             </section>
           )}
 
+          {tab === 'sms' && (
+            <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div><h3 className="font-black">{tr('SMS পাঠানোর ইতিহাস', 'SMS Sending History')}</h3><p className="text-xs text-slate-500">{tr('Accepted মানে DNotify অনুরোধ গ্রহণ করেছে; এটি মোবাইলে Delivered হওয়ার নিশ্চয়তা নয়।', 'Accepted means DNotify accepted the request; it is not a handset delivery confirmation.')}</p></div>
+                <div className="flex gap-2">
+                  <button onClick={loadSmsLogs} disabled={smsLogsLoading} className="rounded-lg border px-3 py-2 text-xs font-bold dark:border-slate-700"><RefreshCw size={13} className="mr-1 inline" />{tr('রিফ্রেশ', 'Refresh')}</button>
+                  <button onClick={() => selectedWorker && setSmsDraft({ worker: selectedWorker, message: '', eventType: 'custom' })} disabled={!selectedWorker?.phone} className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"><MessageSquare size={13} className="mr-1 inline" />{tr('Custom SMS', 'Compose SMS')}</button>
+                </div>
+              </div>
+              {smsLogsLoading ? <p className="py-8 text-center text-sm text-slate-500"><Loader2 size={16} className="mr-2 inline animate-spin" />{tr('লোড হচ্ছে...', 'Loading...')}</p> : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[850px] text-left text-sm">
+                    <thead className="bg-slate-50 text-xs text-slate-500 dark:bg-slate-800"><tr>{['Date', 'Worker', 'Mobile', 'Type', 'Mode', 'Status', 'Attempts', 'Details'].map(x => <th key={x} className="p-3">{x}</th>)}</tr></thead>
+                    <tbody>{smsLogs.map(log => {
+                      const logWorker = workers.find(w => w.id === log.worker_id);
+                      return <tr key={log.id} className="border-t dark:border-slate-800">
+                        <td className="p-3 whitespace-nowrap">{dateLabel(log.created_at)}</td>
+                        <td className="p-3 font-bold">{logWorker?.full_name || 'Worker'}</td>
+                        <td className="p-3">{log.mobile}</td>
+                        <td className="p-3">{log.event_type.replace('_', ' ')}</td>
+                        <td className="p-3">{log.sms_mode}</td>
+                        <td className="p-3"><span className={'rounded-full px-2 py-1 text-[10px] font-black ' + (log.status === 'accepted' ? 'bg-emerald-50 text-emerald-700' : log.status === 'failed' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700')}>{log.status === 'accepted' ? tr('Gateway Accepted', 'Gateway Accepted') : log.status}</span></td>
+                        <td className="p-3">{log.attempts}</td>
+                        <td className="p-3 text-xs text-rose-600">{log.error_message || '—'}</td>
+                      </tr>;
+                    })}</tbody>
+                  </table>
+                  {smsLogs.length === 0 && <p className="py-8 text-center text-sm text-slate-500">{tr('এখনো কোনো SMS পাঠানো হয়নি।', 'No SMS requests yet.')}</p>}
+                </div>
+              )}
+            </section>
+          )}
+
           {tab === 'payslip' && (
             <section className="space-y-4">
               <div className="flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
@@ -657,10 +754,13 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
       {smsDraft && (
         <div className="fixed inset-0 z-[260] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900">
-            <div className="mb-3 flex items-center justify-between"><div><h3 className="font-black">{tr('কাস্টম SMS', 'Customize SMS')}</h3><p className="text-xs text-slate-500">{smsDraft.worker.full_name} · {smsDraft.worker.phone || 'No phone number'}</p></div><button onClick={() => setSmsDraft(null)} className="rounded-lg p-2 text-slate-500"><X size={18} /></button></div>
+            <div className="mb-3 flex items-center justify-between"><div><h3 className="font-black">{tr('SMS বার্তা সম্পাদনা', 'Edit SMS Message')}</h3><p className="text-xs text-slate-500">{smsDraft.worker.full_name} · {smsDraft.worker.phone || 'No phone number'}</p></div><button onClick={() => setSmsDraft(null)} className="rounded-lg p-2 text-slate-500"><X size={18} /></button></div>
             <textarea value={smsDraft.message} onChange={e => setSmsDraft({ ...smsDraft, message: e.target.value })} rows={5} className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-800" />
-            <p className="mt-2 text-xs text-slate-500">{tr('এই বাটন ফোনের SMS অ্যাপ খুলবে। পাঠানোর আগে আপনার ফোনে Send চাপতে হবে। সরাসরি Gateway SMS পাঠাতে SMS Provider API Key প্রয়োজন।', 'This opens the phone SMS app. You must tap Send on your device. Direct gateway delivery requires an SMS provider API key.')}</p>
-            <div className="mt-4 flex flex-wrap justify-end gap-2"><button onClick={async () => { try { await navigator.clipboard.writeText(smsDraft.message); setNotice(tr('SMS কপি হয়েছে।', 'SMS copied.')); } catch { setError('Clipboard permission was denied.'); } }} className="rounded-xl border px-4 py-2 text-xs font-bold dark:border-slate-700">{tr('কপি করুন', 'Copy message')}</button><a href={smsDraft.worker.phone ? 'sms:' + encodeURIComponent(smsDraft.worker.phone) + '?body=' + encodeURIComponent(smsDraft.message) : undefined} className={'rounded-xl px-4 py-2 text-xs font-bold text-white ' + (smsDraft.worker.phone ? 'bg-emerald-600' : 'pointer-events-none bg-slate-400')}>{tr('SMS অ্যাপ খুলুন', 'Open SMS App')}</a></div>
+            <p className="mt-2 text-xs text-slate-500">{tr('DNotify Non-Masking Gateway দিয়ে SMS পাঠানো হবে। প্রতি SMS-এ আপনার DNotify Wallet থেকে চার্জ কাটা হবে।', 'This sends through the DNotify Non-Masking Gateway. Your DNotify wallet is charged per SMS.')}</p>
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button onClick={async () => { try { await navigator.clipboard.writeText(smsDraft.message); setNotice(tr('SMS কপি হয়েছে।', 'SMS copied.')); } catch { setError('Clipboard permission was denied.'); } }} className="rounded-xl border px-4 py-2 text-xs font-bold dark:border-slate-700">{tr('কপি করুন', 'Copy message')}</button>
+              <button onClick={sendSmsDraft} disabled={smsSending || !smsDraft.worker.phone || !smsDraft.message.trim()} className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white disabled:opacity-50">{smsSending ? tr('পাঠানো হচ্ছে...', 'Sending...') : tr('DNotify দিয়ে পাঠান', 'Send via DNotify')}</button>
+            </div>
           </div>
         </div>
       )}
