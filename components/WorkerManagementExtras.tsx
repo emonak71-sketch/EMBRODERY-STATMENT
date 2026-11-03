@@ -58,11 +58,6 @@ const money = (n: number) => new Intl.NumberFormat('en-BD', {
 const dateLabel = (value?: string | null) => value
   ? new Date(value.length === 10 ? value + 'T00:00:00' : value).toLocaleDateString('en-GB')
   : '—';
-const monthShift = (month: string, amount: number) => {
-  const [y, m] = month.split('-').map(Number);
-  const d = new Date(y, m - 1 + amount, 1);
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-};
 const monthInDhaka = (value?: string | null) => {
   if (!value) return '';
   const parts = new Intl.DateTimeFormat('en-CA', {
