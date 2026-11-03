@@ -462,12 +462,44 @@ export const dbService = {
   },
 
   resetPassword: async (email: string) => {
-    if (!isConfigured()) return { success: false, message: 'Supabase configuration is missing.' };
+    if (!isConfigured()) return { success: false, code: 'RECOVERY_CHECK_FAILED' };
     const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || cleanEmail.length > 254) {
+      return { success: false, code: 'RECOVERY_CHECK_FAILED' };
+    }
+
+    // Check account existence on the server before asking Supabase Auth to send a recovery OTP.
+    // The Edge Function uses the service-role key server-side; no privileged key reaches the browser.
+    const { data: accountCheck, error: checkError } = await supabase.functions.invoke(
+      'check-password-recovery',
+      { body: { email: cleanEmail } }
+    );
+
+    if (checkError) {
+      console.error('Password recovery account check failed:', checkError);
+      const status = (checkError as any)?.context?.status;
+      return {
+        success: false,
+        code: status === 429 ? 'RATE_LIMITED' : 'RECOVERY_CHECK_FAILED'
+      };
+    }
+
+    if (accountCheck?.code === 'RATE_LIMITED') {
+      return { success: false, code: 'RATE_LIMITED' };
+    }
+    if (accountCheck?.code === 'ACCOUNT_NOT_FOUND' || accountCheck?.exists === false) {
+      return { success: false, code: 'ACCOUNT_NOT_FOUND' };
+    }
+    if (accountCheck?.exists !== true) {
+      return { success: false, code: 'RECOVERY_CHECK_FAILED' };
+    }
+
+    // Keep the actual OTP send on the browser's Supabase client so Auth applies its normal
+    // per-user and IP rate limits using the visitor's real request context.
     const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
     if (error) {
       console.error('Password recovery email request failed:', error);
-      return { success: false, message: 'ইমেইলে ৬ সংখ্যার কোড পাঠানো যায়নি। ইমেইল ঠিকানা যাচাই করে আবার চেষ্টা করুন।' };
+      return { success: false, code: 'EMAIL_SEND_FAILED' };
     }
     return { success: true, message: 'আপনার Gmail-এ ৬ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে।' };
   },
