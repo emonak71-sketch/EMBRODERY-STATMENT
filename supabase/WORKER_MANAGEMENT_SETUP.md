@@ -47,8 +47,8 @@ Deploy the application changes only after the SQL has completed successfully. Th
 2. Select a worker.
 3. Upload a photo, NID front/back, birth certificate, passport, driving licence, or other PDF/image. New uploads are saved as new versions; existing uploads are not overwritten.
 4. Use **Company ID Card** to print or export a worker ID card.
-5. Use **Salary Increments** to record a dated increment. The current salary updates atomically with the history entry.
-6. Use **Salary Advances** to record an advance and choose the salary month for recovery. When payroll is marked Paid, the outstanding advance is deducted automatically and recorded once.
+5. Use **Salary Increments** to record a dated increment. The current salary and unpaid draft payrolls from the effective salary month onward update atomically; paid payroll is never changed.
+6. Use **Salary Advances** to record an advance and choose the salary month for recovery. When the first eligible payroll at or after that month is marked Paid, the outstanding advance is deducted automatically and recorded once.
 7. Use **Annual Report** to export salary/advance cash outflow by year.
 8. Use **Payslips** to print or export a salary statement. A payment SMS can be prepared only after payroll is marked Paid; the phone's SMS app still requires the user to press Send.
 
