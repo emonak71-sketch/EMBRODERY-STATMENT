@@ -6,7 +6,7 @@ import {
 import { useLanguage } from '../contexts/LanguageContext';
 
 type AuthMode = 'login' | 'signup' | 'signup-verify' | 'forgot' | 'verify' | 'reset';
-interface AuthResult { success: boolean; message?: string; requiresVerification?: boolean; }
+interface AuthResult { success: boolean; message?: string; code?: string; requiresVerification?: boolean; }
 interface AuthProps {
   onLogin: (email: string, pass: string) => Promise<AuthResult>;
   onSignup: (email: string, pass: string, biz: string) => Promise<AuthResult>;
@@ -45,6 +45,33 @@ const Auth: React.FC<AuthProps> = ({
 
   const cleanEmail = email.trim().toLowerCase();
   const clearMessages = () => { setErrorMsg(null); setInfoMsg(null); };
+  const recoveryErrorMessage = (result: AuthResult) => {
+    if (result.code === 'ACCOUNT_NOT_FOUND') {
+      return tr(
+        'এই Gmail ঠিকানা দিয়ে কোনো অ্যাকাউন্ট তৈরি করা হয়নি। অনুগ্রহ করে সঠিক Gmail ঠিকানা লিখুন।',
+        'No account was created with this Gmail address. Please enter the correct Gmail address.'
+      );
+    }
+    if (result.code === 'RATE_LIMITED') {
+      return tr(
+        'অনেকবার চেষ্টা করা হয়েছে। কিছুক্ষণ অপেক্ষা করে আবার চেষ্টা করুন।',
+        'Too many attempts. Please wait a while and try again.'
+      );
+    }
+    if (result.code === 'EMAIL_SEND_FAILED') {
+      return tr(
+        'কোড পাঠানো যায়নি। ইমেইল সার্ভারের সেটিংস পরীক্ষা করে আবার চেষ্টা করুন।',
+        'The code could not be sent. Check the email delivery settings and try again.'
+      );
+    }
+    if (result.code === 'RECOVERY_CHECK_FAILED') {
+      return tr(
+        'Gmail ঠিকানা যাচাই করা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
+        'The email address could not be checked. Check your connection and try again.'
+      );
+    }
+    return result.message || tr('কোড পাঠানো যায়নি। আবার চেষ্টা করুন।', 'Could not send the code. Please try again.');
+  };
   const switchMode = (next: AuthMode) => {
     if (next === mode) return;
     clearMessages();
@@ -100,7 +127,7 @@ const Auth: React.FC<AuthProps> = ({
         else setInfoMsg(result.message || tr('ইমেইল যাচাই সফল হয়েছে। আপনার অ্যাকাউন্টে প্রবেশ করা হচ্ছে।', 'Email verified. Signing you in.'));
       } else if (mode === 'forgot') {
         const result = await onResetPassword(cleanEmail);
-        if (!result.success) setErrorMsg(result.message || tr('কোড পাঠানো যায়নি। আবার চেষ্টা করুন।', 'Could not send the code. Please try again.'));
+        if (!result.success) setErrorMsg(recoveryErrorMessage(result));
         else {
           setMode('verify');
           setOtp('');
@@ -149,7 +176,11 @@ const Auth: React.FC<AuthProps> = ({
       const result = mode === 'signup-verify'
         ? await onResendSignupCode(cleanEmail)
         : await onResetPassword(cleanEmail);
-      if (!result.success) setErrorMsg(result.message || tr('নতুন কোড পাঠানো যায়নি।', 'Could not send a new code.'));
+      if (!result.success) {
+        setErrorMsg(mode === 'signup-verify'
+          ? result.message || tr('নতুন কোড পাঠানো যায়নি।', 'Could not send a new code.')
+          : recoveryErrorMessage(result));
+      }
       else setInfoMsg(tr('নতুন ৬ সংখ্যার কোড পাঠানোর অনুরোধ সফল হয়েছে।', 'A new 6-digit code has been requested.'));
     } catch {
       setErrorMsg(tr('কোড পুনরায় পাঠানো যায়নি। আবার চেষ্টা করুন।', 'Could not resend the code. Please try again.'));
