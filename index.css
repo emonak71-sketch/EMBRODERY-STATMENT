@@ -669,3 +669,11 @@ body {
 @media (prefers-reduced-motion:reduce) {
   .auth-panel { animation:none !important;transition:none !important; }
 }
+
+/* Keep the bilingual switch pinned to the upper-right corner of the glass panel. */
+.auth-panel > .auth-language-switch {
+  position:absolute;
+  top:1rem;
+  right:1rem;
+  z-index:2;
+}
