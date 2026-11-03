@@ -298,8 +298,6 @@ create index if not exists worker_advances_disbursed_idx
 
 alter table public."WorkerAdvances" enable row level security;
 grant select, insert on public."WorkerAdvances" to authenticated;
-grant update (outstanding_amount, status, recovered_at, updated_at)
-  on public."WorkerAdvances" to authenticated;
 
 do $$
 begin
@@ -426,6 +424,7 @@ create unique index if not exists worker_payroll_user_id_id_uidx
 create or replace function public.prepare_worker_payroll_payment()
 returns trigger
 language plpgsql
+security definer
 set search_path = public, pg_temp
 as $$
 declare
