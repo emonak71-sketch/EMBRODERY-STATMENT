@@ -57,7 +57,7 @@ create or replace function public.assign_worker_code()
 returns trigger
 language plpgsql
 set search_path = public, pg_temp
-as $
+as $$
 declare
   v_worker_number bigint;
   v_worker_text text;
@@ -69,7 +69,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 do $$
 begin
