@@ -688,7 +688,7 @@ body {
 .machine-scene-kicker {
   display:flex;align-items:center;gap:14px;margin-bottom:clamp(2px,1vw,12px);
   color:#8ba9cf;font-size:10px;font-weight:900;letter-spacing:.34em;
-  opacity:0;animation:splash-text-in .7s ease-out .25s forwards;
+  opacity:0;animation:splash-text-in .55s ease-out .1s forwards;
 }
 .machine-scene-kicker span {
   width:clamp(24px,5vw,70px);height:1px;
@@ -698,7 +698,7 @@ body {
 .machine-stage {
   position:relative;width:min(1040px,96vw);margin:0 auto;perspective:1200px;
   opacity:0;transform:translateY(22px) scale(.96);
-  animation:machine-stage-enter 1.1s cubic-bezier(.16,1,.3,1) .3s forwards;
+  animation:machine-stage-enter .75s cubic-bezier(.16,1,.3,1) .1s forwards;
 }
 .machine-illustration {
   display:block;width:100%;height:auto;overflow:visible;
@@ -711,29 +711,29 @@ body {
 }
 .machine-carriage {
   transform-box:fill-box;transform-origin:center;
-  animation:machine-carriage-stitch 5.2s cubic-bezier(.35,.05,.55,.95) 1.5s both;
+  animation:machine-carriage-stitch 3.4s cubic-bezier(.35,.05,.55,.95) .85s both;
 }
 .machine-spool {
   transform-box:fill-box;transform-origin:center;
-  animation:machine-spool-spin .75s linear 1.5s 7;
+  animation:machine-spool-spin .55s linear .85s 6;
 }
 .machine-needle-bounce {
   transform-box:fill-box;transform-origin:center top;
-  animation:machine-needle-punch .13s ease-in-out 1.55s 38 alternate;
+  animation:machine-needle-punch .12s ease-in-out .9s 28 alternate;
 }
 .machine-thread-line {
   stroke-dasharray:420;stroke-dashoffset:420;
-  animation:machine-thread-feed 4.9s linear 1.55s forwards;
+  animation:machine-thread-feed 3.4s linear .9s forwards;
 }
-.machine-logo-reveal { animation:machine-logo-reveal 4.7s cubic-bezier(.25,.7,.25,1) 1.8s forwards; }
+.machine-logo-reveal { animation:machine-logo-reveal 3.1s cubic-bezier(.25,.7,.25,1) 1.1s forwards; }
 .machine-logo-stitches {
   stroke-dasharray:1000;stroke-dashoffset:1000;
-  animation:machine-stitch-outline 4.7s linear 1.8s forwards;
+  animation:machine-stitch-outline 3.1s linear 1.1s forwards;
 }
-.machine-needle-sparks { opacity:0;animation:machine-sparks 1.2s ease-in-out 2s 5; }
+.machine-needle-sparks { opacity:0;animation:machine-sparks .7s ease-in-out .95s 4; }
 .splash-finished-brand {
   margin-top:-4px;opacity:0;transform:translateY(14px);
-  animation:splash-finish-brand .9s cubic-bezier(.16,1,.3,1) 6.25s forwards;
+  animation:splash-finish-brand .6s cubic-bezier(.16,1,.3,1) 4.1s forwards;
 }
 .splash-finished-brand .splash-wordmark { opacity:1;transform:none;animation:none; }
 .splash-finished-brand .splash-caption { opacity:1;animation:none; }
@@ -746,12 +746,12 @@ body {
   display:block;width:38%;height:100%;border-radius:inherit;
   background:linear-gradient(90deg,#1760eb,#04d6eb,#8cf4ff);
   box-shadow:0 0 18px rgba(0,198,255,.85);
-  animation:splash-progress 6.5s cubic-bezier(.4,0,.2,1) .9s both;
+  animation:splash-progress 4.2s cubic-bezier(.4,0,.2,1) .4s both;
 }
 .splash-loading {
   margin-top:.72rem;color:#7187aa;font-size:.62rem;font-weight:800;
   letter-spacing:.19em;opacity:0;
-  animation:splash-text-in .65s ease-out 6.45s forwards;
+  animation:splash-text-in .5s ease-out 4.3s forwards;
 }
 @keyframes machine-stage-enter {
   0% { opacity:0;transform:translateY(22px) scale(.96);filter:blur(8px); }
