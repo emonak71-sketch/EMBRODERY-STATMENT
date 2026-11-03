@@ -45,12 +45,22 @@ where n.nspname = 'public'
   )
 order by c.relname;
 
--- OTP confirmation: the legacy auto-confirm trigger must no longer exist.
-select t.tgname
-from pg_trigger t
-join pg_class c on c.oid = t.tgrelid
-join pg_namespace n on n.oid = c.relnamespace
-where n.nspname = 'auth'
-  and c.relname = 'users'
-  and t.tgname = 'auto_confirm_user_trigger'
-  and not t.tgisinternal;
+-- Signup OTP is a separate setup step. This reports its state without changing Auth.
+select case
+  when exists (
+    select 1
+    from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'auth'
+      and c.relname = 'users'
+      and t.tgname = 'auto_confirm_user_trigger'
+      and not t.tgisinternal
+  ) then 'Legacy auto-confirm trigger is still present; signup OTP setup is pending.'
+  else 'Legacy auto-confirm trigger is absent; signup OTP trigger step has been applied.'
+end as signup_otp_status;
+
+-- Per-worker salary cycles should be visible and use YYYY-MM format.
+select worker_code, active_salary_month
+from public."Workers"
+order by worker_code;
