@@ -24,6 +24,13 @@ $installDirectory = Split-Path -Parent $uninstallerPath
 $appExe = Join-Path $installDirectory 'embroidery-statement.exe'
 if (-not (Test-Path $appExe)) { throw "Installed application EXE not found: $appExe" }
 
+# Tauri's Windows app_config_dir is under %APPDATA%/<application identifier>.
+# The installer/uninstaller must leave this user data intact.
+$appConfigDirectory = Join-Path $env:APPDATA 'com.embroidery.statement'
+New-Item -ItemType Directory -Force -Path $appConfigDirectory | Out-Null
+$preservationFile = Join-Path $appConfigDirectory 'installer-data-preservation-smoke.txt'
+'keep-existing-user-data' | Set-Content -Path $preservationFile -Encoding UTF8
+
 $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Embroidery Statement.lnk'
 if (-not (Test-Path $desktopShortcut)) { throw 'Desktop shortcut was not created by the silent installer.' }
 $startMenuRoot = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
@@ -102,6 +109,10 @@ finally {
   }
 }
 if (Test-Path $appExe) { throw 'Application files remain after uninstall.' }
+if (Test-Path $desktopShortcut) { throw 'Desktop shortcut remains after uninstall.' }
+if ($startMenuShortcut -and (Test-Path $startMenuShortcut.FullName)) { throw 'Start Menu shortcut remains after uninstall.' }
+if (-not (Test-Path $preservationFile)) { throw 'User application data was deleted during uninstall.' }
+Remove-Item -Path $preservationFile -Force
 foreach ($runPath in $runPaths) {
   $runKey = Get-ItemProperty -Path $runPath -ErrorAction SilentlyContinue
   if ($runKey -and $runKey.PSObject.Properties['Embroidery Statement']) {
