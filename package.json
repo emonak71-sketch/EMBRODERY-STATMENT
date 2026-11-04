@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:attendance": "node desktop/attendanceCore.test.mjs",
-    "desktop:icons": "npx --yes @tauri-apps/cli@2 icon public/embroidery-statement-logo-180.png --output src-tauri/icons",
+    "desktop:icons": "npx --yes @tauri-apps/cli@2 icon public/embroidery-statement-logo.svg --output src-tauri/icons",
     "desktop:dev": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 dev",
     "desktop:build": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 build",
     "desktop:check": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 build --no-bundle"
