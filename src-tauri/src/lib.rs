@@ -100,6 +100,11 @@ fn write_autostart_diagnostic(app: &AppHandle, message: &str) {
     if let Some(directory) = portable_directory() {
         paths.push(directory.join("data").join("autostart-diagnostic.txt"));
     }
+    if let Ok(executable) = std::env::current_exe() {
+        if let Some(directory) = executable.parent() {
+            paths.push(directory.join("autostart-diagnostic.txt"));
+        }
+    }
     for path in paths {
         if let Some(parent) = path.parent() { let _ = fs::create_dir_all(parent); }
         let _ = fs::write(path, message);

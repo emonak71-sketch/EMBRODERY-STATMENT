@@ -71,11 +71,14 @@ try {
     }
     $debugPaths = @(
       (Join-Path $appConfigDirectory 'autostart-diagnostic.txt'),
-      (Join-Path $env:TEMP 'EmbroideryStatement-autostart-diagnostic.txt')
+      (Join-Path $env:TEMP 'EmbroideryStatement-autostart-diagnostic.txt'),
+      (Join-Path $installDirectory 'autostart-diagnostic.txt'),
+      (Join-Path (Join-Path $installDirectory 'data') 'autostart-diagnostic.txt')
     )
     $debug = ($debugPaths | Where-Object { Test-Path $_ } | ForEach-Object { "$_ : $(Get-Content $_ -Raw)" }) -join ' | '
     if (-not $debug) { $debug = 'No app diagnostic file was written.' }
-    throw "First installed launch did not register Windows sign-in autostart in HKCU or HKLM. Registry values: $($diagnostics -join '; '). App diagnostic: $debug"
+    $portableMarker = Test-Path (Join-Path $installDirectory '.portable')
+    throw "First installed launch did not register Windows sign-in autostart in HKCU or HKLM. Portable marker: $portableMarker. Registry values: $($diagnostics -join '; '). App diagnostic: $debug"
   }
   Write-Host "PASS: Windows sign-in autostart registered in $autostartHive ($($autostartEntry.Name))."
 
