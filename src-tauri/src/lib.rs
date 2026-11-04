@@ -11,7 +11,7 @@ use tauri::{
     tray::{TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager,
 };
-use tauri_plugin_autostart::{MacosLauncher, ManagerExt as AutostartManagerExt};
+use tauri_plugin_autostart::ManagerExt as AutostartManagerExt;
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_updater::UpdaterExt;
 
@@ -304,9 +304,12 @@ fn enable_autostart_on_first_installed_run(app: &AppHandle) {
     }
     let mut preferences = read_preferences(app);
     if preferences.autostart.is_none() {
-        if app.autolaunch().enable().is_ok() {
-            preferences.autostart = Some(true);
-            let _ = save_preferences(app, &preferences);
+        match app.autolaunch().enable() {
+            Ok(()) => {
+                preferences.autostart = Some(true);
+                let _ = save_preferences(app, &preferences);
+            }
+            Err(error) => eprintln!("Unable to register Embroidery Statement for Windows sign-in: {error}"),
         }
     }
 }
@@ -321,10 +324,12 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_autostart::init(
-            MacosLauncher::LaunchAgent,
-            Some(vec!["--autostart"]),
-        ));
+        .plugin(
+            tauri_plugin_autostart::Builder::new()
+                .app_name("Embroidery Statement")
+                .args(["--autostart"])
+                .build(),
+        );
 
     if update_is_configured() {
         builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
