@@ -23,6 +23,8 @@ jobs:
           workspaces: src-tauri -> target
       - name: Install locked frontend dependencies
         run: npm ci
+      - name: Install Windows Rollup native optional binary
+        run: npm install --no-save --no-package-lock @rollup/rollup-win32-x64-msvc@4.62.3
       - name: Validate existing web/PWA build
         run: npm run build
       - name: Test attendance completeness and Dhaka schedule
