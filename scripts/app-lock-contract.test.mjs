@@ -15,6 +15,8 @@ assert.ok(app.includes("import AppLockGate from './components/AppLockGate';"), '
 assert.ok(app.includes("if (user && appLockState !== 'unlocked')"), 'Dashboard must remain blocked until App Lock unlocks');
 assert.ok(app.includes("if (user && appLockState === 'unlocked' && !isMisconfigured)"), 'Business data must load only after unlock');
 assert.ok(app.includes("setInterval(() => void checkRemoteLockVersion(), 60_000)"), 'Cross-device password changes must be detected');
+assert.ok(app.includes("appLockState !== 'unlocked' && appLockState !== 'setup'"), 'Open first-time setup screens must poll for an App Lock created on another device');
+assert.ok(app.includes("else if (appLockState === 'setup')"), 'A newly created App Lock on another device must switch this device to unlock mode');
 assert.ok(!app.includes("document.addEventListener('visibilitychange'"), 'Switching browser tabs must not repeatedly prompt for the App Lock');
 
 assert.ok(service.includes("resetPasswordForEmail(cleanEmail)"), 'App Lock recovery must send the existing Supabase recovery email');

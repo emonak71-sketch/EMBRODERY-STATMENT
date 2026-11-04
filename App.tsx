@@ -236,15 +236,19 @@ const App: React.FC = () => {
     }
   }, [user, appLockState, refreshData, isMisconfigured]);
 
-  // Detect a password change made on another device and require the new password.
+  // Keep already-open setup screens in sync when another device creates the first App Lock.
+  // Also detect password changes made on another device and require the new password.
   useEffect(() => {
-    if (!currentUserId || appLockState !== 'unlocked') return;
+    if (!currentUserId || (appLockState !== 'unlocked' && appLockState !== 'setup')) return;
     const checkRemoteLockVersion = async () => {
       try {
         const status = await dbService.getAppLockStatus();
         if (!status.enabled) {
           setAppLockUpdatedAt(null);
-          setAppLockState('setup');
+          if (appLockState !== 'setup') setAppLockState('setup');
+        } else if (appLockState === 'setup') {
+          setAppLockUpdatedAt(status.updatedAt);
+          setAppLockState('locked');
         } else if (appLockUpdatedAt && status.updatedAt !== appLockUpdatedAt) {
           setAppLockUpdatedAt(status.updatedAt);
           setAppLockState('locked');
