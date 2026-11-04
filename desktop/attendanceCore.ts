@@ -67,7 +67,7 @@ export function dueSessions(
 export function dueCheckpoints(
   clock: { date: string; minutes: number },
   times: ReminderTimes,
-  overdueWindowMinutes = 12 * 60,
+  overdueWindowMinutes = 24 * 60,
 ): Array<{date: string; session: AttendanceSession}> {
   const current = dueSessions(clock.minutes, times).map(session => ({
     date: clock.date,
