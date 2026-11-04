@@ -3,7 +3,7 @@ $keyDirectory = Join-Path $env:USERPROFILE '.tauri'
 $keyPath = Join-Path $keyDirectory 'embroidery-statement.key'
 $publicKeyPath = "$keyPath.pub"
 
-if (Test-Path $keyPath -or Test-Path $publicKeyPath) {
+if ((Test-Path $keyPath) -or (Test-Path $publicKeyPath)) {
   throw "A signing key already exists at $keyPath. Back it up securely; do not overwrite it."
 }
 New-Item -ItemType Directory -Path $keyDirectory -Force | Out-Null
