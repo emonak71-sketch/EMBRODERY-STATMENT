@@ -199,13 +199,22 @@ export const dbService = {
     const {data,error}=await supabase.from('Workers').select('*').eq('user_id',uid).order('full_name');
     if(error) throw handleDbError(error,'loading workers'); return data||[];
   },
-  saveWorker: async (worker:{id?:string;worker_code:string;full_name:string;phone:string;designation:string;joining_date:string;monthly_salary:number;is_active:boolean}) => {
+  saveWorker: async (worker:{id?:string|null;worker_code:string;full_name:string;phone:string;designation:string;joining_date:string;monthly_salary:number;is_active:boolean}) => {
     const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
     if(!uid) throw new Error('Please sign in again.');
-    const payload={...worker,user_id:uid,updated_at:new Date().toISOString()};
-    const q=worker.id?supabase.from('Workers').update(payload).eq('id',worker.id).eq('user_id',uid):supabase.from('Workers').insert([{...payload,created_at:new Date().toISOString()}]);
-    const {data,error}=await q.select(); if(error) throw handleDbError(error,'saving worker');
-    if(!data?.length) throw new Error('Worker was not saved. Check account permissions.'); return data[0];
+
+    // Never send an absent/null id on INSERT. The Workers.id column is UUID
+    // with a database-generated default; including id:null bypasses that default.
+    const {id, ...workerFields} = worker;
+    const payload={...workerFields,user_id:uid,updated_at:new Date().toISOString()};
+    const q=id
+      ? supabase.from('Workers').update(payload).eq('id',id).eq('user_id',uid)
+      : supabase.from('Workers').insert([{...payload,created_at:new Date().toISOString()}]);
+
+    const {data,error}=await q.select();
+    if(error) throw handleDbError(error,'saving worker');
+    if(!data?.length) throw new Error('Worker was not saved. Check account permissions.');
+    return data[0];
   },
   setWorkerActive: async (id:string,is_active:boolean) => {
     const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
