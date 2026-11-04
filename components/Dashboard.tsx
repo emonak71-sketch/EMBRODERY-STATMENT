@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Landmark, TrendingUp, TrendingDown, Package, CreditCard, Wallet, Users, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Landmark, TrendingUp, TrendingDown, Package, CreditCard, Wallet, Users, ArrowLeft, ChevronRight, CalendarDays, ArrowUpRight } from 'lucide-react';
 import { User, Party, Transaction, TabType } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -273,47 +273,53 @@ const Dashboard: React.FC<{
 
   return (
     <div className="space-y-6 pt-14 md:pt-0">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 animate-in fade-in slide-in-from-left-8 duration-700 ease-out">
-        <div>
-          <div className="text-[9px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-[0.3em] mb-1 px-1">
-            {user?.business_name || 'EMBRODERY STATEMENT'}
+      <section className="dashboard-welcome-panel">
+        <div className="dashboard-welcome-copy">
+          <div className="dashboard-eyebrow"><span className="dashboard-live-dot" /> WORKSPACE OVERVIEW</div>
+          <p className="dashboard-business-name">{user?.business_name || 'EMBROIDERY STATEMENT'}</p>
+          <h1>{t('overview')}</h1>
+          <p className="dashboard-welcome-description">A clear view of your business performance and daily activity.</p>
+        </div>
+        <div className="dashboard-date-pill">
+          <CalendarDays className="w-5 h-5" />
+          <div>
+            <span>LAST UPDATED</span>
+            <strong>{new Date().toLocaleDateString('en-GB')}</strong>
           </div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">
-            {t('overview')}
-          </h1>
         </div>
-        <div className="px-4 py-2 bg-white dark:bg-slate-900 rounded-xl shadow-lg shadow-black/5 border border-slate-200 dark:border-slate-800 flex flex-col items-end animate-in fade-in slide-in-from-right-8 duration-700 delay-100">
-          <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Last Update</span>
-          <span className="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300">
-            {new Date().toLocaleDateString('en-GB')}
-          </span>
-        </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="dashboard-stat-grid grid grid-cols-2 lg:grid-cols-3 gap-4">
         {cards.map((card, i) => {
           const isNegative = card.isDynamic && card.amount < 0;
           const isPositive = card.isDynamic && card.amount > 0;
-          
+
           return (
-            <div 
+            <button
               key={i}
-              onClick={(card as any).onClick}
-              className={`dashboard-stat-card bg-white dark:bg-slate-900 p-5 rounded-[1.5rem] shadow-sm border border-slate-200 dark:border-slate-800 transition-all hover:-translate-y-1 hover:shadow-xl animate-in zoom-in-95 fade-in duration-500 ${(card as any).onClick ? 'cursor-pointer' : ''}`}
-              style={{ animationDelay: `${i * 100}ms` }}
+              type="button"
+              onClick={card.onClick}
+              aria-label={`Open ${card.title} details`}
+              className={`dashboard-stat-card dashboard-stat-card--${i} w-full bg-white dark:bg-slate-900 p-5 rounded-[1.5rem] shadow-sm border border-slate-200 dark:border-slate-800 text-left`}
+              style={{ animationDelay: `${i * 85}ms` }}
             >
-              <div className="flex justify-between items-start mb-4">
-                <div className={`${card.color} p-3 rounded-lg`}>
+              <div className="dashboard-stat-card-top">
+                <div className={`${card.color} dashboard-stat-icon p-3 rounded-xl`}>
                   {card.icon}
                 </div>
+                <span className="dashboard-stat-open">View details <ArrowUpRight className="w-3.5 h-3.5" /></span>
               </div>
-              <div>
-                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{card.title}</p>
+              <div className="dashboard-stat-card-copy">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{card.title}</p>
                 <h2 className={`text-xl font-black tracking-tight ${isNegative ? 'text-emerald-600' : isPositive ? 'text-rose-600' : 'text-slate-900 dark:text-white'}`}>
                   {card.title === t('total_parties') ? card.amount : `৳${card.amount.toLocaleString('en-IN')}`}
                 </h2>
               </div>
-            </div>
+              <div className="dashboard-stat-card-bottom">
+                <span>OPEN DETAILS</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </button>
           );
         })}
       </div>
