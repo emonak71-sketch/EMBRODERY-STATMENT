@@ -6,8 +6,29 @@ const publicKey = (process.env.EMBROIDERY_UPDATE_PUBLIC_KEY || '').trim();
 const version = config.version;
 const tag = process.env.RELEASE_TAG || process.env.GITHUB_REF_NAME || '';
 
-if (!publicKey.startsWith('untrusted comment:') || !publicKey.includes('RW')) {
-  throw new Error('Set the real Tauri signer PUBLIC KEY as GitHub repository variable EMBROIDERY_UPDATE_PUBLIC_KEY before releasing.');
+// Tauri's generated .pub file is Base64-encoded Minisign PublicKeyBox text.
+// The updater plugin itself Base64-decodes this value before PublicKey::decode,
+// so validate the decoded envelope but keep the original Base64 string in config.
+let publicKeyText = '';
+try {
+  const compactPublicKey = publicKey.replace(/\s+/g, '');
+  const decodedPublicKey = Buffer.from(compactPublicKey, 'base64');
+  if (!compactPublicKey || decodedPublicKey.toString('base64').replace(/=+$/, '') !== compactPublicKey.replace(/=+$/, '')) {
+    throw new Error('Invalid Base64 encoding');
+  }
+  publicKeyText = decodedPublicKey.toString('utf8');
+} catch {
+  throw new Error('EMBROIDERY_UPDATE_PUBLIC_KEY is not a valid Base64-encoded Tauri public key.');
+}
+const publicKeyLines = publicKeyText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+const minisignPayload = publicKeyLines.find((line) => /^RW[A-Za-z0-9+/]{54}$/.test(line));
+if (
+  !publicKeyLines[0]?.startsWith('untrusted comment: minisign public key:') ||
+  !minisignPayload ||
+  Buffer.from(minisignPayload, 'base64').length !== 42 ||
+  Buffer.from(minisignPayload, 'base64').subarray(0, 2).toString('ascii') !== 'Ed'
+) {
+  throw new Error('EMBROIDERY_UPDATE_PUBLIC_KEY does not contain a valid Tauri Minisign public-key box.');
 }
 if (!process.env.TAURI_SIGNING_PRIVATE_KEY) {
   throw new Error('Set TAURI_SIGNING_PRIVATE_KEY as a GitHub Actions SECRET before releasing.');
