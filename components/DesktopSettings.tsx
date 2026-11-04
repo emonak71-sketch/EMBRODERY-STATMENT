@@ -172,7 +172,7 @@ const DesktopSettings: React.FC = () => {
                   className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-black text-white disabled:opacity-50">
                   <Download size={14}/> Update Now
                 </button>
-                <button type="button" onClick={()=>{localStorage.setItem('desktop_update_dismissed',info.available_version||'');setMessage('You will be reminded after a newer version is published.');}}
+                <button type="button" onClick={()=>{localStorage.setItem('desktop_update_remind_after',String(Date.now()+24*60*60*1000));setMessage('We will remind you about this update after 24 hours.');}}
                   className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold dark:border-slate-700">Remind Me Later</button>
               </>
             )}
