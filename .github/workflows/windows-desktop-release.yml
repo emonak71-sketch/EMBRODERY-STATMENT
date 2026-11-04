@@ -136,7 +136,7 @@ jobs:
         shell: pwsh
         run: ./scripts/windows-installer-smoke.ps1
 
-      - name: Publish GitHub Release and updater manifest
+      - name: Publish or update signed GitHub Release and updater manifest
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -148,18 +148,23 @@ jobs:
           if (-not $installer) { throw 'Installer asset is missing.' }
           $signature = $installer.FullName + '.sig'
           if (-not (Test-Path $signature)) { throw 'Updater signature asset is missing.' }
-          $arguments = @(
-            'release', 'create', $env:RELEASE_TAG,
-            '--repo', $env:GITHUB_REPOSITORY,
-            '--title', "Embroidery Statement $env:RELEASE_TAG",
-            '--generate-notes',
-            '--latest',
-            '--target', $env:GITHUB_SHA,
-            $installer.FullName,
-            $signature,
-            'latest.json'
-          )
-          gh @arguments
-          if ($LASTEXITCODE -ne 0) { throw 'GitHub Release creation failed.' }
+          $assets = @($installer.FullName, $signature, 'latest.json')
+
+          gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $env:RELEASE_TAG already exists; replacing only its signed installer, signature and updater manifest."
+            gh release upload $env:RELEASE_TAG @assets --repo $env:GITHUB_REPOSITORY --clobber
+            if ($LASTEXITCODE -ne 0) { throw 'Updating the existing GitHub Release assets failed.' }
+            gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file 'RELEASE_NOTES_1.0.2.md' --latest
+            if ($LASTEXITCODE -ne 0) { throw 'Updating the GitHub Release metadata failed.' }
+          } else {
+            gh release create $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file 'RELEASE_NOTES_1.0.2.md' --latest --target $env:GITHUB_SHA @assets
+            if ($LASTEXITCODE -ne 0) { throw 'GitHub Release creation failed.' }
+          }
+
+          # Keep the release tag pointing at the exact source commit used for these assets.
+          $tagRef = "${env:GITHUB_SHA}:refs/tags/${env:RELEASE_TAG}"
+          git push --force origin $tagRef
+          if ($LASTEXITCODE -ne 0) { throw 'Updating the release tag to the verified source commit failed.' }
 
 # Signing credentials are provisioned by the one-time local updater setup.
