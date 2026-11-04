@@ -3,44 +3,23 @@ import React, { useState } from 'react';
 import { Settings as SettingsIcon, Save, Mail, Building, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { User } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
-import { setupBiometrics } from './BiometricLock';
-import { Fingerprint } from 'lucide-react';
+import AppLockSettings from './AppLockSettings';
 import DesktopSettings from './DesktopSettings';
 
 interface SettingsProps {
   setActiveTab?: (tab: string) => void;
   user: User | null;
   onUpdateProfile: (email: string, biz: string) => Promise<void>;
+  onAppLockUpdated: (updatedAt: string) => void;
 }
 
 
-const isMobileDevice = () => {
-  if (typeof navigator === 'undefined') return false;
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-};
-
-const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, setActiveTab }) => {
+const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, onAppLockUpdated, setActiveTab }) => {
   const { t } = useLanguage();
   const [email, setEmail] = useState(user?.email || '');
   const [biz, setBiz] = useState(user?.business_name || '');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [lockEnabled, setLockEnabled] = useState(() => localStorage.getItem('app_lock_enabled') === 'true');
-
-  
-  const handleToggleLock = async () => {
-    if (lockEnabled) {
-      localStorage.removeItem('app_lock_enabled');
-      localStorage.removeItem('biometric_id');
-      localStorage.removeItem('app_pin');
-      setLockEnabled(false);
-    } else {
-      const res = await setupBiometrics(user?.email || 'user');
-      if (res) setLockEnabled(true);
-      else alert('Biometrics setup failed or cancelled.');
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -124,28 +103,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, setActiveTab
           </button>
         </form>
 
-        {isMobileDevice() && (
-        <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 md:p-10 shadow-2xl shadow-slate-200/50 dark:shadow-black/20 border border-slate-100 dark:border-slate-800 mt-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
-                <Fingerprint className="w-6 h-6 text-primary-600 dark:text-primary-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">ফেস আইডি / ফিঙ্গারপ্রিন্ট লক</h3>
-                <p className="text-sm font-bold text-slate-500">অ্যাপ খোলার সময় বায়োমেট্রিক আনলক</p>
-              </div>
-            </div>
-            <button 
-              type="button" 
-              onClick={handleToggleLock}
-              className={`w-14 h-8 rounded-full transition-colors relative ${lockEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-            >
-              <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-transform ${lockEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
-            </button>
-          </div>
-        </div>
-        )}
+        <AppLockSettings email={user?.email || ''} onUpdated={onAppLockUpdated} />
 
       </div>
 

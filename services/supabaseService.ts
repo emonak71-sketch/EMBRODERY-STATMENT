@@ -20,6 +20,24 @@ const handleDbError = (error: any, context: string) => {
   return error;
 };
 
+
+const invokeAppLock = async (payload: Record<string, unknown>) => {
+  const { data, error } = await supabase.functions.invoke('app-lock', { body: payload });
+  if (error) {
+    let message = error.message || 'App Lock request failed.';
+    const context = (error as any).context;
+    if (context && typeof context.json === 'function') {
+      try {
+        const responseBody = await context.json();
+        if (typeof responseBody?.error === 'string') message = responseBody.error;
+      } catch { /* Keep the SDK error message. */ }
+    }
+    throw new Error(message);
+  }
+  if (data?.ok === false) throw new Error(data.error || 'App Lock request failed.');
+  return data as Record<string, unknown>;
+};
+
 export const dbService = {
   login: async (email: string, pass: string) => {
     if (!isConfigured()) return { success: false, message: 'Supabase ব্যাকএন্ড কনফিগার করা নেই।' };
@@ -542,6 +560,50 @@ export const dbService = {
       .order('request_date', { ascending: true });
     if (error) throw handleDbError(error, 'loading annual advance report');
     return data || [];
+  },
+
+
+  getAppLockStatus: async (): Promise<{ enabled: boolean; updatedAt: string | null }> => {
+    const data = await invokeAppLock({ action: 'status' });
+    return { enabled: Boolean(data.enabled), updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : null };
+  },
+
+  setAppLock: async (password: string): Promise<{ updatedAt: string }> => {
+    const data = await invokeAppLock({ action: 'set', newPassword: password });
+    if (typeof data.updatedAt !== 'string') throw new Error('App Lock version could not be confirmed.');
+    return { updatedAt: data.updatedAt };
+  },
+
+  verifyAppLock: async (password: string): Promise<{ updatedAt: string }> => {
+    const data = await invokeAppLock({ action: 'verify', password });
+    if (typeof data.updatedAt !== 'string') throw new Error('App Lock verification response was incomplete.');
+    return { updatedAt: data.updatedAt };
+  },
+
+  changeAppLock: async (currentPassword: string, newPassword: string): Promise<{ updatedAt: string }> => {
+    const data = await invokeAppLock({ action: 'change', currentPassword, newPassword });
+    if (typeof data.updatedAt !== 'string') throw new Error('App Lock password version could not be confirmed.');
+    return { updatedAt: data.updatedAt };
+  },
+
+  requestAppLockReset: async (email: string): Promise<{ success: boolean; message?: string }> => {
+    if (!isConfigured()) return { success: false, message: 'Supabase configuration is missing.' };
+    const cleanEmail = email.trim().toLowerCase();
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
+    if (error) {
+      console.error('App Lock recovery email request failed:', error);
+      return { success: false, message: 'Gmail-এ ৮ সংখ্যার OTP পাঠানো যায়নি। কিছুক্ষণ পর আবার চেষ্টা করুন।' };
+    }
+    return { success: true, message: 'An 8-digit OTP has been sent to your Gmail.' };
+  },
+
+  resetAppLockWithOtp: async (email: string, otp: string, newPassword: string): Promise<{ updatedAt: string }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanOtp = otp.replace(/\D/g, '');
+    if (!/^\d{8}$/.test(cleanOtp)) throw new Error('Enter the exact 8-digit Gmail OTP.');
+    const data = await invokeAppLock({ action: 'reset', email: cleanEmail, otp: cleanOtp, newPassword });
+    if (typeof data.updatedAt !== 'string') throw new Error('App Lock reset response was incomplete.');
+    return { updatedAt: data.updatedAt };
   },
 
   resetPassword: async (email: string) => {

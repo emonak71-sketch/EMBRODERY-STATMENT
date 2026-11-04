@@ -11,7 +11,7 @@ import Settings from './components/Settings';
 import MonthlyReports from './components/MonthlyReports';
 import MonthlyCollections from './components/MonthlyCollections';
 import PartiesList from './components/PartiesList';
-import { BiometricLock } from './components/BiometricLock';
+import AppLockGate from './components/AppLockGate';
 import WorkerAttendance from './components/WorkerAttendance';
 import ActivityHistory from './components/ActivityHistory';
 import SplashScreen from './components/SplashScreen';
@@ -79,7 +79,9 @@ const App: React.FC = () => {
   const [isMisconfigured, setIsMisconfigured] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  const [isLocked, setIsLocked] = useState(() => localStorage.getItem('app_lock_enabled') === 'true');
+  const [appLockState, setAppLockState] = useState<'checking' | 'setup' | 'locked' | 'unavailable' | 'unlocked'>('checking');
+  const [appLockUpdatedAt, setAppLockUpdatedAt] = useState<string | null>(null);
+  const currentUserId = user?.id;
   const [stats, setStats] = useState({
     totalCredit: 0,
     totalCollected: 0,
@@ -143,6 +145,28 @@ const App: React.FC = () => {
     }
   }, [user]);
 
+  const refreshAppLockStatus = useCallback(async () => {
+    if (!currentUserId) return;
+    setAppLockState('checking');
+    try {
+      const status = await dbService.getAppLockStatus();
+      setAppLockUpdatedAt(status.updatedAt);
+      setAppLockState(status.enabled ? 'locked' : 'setup');
+    } catch (error) {
+      console.error('Could not load shared App Lock status:', error);
+      setAppLockState('unavailable');
+    }
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!currentUserId) {
+      setAppLockState('checking');
+      setAppLockUpdatedAt(null);
+      return;
+    }
+    void refreshAppLockStatus();
+  }, [currentUserId, refreshAppLockStatus]);
+
   useEffect(() => {
     const isPlaceholder = supabaseUrl.includes('placeholder-project.supabase.co');
     if (isPlaceholder) {
@@ -177,6 +201,8 @@ const App: React.FC = () => {
         });
       } else {
         setUser(null);
+        setAppLockState('checking');
+        setAppLockUpdatedAt(null);
         setParties([]);
         setTransactions([]);
         setDataUnavailable(false);
@@ -194,7 +220,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (user && !isMisconfigured) {
+    if (user && appLockState === 'unlocked' && !isMisconfigured) {
       refreshData();
       const channel = supabase
         .channel('db_changes')
@@ -208,18 +234,39 @@ const App: React.FC = () => {
         supabase.removeChannel(channel);
       };
     }
-  }, [user, refreshData, isMisconfigured]);
+  }, [user, appLockState, refreshData, isMisconfigured]);
 
-  
+  // Lock the current device whenever the app returns to the foreground.
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && localStorage.getItem('app_lock_enabled') === 'true') {
-        setIsLocked(true);
+      if (!document.hidden && currentUserId && appLockState === 'unlocked') {
+        void refreshAppLockStatus();
       }
     };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, []);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [currentUserId, appLockState, refreshAppLockStatus]);
+
+  // Detect a password change made on another device and require the new password.
+  useEffect(() => {
+    if (!currentUserId || appLockState !== 'unlocked') return;
+    const checkRemoteLockVersion = async () => {
+      try {
+        const status = await dbService.getAppLockStatus();
+        if (!status.enabled) {
+          setAppLockUpdatedAt(null);
+          setAppLockState('setup');
+        } else if (appLockUpdatedAt && status.updatedAt !== appLockUpdatedAt) {
+          setAppLockUpdatedAt(status.updatedAt);
+          setAppLockState('locked');
+        }
+      } catch {
+        // Live data access is separately blocked when the network is unavailable.
+      }
+    };
+    const timer = window.setInterval(() => void checkRemoteLockVersion(), 60_000);
+    return () => window.clearInterval(timer);
+  }, [currentUserId, appLockState, appLockUpdatedAt]);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -232,9 +279,7 @@ const App: React.FC = () => {
   }, [isDarkMode]);
 
   const handleLogin = async (e: string, p: string) => {
-    const res = await dbService.login(e, p);
-    if (res.success) setIsLocked(false);
-    return res;
+    return await dbService.login(e, p);
   };
 
   const handleSignup = async (e: string, p: string, b: string) => {
@@ -411,8 +456,28 @@ const App: React.FC = () => {
     );
   }
 
-  if (user && isLocked) {
-    return <BiometricLock onUnlock={() => setIsLocked(false)} onLogout={handleLogout} />;
+  if (user && appLockState === 'checking') {
+    return <SplashScreen />;
+  }
+
+  if (user && appLockState !== 'unlocked') {
+    const gateMode = appLockState === 'setup' ? 'setup' : appLockState === 'unavailable' ? 'unavailable' : 'unlock';
+    return (
+      <AppLockGate
+        mode={gateMode}
+        email={user.email}
+        onUnlock={(updatedAt) => {
+          setAppLockUpdatedAt(updatedAt);
+          setAppLockState('unlocked');
+        }}
+        onLogout={handleLogout}
+        onRetry={() => void refreshAppLockStatus()}
+      />
+    );
+  }
+
+  if (user && loading) {
+    return <SplashScreen />;
   }
 
   if (user && dataUnavailable) {
@@ -468,9 +533,10 @@ const App: React.FC = () => {
         {activeTab === 'monthly_reports' && <MonthlyReports setActiveTab={setActiveTab} transactions={transactions} parties={parties} />}
         {activeTab === 'monthly_collections' && <MonthlyCollections setActiveTab={setActiveTab} transactions={transactions} parties={parties} />}
         {activeTab === 'settings' && (
-          <Settings 
+          <Settings
             user={user}
             onUpdateProfile={handleUpdateProfile}
+            onAppLockUpdated={setAppLockUpdatedAt}
           />
         )}
         {['sales', 'expenses'].includes(activeTab) && (
