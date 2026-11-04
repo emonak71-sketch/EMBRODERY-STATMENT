@@ -11,6 +11,7 @@ New-Item -ItemType Directory -Path $keyDirectory -Force | Out-Null
 Write-Host 'Tauri will ask you to enter a strong passphrase. Store it in a password manager.'
 Write-Host 'The private key will be written only to your Windows user profile.'
 npx --yes @tauri-apps/cli@2 signer generate -w $keyPath
+if ($LASTEXITCODE -ne 0) { throw 'Tauri signing-key generation failed.' }
 if (-not (Test-Path $keyPath)) { throw 'Tauri private key was not generated.' }
 if (-not (Test-Path $publicKeyPath)) { throw 'Tauri public key was not generated.' }
 
