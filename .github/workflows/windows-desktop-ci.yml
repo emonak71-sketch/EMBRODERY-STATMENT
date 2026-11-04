@@ -6,7 +6,7 @@ on:
   pull_request:
   workflow_dispatch:
 concurrency:
-  group: windows-desktop-${{ github.ref }}
+  group: windows-desktop-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 permissions:
   contents: read
