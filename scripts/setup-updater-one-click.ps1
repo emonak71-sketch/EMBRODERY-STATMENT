@@ -104,15 +104,24 @@ $publicKey = [System.IO.File]::ReadAllText($publicKeyPath).Trim()
 if ([string]::IsNullOrWhiteSpace($publicKey)) {
   throw 'The Tauri public key file is empty.'
 }
-# Tauri v2 writes the public key as a raw Base64-encoded Minisign key
-# (42 decoded bytes), not as an "untrusted comment:" text envelope.
+# Tauri v2 stores the Minisign PublicKeyBox as UTF-8 text, then Base64-encodes
+# that complete text for the .pub file. Decode both layers before validating.
 try {
-  $publicKeyBytes = [Convert]::FromBase64String($publicKey)
+  $publicKeyBoxText = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($publicKey))
 } catch {
-  throw 'The Tauri-generated public key is not valid Base64. The existing key files were preserved.'
+  throw 'The Tauri-generated public-key box is not valid Base64. The original key files were preserved.'
 }
-if ($publicKeyBytes.Length -ne 42) {
-  throw "Unexpected Tauri public-key length: $($publicKeyBytes.Length) decoded bytes; expected 42. The existing key files were preserved."
+$publicKeyLines = @($publicKeyBoxText -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
+if ($publicKeyLines.Count -lt 2 -or -not $publicKeyLines[0].StartsWith('untrusted comment: minisign public key:')) {
+  throw 'The decoded file is not a valid Tauri Minisign public-key box. The original key files were preserved.'
+}
+$minisignPublicLine = $publicKeyLines | Where-Object { $_ -match '^RW[A-Za-z0-9+/]{54}$' } | Select-Object -First 1
+if (-not $minisignPublicLine) {
+  throw 'The Tauri public-key box does not contain a valid Minisign public-key payload. The original key files were preserved.'
+}
+$minisignPublicBytes = [Convert]::FromBase64String($minisignPublicLine)
+if ($minisignPublicBytes.Length -ne 42 -or [System.Text.Encoding]::ASCII.GetString($minisignPublicBytes, 0, 2) -ne 'Ed') {
+  throw 'The Minisign public-key payload is invalid. The original key files were preserved.'
 }
 
 Write-Host 'Saving the public key as a GitHub Actions repository variable...'
