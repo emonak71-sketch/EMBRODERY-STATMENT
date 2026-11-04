@@ -57,8 +57,10 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path portable | Out-Null
           Copy-Item "src-tauri/target/release/embroidery-statement.exe" "portable/"
+          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile "portable/MicrosoftEdgeWebView2Setup.exe"
+          if ((Get-Item "portable/MicrosoftEdgeWebView2Setup.exe").Length -lt 100000) { throw "WebView2 bootstrapper download looks incomplete." }
           New-Item -ItemType File -Force -Path "portable/.portable" | Out-Null
-          "Portable Embroidery Statement: Requires Microsoft WebView2 Runtime. Run exe directly. Keep this folder and data/ together during transfer or updates. Portable automatic updating is disabled; download a newer portable ZIP and replace ONLY the EXE. Windows native toast notifications require an installed app identity." | Set-Content -Path "portable/README.txt" -Encoding UTF8
+          "Portable Embroidery Statement: If WebView2 Runtime is missing, run MicrosoftEdgeWebView2Setup.exe (internet required). Keep this folder and data/ together during transfer or updates. Portable automatic updating is disabled; download a newer portable ZIP and replace ONLY the EXE. Windows native toast notifications require an installed app identity." | Set-Content -Path "portable/README.txt" -Encoding UTF8
           Compress-Archive -Path portable -DestinationPath "Embroidery-Statement-${{ github.ref_name }}-Portable.zip" -Force
       - name: Attach portable ZIP to the same GitHub Release
         env:
