@@ -91,6 +91,12 @@ const DesktopSettings: React.FC = () => {
     finally{setBusy(false);}
   };
 
+  useEffect(() => {
+    const onTrayUpdateRequest = () => { void checkUpdates(); };
+    window.addEventListener('embroidery:check-updates', onTrayUpdateRequest);
+    return () => window.removeEventListener('embroidery:check-updates', onTrayUpdateRequest);
+  }, []);
+
   const installUpdate = async () => {
     setBusy(true);setMessage('Downloading signed update...');
     try {
