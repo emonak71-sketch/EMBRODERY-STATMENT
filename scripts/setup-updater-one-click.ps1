@@ -101,8 +101,18 @@ if (-not (Test-Path $keyPath)) { throw "Private key file not found: $keyPath" }
 if (-not (Test-Path $publicKeyPath)) { throw "Public key file not found: $publicKeyPath" }
 
 $publicKey = [System.IO.File]::ReadAllText($publicKeyPath).Trim()
-if (-not $publicKey.StartsWith('untrusted comment:') -or -not $publicKey.Contains('RW')) {
-  throw 'The public key file does not look like a Tauri updater public key.'
+if ([string]::IsNullOrWhiteSpace($publicKey)) {
+  throw 'The Tauri public key file is empty.'
+}
+# Tauri v2 writes the public key as a raw Base64-encoded Minisign key
+# (42 decoded bytes), not as an "untrusted comment:" text envelope.
+try {
+  $publicKeyBytes = [Convert]::FromBase64String($publicKey)
+} catch {
+  throw 'The Tauri-generated public key is not valid Base64. The existing key files were preserved.'
+}
+if ($publicKeyBytes.Length -ne 42) {
+  throw "Unexpected Tauri public-key length: $($publicKeyBytes.Length) decoded bytes; expected 42. The existing key files were preserved."
 }
 
 Write-Host 'Saving the public key as a GitHub Actions repository variable...'
