@@ -4,7 +4,7 @@ This is a desktop enhancement of the **existing React/Vite/TypeScript + Supabase
 
 ## Current implementation status
 
-The desktop integration is developed in the `feature/tauri2-windows-desktop` branch. Production `main` remains unchanged. The connected EMBRODERY-STATMENT Supabase project has the night-attendance, reminder-lease, signup-OTP and desktop security/performance migrations recorded. The legacy auto-confirm trigger on `auth.users` is removed; the unused trigger function has a fixed search path and no anon/authenticated execute permission. Owner-scoped policies now target authenticated users and use `(select auth.uid())`; missing foreign-key indexes have been added. The reminder RPCs were tested under the authenticated database role inside a rollback-only transaction, including a successful pending-to-sent completion; the test row was rolled back. The latest pre-change Windows CI run successfully compiled Tauri and smoke-tested unsigned installer/portable previews. **The CI workflow has now been changed so it no longer builds or uploads any EXE/installer**: it checks TypeScript, the web/PWA build, attendance logic, Rust formatting and native Windows Rust compilation only. Real Windows 10/11 install, notification, sleep/resume and account-flow tests remain for the owner's PC.
+The desktop integration is developed in the `feature/tauri2-windows-desktop` branch. Production `main` remains unchanged. The connected EMBRODERY-STATMENT Supabase project has the night-attendance, reminder-lease, signup-OTP, desktop security/performance and account-scoped Realtime migrations recorded. The legacy auto-confirm trigger on `auth.users` is removed; the unused trigger function has a fixed search path and no anon/authenticated execute permission. Owner-scoped policies now target authenticated users and use `(select auth.uid())`; missing foreign-key indexes have been added. The reminder RPCs were tested under the authenticated database role inside a rollback-only transaction, including a successful pending-to-sent completion; the test row was rolled back. The latest pre-change Windows CI run successfully compiled Tauri and smoke-tested unsigned installer/portable previews. **The CI workflow has now been changed so it no longer builds or uploads any EXE/installer**: it checks TypeScript, the web/PWA build, attendance logic, Rust formatting and native Windows Rust compilation only. Real Windows 10/11 install, notification, sleep/resume and account-flow tests remain for the owner's PC.
 
 **Do not publish v1.0.0 until the Windows build, signing, notification navigation, install/uninstall, update and clean-machine tests pass.** Do not publish incomplete features to production.
 
@@ -17,6 +17,7 @@ The desktop integration is developed in the `feature/tauri2-windows-desktop` bra
 - `components/DesktopSettings.tsx`: Windows-only reminder / startup / updater settings, added to the original Settings.
 - `supabase/worker-night-attendance-additive.sql`: Separate night table and idempotency claims (without changing the existing daily attendance rows).
 - `supabase/desktop-security-performance-hardening.sql`: owner-scoped RLS, reminder RPC permissions and missing FK indexes.
+- `supabase/enable-realtime-account-sync.sql`: adds only RLS-protected business and worker tables to the existing `supabase_realtime` publication for multi-device live refresh; internal reminder claims and password-recovery rate limits remain excluded.
 - `supabase/enable-signup-email-otp.sql`: removes the legacy auto-confirm trigger without changing existing accounts.
 - `.github/workflows/windows-desktop-ci.yml`: source checks and native Rust compilation only; it deliberately does not create EXE or installer artifacts.
 - `.github/workflows/windows-desktop-release.yml`: Signed release and GitHub updater manifest workflow.
@@ -39,6 +40,7 @@ For the connected existing project, the Supabase migration history already recor
 2. `worker_reminder_claim_leases_and_delivery_state`
 3. `enable_signup_email_otp`
 4. `desktop_security_performance_hardening`
+5. `enable_realtime_account_sync`
 
 Do not re-run these migrations on the connected project. They are additive: the legacy morning `WorkerAttendance` rows remain untouched; night records use `WorkerNightAttendance`; reminder claims use `WorkerReminderDeliveries`. The OTP migration removes only the auto-confirm trigger for future signups. The hardening migration tightens owner-scoped RLS and adds indexes without deleting business data.
 
