@@ -67,14 +67,19 @@ export const dbService = {
       return { success: false, message: 'এই Gmail দিয়ে ইতোমধ্যে একটি অ্যাকাউন্ট আছে। লগ-ইন করুন অথবা Forgot Password ব্যবহার করুন।' };
     }
 
-    const requiresVerification = !data.session;
+    // A session returned directly from signUp means email confirmation is
+    // disabled (or an auto-confirm trigger is still active). Never silently
+    // bypass the product's required eight-digit Gmail verification step.
+    if (data.session) {
+      await supabase.auth.signOut({ scope: 'local' });
+      return { success: false, message: 'EMAIL_CONFIRMATION_REQUIRED' };
+    }
+
     return {
       success: true,
-      requiresVerification,
+      requiresVerification: true,
       user: { id: data.user.id, email: data.user.email!, business_name: businessName },
-      message: requiresVerification
-        ? 'আপনার Gmail-এ ৮ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে। অ্যাকাউন্ট চালু করতে কোডটি লিখুন।'
-        : 'অ্যাকাউন্ট তৈরি ও ইমেইল যাচাই সফল হয়েছে।'
+      message: 'আপনার Gmail-এ ৮ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে। অ্যাকাউন্ট চালু করতে কোডটি লিখুন।'
     };
   },
 
