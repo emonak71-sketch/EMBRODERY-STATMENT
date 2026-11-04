@@ -64,6 +64,30 @@ export function dueSessions(
   return result;
 }
 
+export function dueCheckpoints(
+  clock: { date: string; minutes: number },
+  times: ReminderTimes,
+  overdueWindowMinutes = 12 * 60,
+): Array<{date: string; session: AttendanceSession}> {
+  const current = dueSessions(clock.minutes, times).map(session => ({
+    date: clock.date,
+    session,
+  }));
+  // Recover only recent missed checkpoints (e.g. last night after midnight),
+  // rather than showing stale notifications from several days ago.
+  const utcDay = new Date(clock.date + 'T12:00:00.000Z');
+  utcDay.setUTCDate(utcDay.getUTCDate() - 1);
+  const yesterday = utcDay.toISOString().slice(0, 10);
+  const overdue: Array<{date: string; session: AttendanceSession}> = [];
+  for (const session of ['morning','night'] as const) {
+    const minutesLate = 1440 + clock.minutes - minutesFromHHMM(times[session]);
+    if (minutesLate > 0 && minutesLate < overdueWindowMinutes) {
+      overdue.push({date: yesterday, session});
+    }
+  }
+  return [...overdue, ...current];
+}
+
 export function attendanceCompleteness(
   workers: AttendanceWorker[],
   records: AttendanceRecord[],
