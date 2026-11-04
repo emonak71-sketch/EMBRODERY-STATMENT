@@ -1,3 +1,8 @@
+; Always create the desktop shortcut, including normal interactive installs.
+!macro NSIS_HOOK_POSTINSTALL
+  CreateShortcut "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+!macroend
+
 ; Remove only the Embroidery Statement autostart value when the user uninstalls.
 ; The Tauri autostart plugin uses this stable app_name for its Run value.
 !macro NSIS_HOOK_PREUNINSTALL
