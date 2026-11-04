@@ -349,6 +349,28 @@ pub fn run() {
             setup_tray(app)?;
             let handle = app.handle().clone();
             enable_autostart_on_first_installed_run(&handle);
+
+            // Tauri Notification 2.6+ delivers live Windows-toast clicks.
+            // Windows Action Center clicks after the toast disappears are not
+            // guaranteed by the plugin; the tray remains the recovery route.
+            let click_app = handle.clone();
+            app.notification().on_action(move |action| {
+                if action.action_id() != "tap" && action.action_id() != "open-attendance" {
+                    return;
+                }
+                let notification = action.notification();
+                let title = notification.and_then(|n| n.title()).unwrap_or_default();
+                let body = notification.and_then(|n| n.body()).unwrap_or_default();
+                if title.contains("Update") {
+                    navigate_to(&click_app, "settings", None);
+                } else if title.contains("Attendance") || title.contains("হাজিরা") {
+                    let session = if body.contains("night") || body.contains("রাতের") {
+                        "night"
+                    } else { "morning" };
+                    navigate_to(&click_app, "workers", Some(session));
+                }
+            })?;
+
             if std::env::args().any(|arg| arg == "--autostart")
                 && read_preferences(&handle).start_minimized
             {
