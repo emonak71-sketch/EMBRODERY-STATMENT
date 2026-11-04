@@ -91,6 +91,12 @@ fn save_preferences(app: &AppHandle, preferences: &DesktopPreferences) -> Result
 }
 
 
+
+fn write_autostart_diagnostic(message: &str) {
+    let path = std::env::temp_dir().join("EmbroideryStatement-autostart-diagnostic.txt");
+    let _ = fs::write(path, message);
+}
+
 #[cfg(windows)]
 fn set_windows_autostart_registry(enabled: bool) -> Result<(), String> {
     const RUN_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
@@ -348,19 +354,28 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
 }
 
 fn enable_autostart_on_first_installed_run(app: &AppHandle) {
-    if is_portable() { return; }
+    if is_portable() {
+        write_autostart_diagnostic("Skipped: portable marker exists beside the installed executable.");
+        return;
+    }
     let mut preferences = read_preferences(app);
-    if preferences.autostart.is_none() {
-        #[cfg(windows)]
-        let result = set_windows_autostart_registry(true);
-        #[cfg(not(windows))]
-        let result = app.autolaunch().enable().map_err(|e| e.to_string());
-        match result {
-            Ok(()) => {
-                preferences.autostart = Some(true);
-                let _ = save_preferences(app, &preferences);
-            }
-            Err(error) => eprintln!("Unable to register Embroidery Statement for sign-in: {error}"),
+    if let Some(value) = preferences.autostart {
+        write_autostart_diagnostic(&format!("Skipped: stored autostart preference is {value:?}."));
+        return;
+    }
+    #[cfg(windows)]
+    let result = set_windows_autostart_registry(true);
+    #[cfg(not(windows))]
+    let result = app.autolaunch().enable().map_err(|e| e.to_string());
+    match result {
+        Ok(()) => {
+            preferences.autostart = Some(true);
+            let save_result = save_preferences(app, &preferences);
+            write_autostart_diagnostic(&format!("Registry enable succeeded; preference save: {save_result:?}."));
+        }
+        Err(error) => {
+            write_autostart_diagnostic(&format!("Registry enable failed: {error}"));
+            eprintln!("Unable to register Embroidery Statement for sign-in: {error}");
         }
     }
 }
