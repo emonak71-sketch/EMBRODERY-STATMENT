@@ -42,6 +42,18 @@ const NightAttendance: React.FC = () => {
 
   useEffect(() => { void reload(); }, [reload]);
 
+  useEffect(() => {
+    const onRemoteChange = () => {
+      const hasUnsavedChanges = activeWorkers.some(worker => {
+        const saved = records.find(row => row.worker_id === worker.id)?.status;
+        return draft[worker.id] !== saved;
+      });
+      if (!hasUnsavedChanges && !saving) void reload();
+    };
+    window.addEventListener('embroidery:remote-data-changed', onRemoteChange);
+    return () => window.removeEventListener('embroidery:remote-data-changed', onRemoteChange);
+  }, [activeWorkers, records, draft, saving, reload]);
+
   const save = async () => {
     const rows = activeWorkers.filter(w => Boolean(draft[w.id])).map(w => ({
       worker_id: w.id,
