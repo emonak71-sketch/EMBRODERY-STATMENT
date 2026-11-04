@@ -73,7 +73,7 @@ export const dbService = {
       requiresVerification,
       user: { id: data.user.id, email: data.user.email!, business_name: businessName },
       message: requiresVerification
-        ? 'আপনার Gmail-এ যাচাইকরণ কোড পাঠানো হয়েছে। অ্যাকাউন্ট চালু করতে কোডটি লিখুন।'
+        ? 'আপনার Gmail-এ ৮ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে। অ্যাকাউন্ট চালু করতে কোডটি লিখুন।'
         : 'অ্যাকাউন্ট তৈরি ও ইমেইল যাচাই সফল হয়েছে।'
     };
   },
@@ -82,8 +82,8 @@ export const dbService = {
     if (!isConfigured()) return { success: false, message: 'Supabase ব্যাকএন্ড কনফিগার করা নেই।' };
     const cleanEmail = email.trim().toLowerCase();
     const cleanToken = token.replace(/\D/g, '');
-    if (!/^\d{6,10}$/.test(cleanToken)) {
-      return { success: false, message: 'ইমেইলে পাওয়া সম্পূর্ণ কোডটি লিখুন (৬–১০ সংখ্যা)।' };
+    if (!/^\d{8}$/.test(cleanToken)) {
+      return { success: false, message: 'ইমেইলে পাওয়া সঠিক ৮ সংখ্যার কোডটি লিখুন।' };
     }
     const { data, error } = await supabase.auth.verifyOtp({
       email: cleanEmail,
@@ -108,7 +108,7 @@ export const dbService = {
       console.error('Signup OTP resend failed:', error);
       return { success: false, message: 'নতুন OTP পাঠানো যায়নি। কিছুক্ষণ অপেক্ষা করে আবার চেষ্টা করুন।' };
     }
-    return { success: true, message: 'আপনার Gmail-এ নতুন যাচাইকরণ কোড পাঠানো হয়েছে।' };
+    return { success: true, message: 'আপনার Gmail-এ নতুন ৮ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে।' };
   },
 
   updateProfile: async (email: string, businessName: string) => {
@@ -467,17 +467,17 @@ export const dbService = {
     const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
     if (error) {
       console.error('Password recovery email request failed:', error);
-      return { success: false, message: 'ইমেইলে যাচাইকরণ কোড পাঠানো যায়নি। ইমেইল ঠিকানা যাচাই করে আবার চেষ্টা করুন।' };
+      return { success: false, message: 'ইমেইলে ৮ সংখ্যার যাচাইকরণ কোড পাঠানো যায়নি। ইমেইল ঠিকানা যাচাই করে আবার চেষ্টা করুন।' };
     }
-    return { success: true, message: 'আপনার Gmail-এ যাচাইকরণ কোড পাঠানো হয়েছে।' };
+    return { success: true, message: 'আপনার Gmail-এ ৮ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে।' };
   },
 
   verifyResetCode: async (email: string, token: string) => {
     if (!isConfigured()) return { success: false, message: 'Supabase configuration is missing.' };
     const cleanEmail = email.trim().toLowerCase();
     const cleanToken = token.replace(/\D/g, '');
-    if (!/^\d{6,10}$/.test(cleanToken)) {
-      return { success: false, message: 'ইমেইলে পাওয়া সম্পূর্ণ কোডটি লিখুন (৬–১০ সংখ্যা)।' };
+    if (!/^\d{8}$/.test(cleanToken)) {
+      return { success: false, message: 'ইমেইলে পাওয়া সঠিক ৮ সংখ্যার কোডটি লিখুন।' };
     }
     const { error } = await supabase.auth.verifyOtp({
       email: cleanEmail,
