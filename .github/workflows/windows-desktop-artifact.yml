@@ -1,0 +1,112 @@
+name: Windows Desktop - Unsigned Installer Verification
+
+on:
+  push:
+    branches:
+      - build/windows-desktop-artifact-2026-11-04
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unsigned-desktop-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-installer:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Initialize MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Set up Rust MSVC
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Install Windows Rollup native binary
+        run: npm install --no-save --no-package-lock @rollup/rollup-win32-x64-msvc@4.62.3
+
+      - name: Type-check application
+        run: npm run typecheck
+
+      - name: Test attendance and Dhaka reminder logic
+        run: npm run test:attendance
+
+      - name: Generate Windows icons
+        run: npm run desktop:icons
+
+      - name: Build unsigned NSIS installer (updater signing intentionally disabled)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npx --yes @tauri-apps/cli@2 build --bundles nsis --config src-tauri/tauri.unsigned.conf.json
+          if ($LASTEXITCODE -ne 0) { throw 'Tauri NSIS build failed.' }
+          $installer = Get-ChildItem 'src-tauri/target/release/bundle/nsis' -Filter '*.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'NSIS installer was not generated.' }
+          $app = 'src-tauri/target/release/embroidery-statement.exe'
+          if (-not (Test-Path $app)) { throw 'Portable application executable was not generated.' }
+          Write-Host "PASS: installer generated: $($installer.FullName)"
+          Write-Host "PASS: application executable generated: $app"
+
+      - name: Install and smoke-test Windows application
+        shell: pwsh
+        run: ./scripts/windows-installer-smoke.ps1
+
+      - name: Package portable edition
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path portable | Out-Null
+          Copy-Item 'src-tauri/target/release/embroidery-statement.exe' 'portable/'
+          Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile 'portable/MicrosoftEdgeWebView2Setup.exe'
+          if ((Get-Item 'portable/MicrosoftEdgeWebView2Setup.exe').Length -lt 100000) { throw 'WebView2 bootstrapper download looks incomplete.' }
+          New-Item -ItemType File -Force -Path 'portable/.portable' | Out-Null
+          @(
+            'Embroidery Statement — Portable Edition'
+            'This is an unsigned verification build.'
+            'Portable edition does not support automatic updates, Windows sign-in startup, or native Windows toast reminders.'
+            'If WebView2 Runtime is missing, run MicrosoftEdgeWebView2Setup.exe (internet required).'
+            'Keep this folder and its data subfolder together. Do not delete data when replacing the EXE.'
+          ) | Set-Content -Path 'portable/README.txt' -Encoding UTF8
+          $version = (Get-Content 'package.json' -Raw | ConvertFrom-Json).version
+          $sha = '${{ github.sha }}'
+          @(
+            "Version: $version"
+            "Commit: $sha"
+            'Build type: unsigned test build'
+            'Updater: disabled pending Tauri signing-key configuration'
+            'Installer smoke test: passed'
+          ) | Set-Content -Path 'BUILD-INFO.txt' -Encoding UTF8
+          Compress-Archive -Path portable -DestinationPath "Embroidery-Statement-$version-Portable.zip" -Force
+
+      - name: Upload verified Windows build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Embroidery-Statement-Windows-Unsigned-TestBuild
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            Embroidery-Statement-*-Portable.zip
+            BUILD-INFO.txt
+          if-no-files-found: error
+          retention-days: 14
