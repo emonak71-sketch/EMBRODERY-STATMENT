@@ -211,7 +211,7 @@ fn desktop_test_notification(app: AppHandle, language: String) -> Result<(), Str
         return Err("Portable edition may not have a Windows notification identity.".into());
     }
     let (title, body) = if language == "bn" {
-        ("এম্ব্রয়ডারি স্টেটমেন্ট — হাজিরা", "এটি একটি পরীক্ষামূলক নোটিফিকেশন।")
+        ("Embroidery Statement — হাজিরা", "এটি একটি পরীক্ষামূলক নোটিফিকেশন।")
     } else {
         ("Embroidery Statement — Attendance", "This is a test attendance notification.")
     };
