@@ -92,7 +92,7 @@ const Auth: React.FC<AuthProps> = ({
         else if (result.requiresVerification !== false) {
           localStorage.setItem('saved_email', cleanEmail);
           switchMode('signup-verify');
-          setInfoMsg(localizedMessage(result.message, 'আপনার Gmail-এ ৮ সংখ্যার ৮ সংখ্যার কোড পাঠানো হয়েছে। অ্যাকাউন্ট চালু করতে কোডটি লিখুন।', 'An 8-digit verification code has been sent to your email. Enter it to activate your account.'));
+          setInfoMsg(localizedMessage(result.message, 'আপনার Gmail-এ ৮ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে। অ্যাকাউন্ট চালু করতে কোডটি লিখুন।', 'An 8-digit verification code has been sent to your email. Enter it to activate your account.'));
         } else {
           localStorage.setItem('saved_email', cleanEmail);
           setInfoMsg(localizedMessage(result.message, 'অ্যাকাউন্ট তৈরি হয়েছে।', 'Your account has been created.'));
@@ -112,7 +112,7 @@ const Auth: React.FC<AuthProps> = ({
         else {
           setMode('verify');
           setOtp('');
-          setInfoMsg(localizedMessage(result.message, 'আপনার ইমেইলে ৮ সংখ্যার ৮ সংখ্যার কোড পাঠানো হয়েছে।', 'An 8-digit verification code has been sent to your email.'));
+          setInfoMsg(localizedMessage(result.message, 'আপনার ইমেইলে ৮ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে।', 'An 8-digit verification code has been sent to your email.'));
         }
       } else if (mode === 'verify') {
         const code = otp.replace(/\D/g, '');
@@ -158,7 +158,7 @@ const Auth: React.FC<AuthProps> = ({
         ? await onResendSignupCode(cleanEmail)
         : await onResetPassword(cleanEmail);
       if (!result.success) setErrorMsg(localizedMessage(result.message, 'নতুন কোড পাঠানো যায়নি।', 'Could not send a new code.'));
-      else setInfoMsg(tr('নতুন ৮ সংখ্যার ৮ সংখ্যার কোড পাঠানোর অনুরোধ সফল হয়েছে।', 'A new 8-digit verification code has been requested.'));
+      else setInfoMsg(tr('নতুন ৮ সংখ্যার যাচাইকরণ কোড পাঠানোর অনুরোধ সফল হয়েছে।', 'A new 8-digit verification code has been requested.'));
     } catch {
       setErrorMsg(tr('কোড পুনরায় পাঠানো যায়নি। আবার চেষ্টা করুন।', 'Could not resend the code. Please try again.'));
     } finally {
