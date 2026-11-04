@@ -112,7 +112,7 @@ export const reminderTranslations = {
   bn: {
     morning: 'কর্মীদের সকালের হাজিরা এখনো নেওয়া হয়নি। অনুগ্রহ করে হাজিরা সম্পন্ন করুন।',
     night: 'কর্মীদের রাতের হাজিরা এখনো নেওয়া হয়নি। অনুগ্রহ করে হাজিরা সম্পন্ন করুন।',
-    title: 'এম্ব্রয়ডারি স্টেটমেন্ট — হাজিরা',
+    title: 'Embroidery Statement — হাজিরা',
   },
   en: {
     morning: 'Workers’ morning attendance has not been recorded yet. Please complete the attendance.',
