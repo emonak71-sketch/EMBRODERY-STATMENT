@@ -91,17 +91,6 @@ jobs:
           npx --yes @tauri-apps/cli@2 build --bundles nsis
           if ($LASTEXITCODE -ne 0) { throw 'Signed Tauri NSIS build failed.' }
 
-      - name: Verify 1.0.1 to 1.0.2 in-place upgrade and user-data preservation
-        shell: pwsh
-        env:
-          PREVIOUS_INSTALLER_URL: https://github.com/emonak71-sketch/EMBRODERY-STATMENT/releases/download/v1.0.1/Embroidery.Statement_1.0.1_x64-setup.exe
-          PREVIOUS_INSTALLER_SHA256: 919ff2393c44b66f2c2d3561a9c2c69c02d1c3546e1cf873ce073a8757836289
-        run: ./scripts/windows-upgrade-smoke.ps1
-
-      - name: Run Windows installer, tray and native notification smoke test
-        shell: pwsh
-        run: ./scripts/windows-installer-smoke.ps1
-
       - name: Generate Tauri updater manifest
         shell: pwsh
         run: |
@@ -135,6 +124,17 @@ jobs:
           }
           $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path 'latest.json' -Encoding utf8
           Write-Host "Updater manifest prepared for $version."
+
+      - name: Verify 1.0.1 to 1.0.2 in-place upgrade and user-data preservation
+        shell: pwsh
+        env:
+          PREVIOUS_INSTALLER_URL: https://github.com/emonak71-sketch/EMBRODERY-STATMENT/releases/download/v1.0.1/Embroidery.Statement_1.0.1_x64-setup.exe
+          PREVIOUS_INSTALLER_SHA256: 919ff2393c44b66f2c2d3561a9c2c69c02d1c3546e1cf873ce073a8757836289
+        run: ./scripts/windows-upgrade-smoke.ps1
+
+      - name: Run Windows installer, tray and native notification smoke test
+        shell: pwsh
+        run: ./scripts/windows-installer-smoke.ps1
 
       - name: Publish GitHub Release and updater manifest
         shell: pwsh
