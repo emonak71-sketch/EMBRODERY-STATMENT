@@ -36,6 +36,12 @@ jobs:
         run: npm run desktop:icons
       - name: Compile native Windows application (without signed release bundles)
         run: npx --yes @tauri-apps/cli@2 build --no-bundle
+      - name: Upload resolved Rust dependency lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-cargo-lockfile
+          path: src-tauri/Cargo.lock
+          if-no-files-found: error
       - name: Build unsigned NSIS installer preview
         run: npx --yes @tauri-apps/cli@2 build --bundles nsis --config src-tauri/tauri.preview.conf.json
       - name: Smoke test installed Windows application
