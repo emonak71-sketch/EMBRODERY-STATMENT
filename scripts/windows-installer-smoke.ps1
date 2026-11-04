@@ -96,7 +96,20 @@ public static extern bool PostMessage(System.IntPtr hWnd, uint msg, System.IntPt
   if (-not $first.HasExited -and $instances.Count -ne 1) {
     throw "Expected exactly one running application process; found $($instances.Count)."
   }
-  Write-Host 'PASS: install, desktop/Start Menu shortcuts, autostart, launch, close-to-tray and single-instance.'
+
+  # Native Windows toasts are tested only after the NSIS installer has installed the app.
+  Write-Host 'Stopping the app before the isolated Windows notification test...'
+  Get-Process -Name 'embroidery-statement' -ErrorAction SilentlyContinue |
+    Stop-Process -Force -ErrorAction SilentlyContinue
+  Start-Sleep -Seconds 2
+  Write-Host 'Dispatching a native Windows toast from the installed application...'
+  $notificationTest = Start-Process -FilePath $appExe -ArgumentList @('--test-notification', '--exit-after-test-notification') -Wait -PassThru
+  if ($notificationTest.ExitCode -ne 0) {
+    throw "Native Windows notification dispatch failed with exit code $($notificationTest.ExitCode)."
+  }
+  Write-Host 'PASS: installed app submitted a native Windows notification request.'
+
+  Write-Host 'PASS: install, shortcuts, autostart, launch, close-to-tray, single-instance and notification dispatch.'
 }
 finally {
   Get-Process -Name 'embroidery-statement' -ErrorAction SilentlyContinue |
