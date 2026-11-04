@@ -49,7 +49,7 @@ try {
     $runKey = Get-ItemProperty -Path $runPath -ErrorAction SilentlyContinue
     if ($runKey) {
       $candidate = $runKey.PSObject.Properties | Where-Object {
-        $_.Name -notmatch '^PS' -and [string]$_.Value -match [regex]::Escape($appExe)
+        $_.Name -eq 'Embroidery Statement' -and [string]$_.Value -match [regex]::Escape($appExe)
       } | Select-Object -First 1
       if ($candidate) { $autostartEntry = $candidate; $autostartHive = $runPath; break }
     }
@@ -102,4 +102,10 @@ finally {
   }
 }
 if (Test-Path $appExe) { throw 'Application files remain after uninstall.' }
-Write-Host 'PASS: silent installation, desktop shortcut, app startup, single-instance and uninstall.'
+foreach ($runPath in $runPaths) {
+  $runKey = Get-ItemProperty -Path $runPath -ErrorAction SilentlyContinue
+  if ($runKey -and $runKey.PSObject.Properties['Embroidery Statement']) {
+    throw "Autostart registry entry was left behind after uninstall: $runPath"
+  }
+}
+Write-Host 'PASS: silent installation, desktop/Start Menu shortcuts, autostart, close-to-tray, single-instance, uninstall and autostart cleanup.'
