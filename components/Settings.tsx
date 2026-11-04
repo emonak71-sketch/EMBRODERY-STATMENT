@@ -5,6 +5,7 @@ import { User } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { setupBiometrics } from './BiometricLock';
 import { Fingerprint } from 'lucide-react';
+import DesktopSettings from './DesktopSettings';
 
 interface SettingsProps {
   setActiveTab?: (tab: string) => void;
@@ -147,6 +148,8 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, setActiveTab
         )}
 
       </div>
+
+      <DesktopSettings />
 
       <div className="p-8 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-[2rem]">
         <h3 className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2 px-1">Security Information</h3>
