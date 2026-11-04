@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { dbService } from '../services/supabaseService';
 import { useLanguage } from '../contexts/LanguageContext';
+import { bangladeshClock } from '../desktop/attendanceCore';
 
 type Worker = {
   id: string; worker_code: string; full_name: string; phone: string;
@@ -48,10 +49,7 @@ type SmsDraft = {
 type ExtraTab = 'documents' | 'idcard' | 'increments' | 'advances' | 'annual' | 'payslip' | 'sms';
 type DocumentType = 'profile_photo' | 'nid_front' | 'nid_back' | 'birth_certificate' | 'driving_license' | 'passport' | 'other';
 
-const today = () => {
-  const d = new Date();
-  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
-};
+const today = () => bangladeshClock().date;
 const money = (n: number) => new Intl.NumberFormat('en-BD', {
   style: 'currency', currency: 'BDT', maximumFractionDigits: 2
 }).format(Number(n) || 0);
@@ -194,7 +192,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
   const [deductMonth, setDeductMonth] = useState(today().slice(0, 7));
   const [advanceReason, setAdvanceReason] = useState('');
 
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [year, setYear] = useState(() => Number(today().slice(0, 4)));
   const [annualPayrolls, setAnnualPayrolls] = useState<Payroll[]>([]);
   const [annualAdvances, setAnnualAdvances] = useState<Advance[]>([]);
   const [annualLoading, setAnnualLoading] = useState(false);
@@ -297,6 +295,49 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
 
   useEffect(() => { loadMonthPayroll(); }, [loadMonthPayroll]);
   useEffect(() => { if (tab === 'sms') loadSmsLogs(); }, [tab, loadSmsLogs]);
+
+  // Keep the currently open HR tool in sync with edits made on another device.
+  // Do not replace data while a save, upload, or editable SMS draft is in progress.
+  useEffect(() => {
+    const onRemoteChange = (event: Event) => {
+      const table = (event as CustomEvent<{ table?: string }>).detail?.table;
+      if (!table || saving || uploadingType || smsDraft || smsSending) return;
+
+      if (table === 'Workers') {
+        void loadWorkers();
+        return;
+      }
+      if (table === 'WorkerDocuments' && tab === 'documents') {
+        void loadDocuments();
+        return;
+      }
+      if (table === 'WorkerSalaryIncrements' && tab === 'increments') {
+        void loadIncrements();
+        return;
+      }
+      if (table === 'WorkerAdvances' || table === 'WorkerAdvanceRecoveries') {
+        if (tab === 'advances') void loadAdvances();
+        if (tab === 'annual') void loadAnnual();
+        return;
+      }
+      if (table === 'WorkerPayroll') {
+        if (tab === 'payslip') void loadMonthPayroll();
+        if (tab === 'annual') void loadAnnual();
+        if (tab === 'advances') void loadAdvances();
+        return;
+      }
+      if (table === 'WorkerSmsLogs' && tab === 'sms') {
+        void loadSmsLogs();
+      }
+    };
+
+    window.addEventListener('embroidery:remote-data-changed', onRemoteChange);
+    return () => window.removeEventListener('embroidery:remote-data-changed', onRemoteChange);
+  }, [
+    tab, saving, uploadingType, smsDraft, smsSending,
+    loadWorkers, loadDocuments, loadIncrements, loadAdvances,
+    loadAnnual, loadMonthPayroll, loadSmsLogs
+  ]);
 
   const refreshAll = async () => {
     await Promise.all([loadWorkers(), loadDocuments(), loadIncrements(), loadAdvances(), loadAnnual(), loadMonthPayroll()]);
@@ -648,7 +689,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
 
           {tab === 'annual' && (
             <section className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div><h3 className="font-black">{tr('বার্ষিক বেতন ও নগদ খরচ', 'Annual Salary & Cash Outflow')}</h3><p className="text-xs text-slate-500">{tr('বেতন পরিশোধের তারিখ এবং অগ্রিম দেওয়ার নির্বাচিত তারিখ অনুযায়ী হিসাব।', 'Grouped by actual salary payment date and the selected advance date.')}</p></div><div className="flex gap-2"><select value={year} onChange={e => setYear(Number(e.target.value))} className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800">{Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 10 + i).map(y => <option key={y} value={y}>{y}</option>)}</select><button onClick={exportAnnualCsv} className="rounded-xl bg-blue-700 px-3 py-2 text-xs font-bold text-white"><Download size={13} className="mr-1 inline" />CSV</button></div></div>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div><h3 className="font-black">{tr('বার্ষিক বেতন ও নগদ খরচ', 'Annual Salary & Cash Outflow')}</h3><p className="text-xs text-slate-500">{tr('বেতন পরিশোধের তারিখ এবং অগ্রিম দেওয়ার নির্বাচিত তারিখ অনুযায়ী হিসাব।', 'Grouped by actual salary payment date and the selected advance date.')}</p></div><div className="flex gap-2"><select value={year} onChange={e => setYear(Number(e.target.value))} className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800">{Array.from({ length: 11 }, (_, i) => Number(today().slice(0, 4)) - 10 + i).map(y => <option key={y} value={y}>{y}</option>)}</select><button onClick={exportAnnualCsv} className="rounded-xl bg-blue-700 px-3 py-2 text-xs font-bold text-white"><Download size={13} className="mr-1 inline" />CSV</button></div></div>
               {annualLoading ? <p className="p-5 text-sm text-slate-500"><Loader2 className="mr-2 inline animate-spin" size={15} />Loading annual report...</p> : (
                 <>
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
