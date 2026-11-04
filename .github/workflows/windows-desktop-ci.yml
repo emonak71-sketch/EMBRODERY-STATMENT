@@ -13,7 +13,7 @@ permissions:
   contents: read
 jobs:
   windows-build:
-    runs-on: windows-latest
+    runs-on: windows-2022
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -21,42 +21,45 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - name: Verify Windows MSVC v143, Windows 11 SDK, Rust MSVC target and Tauri prerequisites
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-          if (-not (Test-Path $vswhere)) { throw 'Visual Studio Installer vswhere.exe not found.' }
-          $vsPath = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          if (-not $vsPath) { throw 'Visual Studio C++ x64/x86 build tools are not installed.' }
-          $msvcRoot = Join-Path $vsPath 'VC\Tools\MSVC'
-          $v143 = Get-ChildItem $msvcRoot -Directory | Where-Object { $_.Name -match '^14\.3[0-9.]+' } | Sort-Object Name -Descending | Select-Object -First 1
-          if (-not $v143) { throw 'MSVC v143 toolset (14.3x) not found.' }
-          if (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) { throw 'MSVC compiler cl.exe is not available in the developer environment.' }
-          $kits = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots' -ErrorAction Stop
-          $sdkRoot = $kits.KitsRoot10
-          if (-not $sdkRoot -or -not (Test-Path (Join-Path $sdkRoot 'Include'))) { throw 'Windows 10/11 SDK root is missing.' }
-          $sdk = Get-ChildItem (Join-Path $sdkRoot 'Include') -Directory | Where-Object { $_.Name -match '^10\.' } | Sort-Object Name -Descending | Select-Object -First 1
-          if (-not $sdk) { throw 'Windows 10/11 SDK headers are missing.' }
-          rustc -Vv
-          cargo -V
-          $installed = rustup target list --installed
-          if ($installed -notcontains 'x86_64-pc-windows-msvc') { throw 'Rust x86_64-pc-windows-msvc target is not installed.' }
-          Write-Host "PASS: Visual Studio: $vsPath"
-          Write-Host "PASS: MSVC v143: $($v143.Name)"
-          Write-Host "PASS: compiler: $((Get-Command cl.exe).Source)"
-          Write-Host "PASS: Windows SDK: $($sdk.Name) at $sdkRoot"
-          Write-Host 'PASS: Rust target x86_64-pc-windows-msvc'
-      - name: Set up Deno for Supabase Edge Function checks
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
+      - name: Verify Windows MSVC v143, Windows 11 SDK, Rust MSVC target and Tauri prerequisites
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          if (-not (Test-Path $vswhere)) { throw 'Visual Studio Installer vswhere.exe not found.' }
+          $vsPath = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.v143.x86.x64 -property installationPath
+          if (-not $vsPath) { throw 'Visual Studio 2022 MSVC v143 component is not installed.' }
+          $msvcRoot = Join-Path $vsPath 'VC\Tools\MSVC'
+          $v143 = Get-ChildItem $msvcRoot -Directory | Where-Object { $_.Name -match '^14\.(3[0-9]|4[0-9])\.' } | Sort-Object Name -Descending | Select-Object -First 1
+          if (-not $v143) { throw 'MSVC v143 toolset (14.3x/14.4x) not found.' }
+          $compiler = Get-Command cl.exe -ErrorAction SilentlyContinue
+          if (-not $compiler) { throw 'MSVC compiler cl.exe is not available after developer environment initialization.' }
+          $kits = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots' -ErrorAction Stop
+          $sdkRoot = $kits.KitsRoot10
+          if (-not $sdkRoot -or -not (Test-Path (Join-Path $sdkRoot 'Include'))) { throw 'Windows SDK root is missing.' }
+          $sdk = Get-ChildItem (Join-Path $sdkRoot 'Include') -Directory | Where-Object { $_.Name -match '^10\.' } | Sort-Object Name -Descending | Select-Object -First 1
+          if (-not $sdk) { throw 'Windows 10/11 SDK headers are missing.' }
+          $sdkLib = Join-Path (Join-Path $sdkRoot 'Lib') $sdk.Name
+          if (-not (Test-Path $sdkLib)) { throw "Windows SDK libraries are missing for $($sdk.Name)." }
+          rustc -Vv
+          cargo -V
+          $installed = rustup target list --installed
+          if ($installed -notcontains 'x86_64-pc-windows-msvc') { throw 'Rust x86_64-pc-windows-msvc target is not installed.' }
+          Write-Host "PASS: Visual Studio 2022: $vsPath"
+          Write-Host "PASS: MSVC v143: $($v143.Name)"
+          Write-Host "PASS: compiler: $($compiler.Source)"
+          Write-Host "PASS: Windows SDK: $($sdk.Name) at $sdkRoot"
+          Write-Host 'PASS: Rust target x86_64-pc-windows-msvc'
+      - name: Set up Deno for Supabase Edge Function checks
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
