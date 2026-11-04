@@ -34,7 +34,9 @@ create table if not exists public."WorkerReminderDeliveries" (
   user_id uuid not null references auth.users(id) on delete cascade,
   attendance_date date not null,
   session text not null check (session in ('morning','night')),
-  sent_at timestamptz not null default now(),
+  sent_at timestamptz,
+  status text not null default 'sent' check (status in ('pending','sent')),
+  claimed_at timestamptz not null default now(),
   constraint worker_reminder_delivery_unique unique (user_id, attendance_date, session)
 );
 alter table public."WorkerReminderDeliveries" enable row level security;
