@@ -69,8 +69,12 @@ try {
           ForEach-Object { "$($_.Name)=$($_.Value)" }
       }
     }
-    $debugPath = Join-Path $env:TEMP 'EmbroideryStatement-autostart-diagnostic.txt'
-    $debug = if (Test-Path $debugPath) { Get-Content $debugPath -Raw } else { 'No app diagnostic file was written.' }
+    $debugPaths = @(
+      (Join-Path $appConfigDirectory 'autostart-diagnostic.txt'),
+      (Join-Path $env:TEMP 'EmbroideryStatement-autostart-diagnostic.txt')
+    )
+    $debug = ($debugPaths | Where-Object { Test-Path $_ } | ForEach-Object { "$_ : $(Get-Content $_ -Raw)" }) -join ' | '
+    if (-not $debug) { $debug = 'No app diagnostic file was written.' }
     throw "First installed launch did not register Windows sign-in autostart in HKCU or HKLM. Registry values: $($diagnostics -join '; '). App diagnostic: $debug"
   }
   Write-Host "PASS: Windows sign-in autostart registered in $autostartHive ($($autostartEntry.Name))."

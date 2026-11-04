@@ -92,9 +92,18 @@ fn save_preferences(app: &AppHandle, preferences: &DesktopPreferences) -> Result
 
 
 
-fn write_autostart_diagnostic(message: &str) {
-    let path = std::env::temp_dir().join("EmbroideryStatement-autostart-diagnostic.txt");
-    let _ = fs::write(path, message);
+fn write_autostart_diagnostic(app: &AppHandle, message: &str) {
+    let mut paths = vec![std::env::temp_dir().join("EmbroideryStatement-autostart-diagnostic.txt")];
+    if let Ok(directory) = app.path().app_config_dir() {
+        paths.push(directory.join("autostart-diagnostic.txt"));
+    }
+    if let Some(directory) = portable_directory() {
+        paths.push(directory.join("data").join("autostart-diagnostic.txt"));
+    }
+    for path in paths {
+        if let Some(parent) = path.parent() { let _ = fs::create_dir_all(parent); }
+        let _ = fs::write(path, message);
+    }
 }
 
 #[cfg(windows)]
@@ -355,12 +364,12 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
 
 fn enable_autostart_on_first_installed_run(app: &AppHandle) {
     if is_portable() {
-        write_autostart_diagnostic("Skipped: portable marker exists beside the installed executable.");
+        write_autostart_diagnostic(app, "Skipped: portable marker exists beside the installed executable.");
         return;
     }
     let mut preferences = read_preferences(app);
     if let Some(value) = preferences.autostart {
-        write_autostart_diagnostic(&format!("Skipped: stored autostart preference is {value:?}."));
+        write_autostart_diagnostic(app, &format!("Skipped: stored autostart preference is {value:?}."));
         return;
     }
     #[cfg(windows)]
@@ -371,10 +380,10 @@ fn enable_autostart_on_first_installed_run(app: &AppHandle) {
         Ok(()) => {
             preferences.autostart = Some(true);
             let save_result = save_preferences(app, &preferences);
-            write_autostart_diagnostic(&format!("Registry enable succeeded; preference save: {save_result:?}."));
+            write_autostart_diagnostic(app, &format!("Registry enable succeeded; preference save: {save_result:?}."));
         }
         Err(error) => {
-            write_autostart_diagnostic(&format!("Registry enable failed: {error}"));
+            write_autostart_diagnostic(app, &format!("Registry enable failed: {error}"));
             eprintln!("Unable to register Embroidery Statement for sign-in: {error}");
         }
     }
@@ -425,6 +434,7 @@ pub fn run() {
         .setup(move |app| {
             setup_tray(app)?;
             let handle = app.handle().clone();
+            write_autostart_diagnostic(&handle, "Tauri setup entered; checking first-run autostart.");
             enable_autostart_on_first_installed_run(&handle);
 
             // Tauri Notification 2.6+ delivers live Windows-toast clicks.
