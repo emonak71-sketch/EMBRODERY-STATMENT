@@ -4,7 +4,7 @@ This is a desktop enhancement of the **existing React/Vite/TypeScript + Supabase
 
 ## Current implementation status
 
-The desktop integration is developed in the `feature/tauri2-windows-desktop` branch. Production `main` is unchanged. The two additive SQL migrations `supabase/worker-night-attendance-additive.sql` and `supabase/worker-reminder-lease-migration.sql` have been applied to the connected EMBRODERY-STATMENT Supabase project. Owner-scoped RLS policies and both invoker-security reminder RPCs were inspected. A rollback-only SQL test verified first claim, duplicate blocking, stale pending-claim recovery, marking a delivery as sent, and blocking a second sent claim. The existing web production build, attendance unit tests, Tauri native Windows compilation, and unsigned NSIS/portable packaging have passed in a completed Windows CI run. A newer CI run is adding the installer runtime smoke checks (silent install, shortcuts, autostart, app launch, close-to-tray, single-instance, and uninstall); its result must be green before treating those checks as passed. Actual Windows 10 and Windows 11 user-PC verification remains outstanding.
+The desktop integration is developed in the `feature/tauri2-windows-desktop` branch. Production `main` remains unchanged. The connected EMBRODERY-STATMENT Supabase project has the night-attendance, reminder-lease, signup-OTP and desktop security/performance migrations recorded. The legacy auto-confirm trigger on `auth.users` is removed; the unused trigger function has a fixed search path and no anon/authenticated execute permission. Owner-scoped policies now target authenticated users and use `(select auth.uid())`; missing foreign-key indexes have been added. The reminder RPCs were tested under the authenticated database role inside a rollback-only transaction, including a successful pending-to-sent completion; the test row was rolled back. The latest pre-change Windows CI run successfully compiled Tauri and smoke-tested unsigned installer/portable previews. **The CI workflow has now been changed so it no longer builds or uploads any EXE/installer**: it checks TypeScript, the web/PWA build, attendance logic, Rust formatting and native Windows Rust compilation only. Real Windows 10/11 install, notification, sleep/resume and account-flow tests remain for the owner's PC.
 
 **Do not publish v1.0.0 until the Windows build, signing, notification navigation, install/uninstall, update and clean-machine tests pass.** Do not publish incomplete features to production.
 
@@ -16,7 +16,9 @@ The desktop integration is developed in the `feature/tauri2-windows-desktop` bra
 - `components/NightAttendance.tsx`: Additive night attendance form; morning attendance remains in its existing daily form.
 - `components/DesktopSettings.tsx`: Windows-only reminder / startup / updater settings, added to the original Settings.
 - `supabase/worker-night-attendance-additive.sql`: Separate night table and idempotency claims (without changing the existing daily attendance rows).
-- `.github/workflows/windows-desktop-ci.yml`: Windows compile and portable preview workflow.
+- `supabase/desktop-security-performance-hardening.sql`: owner-scoped RLS, reminder RPC permissions and missing FK indexes.
+- `supabase/enable-signup-email-otp.sql`: removes the legacy auto-confirm trigger without changing existing accounts.
+- `.github/workflows/windows-desktop-ci.yml`: source checks and native Rust compilation only; it deliberately does not create EXE or installer artifacts.
 - `.github/workflows/windows-desktop-release.yml`: Signed release and GitHub updater manifest workflow.
 
 ## Architecture and historical attendance semantics
@@ -31,12 +33,14 @@ To avoid duplicate reminders across multiple devices, `WorkerReminderDeliveries`
 
 ## Database migration order
 
-For a fresh Supabase project, run these SQL files in this order using the Supabase SQL Editor:
+For the connected existing project, the Supabase migration history already records the following desktop migrations as applied:
 
-1. `supabase/worker-night-attendance-additive.sql`
-2. `supabase/worker-reminder-lease-migration.sql`
+1. `add_separate_night_attendance_and_reminder_delivery`
+2. `worker_reminder_claim_leases_and_delivery_state`
+3. `enable_signup_email_otp`
+4. `desktop_security_performance_hardening`
 
-The first creates the separate night register and reminder-delivery table. The second adds expiring pending claims and the `claim_worker_attendance_reminder` / `complete_worker_attendance_reminder` RPCs. Both are additive; the original morning attendance table is not dropped or rewritten.
+Do not re-run these migrations on the connected project. They are additive: the legacy morning `WorkerAttendance` rows remain untouched; night records use `WorkerNightAttendance`; reminder claims use `WorkerReminderDeliveries`. The OTP migration removes only the auto-confirm trigger for future signups. The hardening migration tightens owner-scoped RLS and adds indexes without deleting business data.
 
 ## Building on Windows
 
@@ -47,27 +51,40 @@ git clone https://github.com/emonak71-sketch/EMBRODERY-STATMENT.git
 cd EMBRODERY-STATMENT
 git checkout feature/tauri2-windows-desktop
 npm ci
-# Only if the Linux-generated lockfile omits the Windows Rollup native module:
-npm install --no-save --no-package-lock @rollup/rollup-win32-x64-msvc@4.62.3
+npm run typecheck
 npm run build
 npm run test:attendance
 npm run desktop:icons
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+cargo check --manifest-path src-tauri/Cargo.toml
 npm run desktop:dev
 ```
 
-For production compilation (signed updater artifacts require configuration below):
+When you are ready to create the Windows installer/EXE on your PC, run:
 
 ```powershell
 npm run desktop:build
 ```
 
-The app uses a native window. Pressing X hides it to the Windows tray; use the tray menu's Exit Application command to terminate it. A second instance focuses the existing one.
+This is the final packaging step you will perform yourself. The source-check CI intentionally does **not** create or upload an EXE or installer.
 
-For CI artifacts, open **GitHub → Actions → Windows Desktop - Tauri Build Check**, select the latest successful branch run and download `windows-portable-preview-unsigned`. Preview artifacts are **unsigned** and not production releases.
+The app uses a native window. Pressing X hides it to the Windows tray; use the tray menu's Exit Application command to terminate it. A second instance focuses the existing one. After your local build, run `./scripts/windows-installer-smoke.ps1` from the repository root to test install, shortcuts, autostart, close-to-tray, single-instance, uninstall cleanup and preservation of user app data.
 
 ## Windows installer smoke test
 
-The CI workflow runs `scripts/windows-installer-smoke.ps1` after creating the unsigned NSIS preview. It silently installs the setup executable, checks the uninstall registry entry and Desktop/Start Menu shortcuts, launches the app, checks first-run Windows autostart registration in either HKCU or HKLM (the official Tauri plugin uses dynamic scope), sends a window-close message to verify the process remains in the tray, launches a second instance to verify single-instance behaviour, then terminates and uninstalls the test installation, verifying the autostart registry entry is removed. This validates the installer path on a GitHub-hosted Windows runner; it does not replace a real Windows 10/11 desktop acceptance test.
+The installer smoke-test script is retained for you to run **after your local EXE build**. It silently installs the setup executable, checks the uninstall registry entry and Desktop/Start Menu shortcuts, launches the app, checks first-run Windows autostart registration in HKCU or HKLM, sends a window-close message to verify the process remains in the tray, launches a second instance to verify single-instance behaviour, then terminates and uninstalls the test installation. It verifies shortcut/autostart cleanup and confirms the uninstaller does not delete the app's user-data directory. The source-check CI does not run this installer test because it deliberately does not build an EXE.
+
+## Version management
+
+Use the repository helper to keep the frontend, lockfile, Tauri manifest and Tauri config versions aligned:
+
+```powershell
+npm run version:bump -- patch
+# or: npm run version:bump -- minor
+# or: npm run version:bump -- 1.2.3
+```
+
+The signed-release validation also checks that `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` all match the `vX.Y.Z` tag. Review changes and run the source checks before creating a release tag.
 
 ## Distribution formats
 
@@ -115,7 +132,7 @@ The Tauri updater key above signs update packages and manifests. It does **not**
 
 ## Security
 
-Existing tables, row IDs, login credentials and the original 8-digit email OTP were not changed. Supabase client uses the existing public/anon key and authenticated user RLS; it must not use `service_role` in the Windows executable. User auth/profile data still follows Supabase's existing session persistence.
+The connected Supabase project now has the legacy auto-confirm trigger removed, so new signups can follow the email-confirmation flow. Existing users and data are unchanged. The app rejects a signup response that already contains a session before OTP verification. Before testing new accounts, verify in Supabase Auth that **Confirm email** is enabled, the email OTP length is **8**, and the Confirm Signup and Reset Password templates use `{{ .Token }}` (the supplied HTML templates are in `supabase/templates/`). Configure production SMTP for reliable Gmail delivery. The connected project's leaked-password protection is still disabled; enable it under Supabase Authentication → Password Security. The desktop app uses only the existing public/anon key and authenticated user RLS; never put `service_role` in the Windows executable.
 
 Production database read/write tests should use a dedicated **test account**. Do not insert fake attendance records for real users during QA.
 
