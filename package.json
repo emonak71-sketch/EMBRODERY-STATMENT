@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
+    "version:bump": "node scripts/bump-version.mjs",
     "preview": "vite preview",
     "test:attendance": "node desktop/attendanceCore.test.mjs",
     "desktop:icons": "npx --yes @tauri-apps/cli@2 icon public/embroidery-statement-logo.svg --output src-tauri/icons",
