@@ -29,7 +29,7 @@ export const dbService = {
       if (error.message.includes('Invalid login credentials')) {
         msg = 'ইমেইল বা পাসওয়ার্ড ভুল হয়েছে। সঠিক তথ্য দিয়ে চেষ্টা করুন।';
       } else if (error.message.includes('Email not confirmed')) {
-        msg = 'আপনার ইমেইল যাচাই হয়নি। Gmail-এ পাঠানো ৬ সংখ্যার OTP দিয়ে Signup verification সম্পন্ন করুন।';
+        msg = 'আপনার ইমেইল যাচাই হয়নি। Gmail-এ পাঠানো কোড দিয়ে Signup verification সম্পন্ন করুন।';
       }
       return { success: false, message: msg };
     }
@@ -73,7 +73,7 @@ export const dbService = {
       requiresVerification,
       user: { id: data.user.id, email: data.user.email!, business_name: businessName },
       message: requiresVerification
-        ? 'আপনার Gmail-এ ৬ সংখ্যার OTP পাঠানো হয়েছে। অ্যাকাউন্ট চালু করতে কোডটি লিখুন।'
+        ? 'আপনার Gmail-এ যাচাইকরণ কোড পাঠানো হয়েছে। অ্যাকাউন্ট চালু করতে কোডটি লিখুন।'
         : 'অ্যাকাউন্ট তৈরি ও ইমেইল যাচাই সফল হয়েছে।'
     };
   },
@@ -82,8 +82,8 @@ export const dbService = {
     if (!isConfigured()) return { success: false, message: 'Supabase ব্যাকএন্ড কনফিগার করা নেই।' };
     const cleanEmail = email.trim().toLowerCase();
     const cleanToken = token.replace(/\D/g, '');
-    if (!/^\d{6}$/.test(cleanToken)) {
-      return { success: false, message: '৬ সংখ্যার সঠিক কোডটি লিখুন।' };
+    if (!/^\d{6,10}$/.test(cleanToken)) {
+      return { success: false, message: 'ইমেইলে পাওয়া সম্পূর্ণ কোডটি লিখুন (৬–১০ সংখ্যা)।' };
     }
     const { data, error } = await supabase.auth.verifyOtp({
       email: cleanEmail,
@@ -108,7 +108,7 @@ export const dbService = {
       console.error('Signup OTP resend failed:', error);
       return { success: false, message: 'নতুন OTP পাঠানো যায়নি। কিছুক্ষণ অপেক্ষা করে আবার চেষ্টা করুন।' };
     }
-    return { success: true, message: 'আপনার Gmail-এ নতুন ৬ সংখ্যার OTP পাঠানো হয়েছে।' };
+    return { success: true, message: 'আপনার Gmail-এ নতুন যাচাইকরণ কোড পাঠানো হয়েছে।' };
   },
 
   updateProfile: async (email: string, businessName: string) => {
@@ -467,17 +467,17 @@ export const dbService = {
     const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
     if (error) {
       console.error('Password recovery email request failed:', error);
-      return { success: false, message: 'ইমেইলে ৬ সংখ্যার কোড পাঠানো যায়নি। ইমেইল ঠিকানা যাচাই করে আবার চেষ্টা করুন।' };
+      return { success: false, message: 'ইমেইলে যাচাইকরণ কোড পাঠানো যায়নি। ইমেইল ঠিকানা যাচাই করে আবার চেষ্টা করুন।' };
     }
-    return { success: true, message: 'আপনার Gmail-এ ৬ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে।' };
+    return { success: true, message: 'আপনার Gmail-এ যাচাইকরণ কোড পাঠানো হয়েছে।' };
   },
 
   verifyResetCode: async (email: string, token: string) => {
     if (!isConfigured()) return { success: false, message: 'Supabase configuration is missing.' };
     const cleanEmail = email.trim().toLowerCase();
     const cleanToken = token.replace(/\D/g, '');
-    if (!/^\d{6}$/.test(cleanToken)) {
-      return { success: false, message: '৬ সংখ্যার সঠিক কোডটি লিখুন।' };
+    if (!/^\d{6,10}$/.test(cleanToken)) {
+      return { success: false, message: 'ইমেইলে পাওয়া সম্পূর্ণ কোডটি লিখুন (৬–১০ সংখ্যা)।' };
     }
     const { error } = await supabase.auth.verifyOtp({
       email: cleanEmail,
