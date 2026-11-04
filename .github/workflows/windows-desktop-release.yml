@@ -2,6 +2,8 @@ name: Windows Desktop Signed Release
 
 on:
   push:
+    branches:
+      - release
     tags:
       - 'v*'
   workflow_dispatch:
@@ -69,6 +71,13 @@ jobs:
       - name: Generate Windows icons
         run: npm run desktop:icons
 
+      - name: Resolve release tag from app version on the release branch
+        if: github.ref == 'refs/heads/release'
+        shell: pwsh
+        run: |
+          $version = (Get-Content 'package.json' -Raw | ConvertFrom-Json).version
+          "RELEASE_TAG=v$version" >> $env:GITHUB_ENV
+
       - name: Validate release version and configure updater public key
         run: node scripts/prepare-signed-desktop-release.mjs
 
@@ -114,20 +123,27 @@ jobs:
           Write-Host "Updater manifest prepared for $version."
 
       - name: Publish GitHub Release and updater manifest
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          target_commitish: ${{ github.sha }}
-          name: Embroidery Statement ${{ env.RELEASE_TAG }}
-          generate_release_notes: true
-          draft: false
-          prerelease: false
-          make_latest: true
-          overwrite_files: true
-          fail_on_unmatched_files: true
-          files: |
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/nsis/*.exe.sig
-            latest.json
+        shell: pwsh
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-ChildItem 'src-tauri/target/release/bundle/nsis' -Filter '*.exe' |
+            Where-Object { $_.Name -notmatch 'uninstall' } |
+            Select-Object -First 1
+          if (-not $installer) { throw 'Installer asset is missing.' }
+          $signature = $installer.FullName + '.sig'
+          if (-not (Test-Path $signature)) { throw 'Updater signature asset is missing.' }
+          $arguments = @(
+            'release', 'create', $env:RELEASE_TAG,
+            '--repo', $env:GITHUB_REPOSITORY,
+            '--title', "Embroidery Statement $env:RELEASE_TAG",
+            '--generate-notes',
+            '--latest',
+            '--target', $env:GITHUB_SHA,
+            $installer.FullName,
+            $signature,
+            'latest.json'
+          )
+          gh @arguments
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub Release creation failed.' }
