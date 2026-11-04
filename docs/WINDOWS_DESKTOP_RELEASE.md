@@ -20,7 +20,7 @@ Do not regenerate or overwrite this key after publishing updates. Existing insta
 4. Enter the matching tag, for example `v1.0.1`. The workflow builds the Windows NSIS installer, signs the Tauri updater artifact, generates `latest.json`, and publishes the GitHub Release.
 5. Installed signed copies can check for the update in **Settings → Windows Desktop & Reminders → Check for Updates**.
 
-The workflow can also run automatically when a matching `vX.Y.Z` tag is pushed.
+The workflow runs automatically when a matching `vX.Y.Z` tag is pushed. It can also build automatically when an approved, version-bumped commit is pushed to the dedicated `release` branch; this is the AI-assisted release path.
 
 ## First signed installation
 
