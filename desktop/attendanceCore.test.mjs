@@ -29,6 +29,6 @@ assert.deepEqual(
 assert.deepEqual(
   dueCheckpoints({date:'2026-11-05',minutes:12*60},{morning:'11:00',night:'23:00'}),
   [{date:'2026-11-05',session:'morning'}],
-  'An old previous-night checkpoint should not create a stale reminder'
+  'A checkpoint older than 24 hours should not create a stale reminder'
 );
 console.log('Attendance reminder core tests passed.');
