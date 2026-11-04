@@ -125,8 +125,23 @@ export const dbService = {
 
   logout: async () => { if (isConfigured()) await supabase.auth.signOut({ scope: 'local' }); },
 
+  getActivityHistory: async (limit = 200) => {
+    if (!isConfigured()) throw new Error('Supabase is not configured.');
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase
+      .from('ActivityHistory')
+      .select('id, user_id, actor_id, table_name, record_id, action, old_data, new_data, changed_at')
+      .eq('user_id', uid)
+      .order('changed_at', { ascending: false })
+      .limit(Math.max(1, Math.min(limit, 500)));
+    if (error) throw error;
+    return data || [];
+  },
+
   getInitialData: async () => {
-    if (!isConfigured()) return { parties: [], transactions: [], products: [], expenses: [], sales: [] };
+    if (!isConfigured()) throw new Error('Supabase is not configured.');
     try {
       const [parties, txs, products, expenses, sales] = await Promise.all([
         supabase.from('Parties').select('*'),
@@ -135,8 +150,13 @@ export const dbService = {
         supabase.from('Expenses').select('*'),
         supabase.from('Sales').select('*'),
       ]);
+      const failed = [parties, txs, products, expenses, sales].find(result => result.error);
+      if (failed?.error) throw failed.error;
       return { parties: parties.data || [], transactions: txs.data || [], products: products.data || [], expenses: expenses.data || [], sales: sales.data || [] };
-    } catch (err) { return { parties: [], transactions: [], products: [], expenses: [], sales: [] }; }
+    } catch (err) {
+      console.error('Initial live business data could not be loaded:', err);
+      throw err;
+    }
   },
 
   addParty: async (party: Omit<Party, 'id' | 'created_at'>) => {

@@ -1,23 +1,14 @@
-const CACHE_NAME = 'embrodery-v2';
-
-self.addEventListener('install', (event) => {
+// Network-only service worker. No application or business-data cache fallback.
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
-
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          return caches.delete(cacheName);
-        })
-      );
-    }).then(() => self.clients.claim())
+    caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+      .then(() => self.clients.claim())
   );
 });
-
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
-  );
+  if (event.request.method !== 'GET') return;
+  event.respondWith(fetch(event.request, { cache: 'no-store' }));
 });

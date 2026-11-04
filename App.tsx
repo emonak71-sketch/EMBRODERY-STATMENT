@@ -13,6 +13,7 @@ import MonthlyCollections from './components/MonthlyCollections';
 import PartiesList from './components/PartiesList';
 import { BiometricLock } from './components/BiometricLock';
 import WorkerAttendance from './components/WorkerAttendance';
+import ActivityHistory from './components/ActivityHistory';
 import SplashScreen from './components/SplashScreen';
 
 const sendSMSAlert = async (phone: string, message: string) => {
@@ -73,6 +74,7 @@ const App: React.FC = () => {
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [loading, setLoading] = useState(true);
+  const [dataUnavailable, setDataUnavailable] = useState(false);
   const [splashComplete, setSplashComplete] = useState(false);
   const [isMisconfigured, setIsMisconfigured] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -93,8 +95,10 @@ const App: React.FC = () => {
 
   const refreshData = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
     try {
       const db = await dbService.getInitialData();
+      setDataUnavailable(false);
       setParties(db.parties);
                         setTransactions(db.transactions);
 
@@ -129,7 +133,11 @@ const App: React.FC = () => {
         monthlyCollected
       });
     } catch (err) {
-      console.error('Failed to fetch data:', err);
+      console.error('Failed to fetch live business data:', err);
+      setParties([]);
+      setTransactions([]);
+      setStats({ totalCredit: 0, totalCollected: 0, totalOutstanding: 0, monthlyWork: 0, monthlyCollected: 0 });
+      setDataUnavailable(true);
     } finally {
       setLoading(false);
     }
@@ -171,6 +179,7 @@ const App: React.FC = () => {
         setUser(null);
         setParties([]);
         setTransactions([]);
+        setDataUnavailable(false);
         setStats({
           totalCredit: 0,
           totalCollected: 0,
@@ -406,6 +415,20 @@ const App: React.FC = () => {
     return <BiometricLock onUnlock={() => setIsLocked(false)} onLogout={handleLogout} />;
   }
 
+  if (user && dataUnavailable) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 p-6 text-white">
+        <div className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-900 p-8 text-center shadow-2xl">
+          <AlertTriangle className="mx-auto mb-5 h-10 w-10 text-amber-400" />
+          <p className="text-[10px] font-bold uppercase tracking-[.22em] text-sky-300">Embroidery Statement · Secure Workspace</p>
+          <h1 className="mt-3 text-2xl font-semibold">Live business data unavailable</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-400">The live database could not be reached. Previously loaded business records have been cleared from this screen. Reconnect and retry to continue.</p>
+          <button onClick={() => void refreshData()} className="mt-6 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500">Retry live connection</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell flex h-[100dvh] min-h-[100svh] w-full max-w-full overflow-hidden">
       <Sidebar 
@@ -426,6 +449,7 @@ const App: React.FC = () => {
 
       <main className="app-main min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 no-print">
         {activeTab === 'workers' && <WorkerAttendance userId={user.id} companyName={user.business_name} requestedAttendance={attendanceRequest} />}
+        {activeTab === 'history' && <ActivityHistory />}
         {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} />}
         {activeTab === 'parties' && <PartiesList parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
         {activeTab === 'ledger' && (

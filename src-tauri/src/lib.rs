@@ -1,4 +1,6 @@
 use std::{fs, path::PathBuf, sync::Mutex, time::Duration};
+#[cfg(windows)]
+use std::process::Command;
 
 use serde::{Deserialize, Serialize};
 use tauri::{
@@ -88,6 +90,28 @@ fn save_preferences(app: &AppHandle, preferences: &DesktopPreferences) -> Result
     fs::rename(temp, path).map_err(|e| e.to_string())
 }
 
+
+#[cfg(windows)]
+fn set_windows_autostart_registry(enabled: bool) -> Result<(), String> {
+    const RUN_KEY: &str = r"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+    let mut command = Command::new("reg.exe");
+    if enabled {
+        let executable = std::env::current_exe().map_err(|e| e.to_string())?;
+        let launch_command = format!("\\\"{}\\\" --autostart", executable.display());
+        command.arg("ADD").arg(RUN_KEY).arg("/V").arg("Embroidery Statement")
+            .arg("/T").arg("REG_SZ").arg("/D").arg(launch_command).arg("/F");
+    } else {
+        command.arg("DELETE").arg(RUN_KEY).arg("/V").arg("Embroidery Statement").arg("/F");
+    }
+    let output = command.output().map_err(|e| format!("Windows startup registry command failed: {e}"))?;
+    if !output.status.success() {
+        let message = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        if !enabled && message.to_lowercase().contains("unable to find") { return Ok(()); }
+        return Err(if message.is_empty() { "Windows startup registry update failed.".into() } else { message });
+    }
+    Ok(())
+}
+
 fn show_main(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.unminimize();
@@ -149,6 +173,9 @@ fn desktop_set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
     if is_portable() {
         return Err("Portable builds do not register Windows startup.".into());
     }
+    #[cfg(windows)]
+    set_windows_autostart_registry(enabled)?;
+    #[cfg(not(windows))]
     if enabled {
         app.autolaunch().enable().map_err(|e| e.to_string())?;
     } else {
@@ -321,19 +348,19 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
 }
 
 fn enable_autostart_on_first_installed_run(app: &AppHandle) {
-    if is_portable() {
-        return;
-    }
+    if is_portable() { return; }
     let mut preferences = read_preferences(app);
     if preferences.autostart.is_none() {
-        match app.autolaunch().enable() {
+        #[cfg(windows)]
+        let result = set_windows_autostart_registry(true);
+        #[cfg(not(windows))]
+        let result = app.autolaunch().enable().map_err(|e| e.to_string());
+        match result {
             Ok(()) => {
                 preferences.autostart = Some(true);
                 let _ = save_preferences(app, &preferences);
             }
-            Err(error) => {
-                eprintln!("Unable to register Embroidery Statement for Windows sign-in: {error}")
-            }
+            Err(error) => eprintln!("Unable to register Embroidery Statement for sign-in: {error}"),
         }
     }
 }
