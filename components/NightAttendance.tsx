@@ -43,7 +43,9 @@ const NightAttendance: React.FC = () => {
   useEffect(() => { void reload(); }, [reload]);
 
   useEffect(() => {
-    const onRemoteChange = () => {
+    const onRemoteChange = (event: Event) => {
+      const table = (event as CustomEvent<{ table?: string }>).detail?.table;
+      if (table && !['Workers', 'WorkerNightAttendance'].includes(table)) return;
       const hasUnsavedChanges = activeWorkers.some(worker => {
         const saved = records.find(row => row.worker_id === worker.id)?.status;
         return draft[worker.id] !== saved;
