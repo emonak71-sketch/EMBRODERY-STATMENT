@@ -86,7 +86,8 @@ A raw EXE uses the already-installed Microsoft WebView2 runtime. Windows native 
 The repository does NOT contain signing private keys. A signed updater build requires:
 
 1. On your Windows PC, run `powershell -ExecutionPolicy Bypass -File .\\scripts\\generate-tauri-signing-key.ps1`. The script generates a key pair under `%USERPROFILE%\\.tauri`; choose a strong passphrase and back up the private key + passphrase in a password manager or encrypted offline backup.
-2. In **GitHub → Repository Settings → Secrets and variables → Actions**, add repository **variable** `EMBROIDERY_UPDATE_PUBLIC_KEY` (the complete contents of `embroidery-statement.key.pub`) and repository **secrets** `TAURI_SIGNING_PRIVATE_KEY` (complete contents of `embroidery-statement.key`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (the passphrase). The private key must never be pasted into chat, committed, or added as a repository variable.
+2. Install GitHub CLI on that PC and run `gh auth login` with a GitHub account that has repository administration/write-secret permission.
+3. Run `powershell -ExecutionPolicy Bypass -File .\\scripts\\configure-github-updater-secrets.ps1`. It sets the public key as a repository Actions variable and sends the private key/passphrase directly to GitHub as Actions secrets through standard input. It does not print either secret. If you prefer, add them manually under **GitHub → Repository Settings → Secrets and variables → Actions**. The private key must never be pasted into chat, committed, or added as a repository variable.
 4. Review and merge this branch only after CI and installed-app testing pass.
 5. Keep versions aligned in `package.json`, `package-lock.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`.
 6. Push a tag exactly matching that version (e.g. `v1.0.0` for the initial signed desktop release), with descriptive GitHub Release notes. Workflow `windows-desktop-release.yml` runs on the tag.
