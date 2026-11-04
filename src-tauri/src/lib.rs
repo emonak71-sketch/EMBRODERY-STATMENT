@@ -93,11 +93,11 @@ fn save_preferences(app: &AppHandle, preferences: &DesktopPreferences) -> Result
 
 #[cfg(windows)]
 fn set_windows_autostart_registry(enabled: bool) -> Result<(), String> {
-    const RUN_KEY: &str = r"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+    const RUN_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
     let mut command = Command::new("reg.exe");
     if enabled {
         let executable = std::env::current_exe().map_err(|e| e.to_string())?;
-        let launch_command = format!("\\\"{}\\\" --autostart", executable.display());
+        let launch_command = format!("\"{}\" --autostart", executable.display());
         command.arg("ADD").arg(RUN_KEY).arg("/V").arg("Embroidery Statement")
             .arg("/T").arg("REG_SZ").arg("/D").arg(launch_command).arg("/F");
     } else {
