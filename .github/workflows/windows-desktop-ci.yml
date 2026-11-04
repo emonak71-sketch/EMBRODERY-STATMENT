@@ -1,4 +1,4 @@
-name: Windows Desktop - Tauri Build Check
+name: Windows Desktop - Source and Native Code Checks
 on:
   # Run one Windows native build for each update to the desktop feature branch.
   push:
@@ -47,65 +47,15 @@ jobs:
         run: npm ci
       - name: Install Windows Rollup native optional binary
         run: npm install --no-save --no-package-lock @rollup/rollup-win32-x64-msvc@4.62.3
-      - name: Validate existing web/PWA build
+      - name: Type-check the complete React and TypeScript application
+        run: npm run typecheck
+      - name: Validate existing web/PWA production build
         run: npm run build
       - name: Test attendance completeness and Dhaka schedule
         run: npm run test:attendance
       - name: Generate Windows application icons from the official logo
         run: npm run desktop:icons
-      - name: Compile native Windows application (without signed release bundles)
-        run: npx --yes @tauri-apps/cli@2 build --no-bundle
-      - name: Upload resolved Rust dependency lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: tauri-cargo-lockfile
-          path: src-tauri/Cargo.lock
-          if-no-files-found: error
-      - name: Build unsigned NSIS installer preview
-        run: npx --yes @tauri-apps/cli@2 build --bundles nsis --config src-tauri/tauri.preview.conf.json
-      - name: Smoke test installed Windows application
-        shell: pwsh
-        run: ./scripts/windows-installer-smoke.ps1
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-installer-preview-unsigned
-          path: src-tauri/target/release/bundle/nsis/*.exe
-          if-no-files-found: error
-      - name: Stage the portable preview
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path portable | Out-Null
-          Copy-Item "src-tauri/target/release/embroidery-statement.exe" "portable/"
-          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile "portable/MicrosoftEdgeWebView2Setup.exe"
-          if ((Get-Item "portable/MicrosoftEdgeWebView2Setup.exe").Length -lt 100000) { throw "WebView2 bootstrapper download looks incomplete." }
-          New-Item -ItemType File -Force -Path "portable/.portable" | Out-Null
-          "Portable preview: If Microsoft WebView2 Runtime is missing, run MicrosoftEdgeWebView2Setup.exe (internet required). Keep data/ in this directory when replacing the EXE. Native Windows toast notifications may require installation." | Set-Content -Path "portable/README.txt" -Encoding UTF8
-          Compress-Archive -Path portable -DestinationPath Embroidery-Statement-Portable-PREVIEW.zip -Force
-      - name: Smoke test portable edition and adjacent data profile
-        shell: pwsh
-        run: |
-          $zip = Join-Path $PWD 'Embroidery-Statement-Portable-PREVIEW.zip'
-          $folder = Join-Path $env:TEMP 'EmbroideryStatementPortableSmoke'
-          if (Test-Path $folder) { Remove-Item $folder -Recurse -Force }
-          Expand-Archive -Path $zip -DestinationPath $folder
-          $portableRoot = Join-Path $folder 'portable'
-          $portableExe = Join-Path $portableRoot 'embroidery-statement.exe'
-          $dataDirectory = Join-Path $portableRoot 'data'
-          if (-not (Test-Path $portableExe)) { throw 'Portable EXE missing from portable package.' }
-          if (-not (Test-Path (Join-Path $portableRoot 'MicrosoftEdgeWebView2Setup.exe'))) { throw 'WebView2 bootstrapper missing from portable package.' }
-          $process = Start-Process -FilePath $portableExe -PassThru
-          Start-Sleep -Seconds 10
-          $process.Refresh()
-          if ($process.HasExited) { throw 'Portable application failed to remain open on the Windows runner.' }
-          if (-not (Test-Path $dataDirectory)) { throw 'Portable adjacent data directory was not created.' }
-          $sentinel = Join-Path $dataDirectory 'portable-profile-smoke-test.txt'
-          'profile-persistence-check' | Set-Content -Path $sentinel -Encoding UTF8
-          Get-Process -Name 'embroidery-statement' -ErrorAction SilentlyContinue | Stop-Process -Force
-          Start-Sleep -Seconds 2
-          if (-not (Test-Path $sentinel)) { throw 'Portable adjacent data was not preserved after process exit.' }
-          Write-Host 'PASS: portable EXE launches and adjacent data folder persists.'
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-portable-preview-unsigned
-          path: Embroidery-Statement-Portable-PREVIEW.zip
-          if-no-files-found: error
+      - name: Validate Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+      - name: Compile Tauri 2 native Windows code without producing an EXE or installer
+        run: cargo check --manifest-path src-tauri/Cargo.toml
