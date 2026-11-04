@@ -5,6 +5,9 @@ on:
       - feature/tauri2-windows-desktop
   pull_request:
   workflow_dispatch:
+concurrency:
+  group: windows-desktop-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
