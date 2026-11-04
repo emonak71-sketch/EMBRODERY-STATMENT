@@ -68,8 +68,8 @@ $remotePublic = (& $ghCommand.Source variable get EMBROIDERY_UPDATE_PUBLIC_KEY -
 $remotePublicExists = ($LASTEXITCODE -eq 0) -and -not [string]::IsNullOrWhiteSpace($remotePublic)
 $existingSecrets = @(& $ghCommand.Source secret list --repo $repo)
 if ($LASTEXITCODE -ne 0) { throw 'Could not inspect existing GitHub Actions secret names.' }
-$remotePrivateExists = [bool]($existingSecrets | Where-Object { ($_ -split '\\s+')[0] -eq 'TAURI_SIGNING_PRIVATE_KEY' })
-$remotePasswordExists = [bool]($existingSecrets | Where-Object { ($_ -split '\\s+')[0] -eq 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD' })
+$remotePrivateExists = [bool]($existingSecrets | Where-Object { ($_ -split '\s+')[0] -eq 'TAURI_SIGNING_PRIVATE_KEY' })
+$remotePasswordExists = [bool]($existingSecrets | Where-Object { ($_ -split '\s+')[0] -eq 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD' })
 
 $localPrivateExists = Test-Path $keyPath
 $localPublicExists = Test-Path $publicKeyPath
@@ -159,8 +159,8 @@ $securePassword.Dispose()
 
 $secretNames = @(& $ghCommand.Source secret list --repo $repo)
 if ($LASTEXITCODE -ne 0) { throw 'Could not verify GitHub Actions secrets.' }
-if (-not ($secretNames | Where-Object { ($_ -split '\\s+')[0] -eq 'TAURI_SIGNING_PRIVATE_KEY' }) -or
-    -not ($secretNames | Where-Object { ($_ -split '\\s+')[0] -eq 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD' })) {
+if (-not ($secretNames | Where-Object { ($_ -split '\s+')[0] -eq 'TAURI_SIGNING_PRIVATE_KEY' }) -or
+    -not ($secretNames | Where-Object { ($_ -split '\s+')[0] -eq 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD' })) {
   throw 'GitHub Actions signing secrets were not both found after upload.'
 }
 $verifyPublic = (& $ghCommand.Source variable get EMBROIDERY_UPDATE_PUBLIC_KEY --repo $repo) -join "`n"
