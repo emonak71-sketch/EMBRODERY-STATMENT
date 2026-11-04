@@ -191,6 +191,7 @@ const App: React.FC = () => {
         .channel('db_changes')
         .on('postgres_changes', { event: '*', schema: 'public' }, () => {
           refreshData();
+          window.dispatchEvent(new CustomEvent('embroidery:remote-data-changed'));
         })
         .subscribe();
 
