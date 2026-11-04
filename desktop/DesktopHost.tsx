@@ -102,8 +102,8 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
       try {
         const info=await desktopInvoke<DesktopUpdateInfo>('desktop_check_update');
         localStorage.setItem('desktop_last_update_check',new Date().toLocaleString());
-        if(info.available_version && !info.portable &&
-           localStorage.getItem('desktop_update_dismissed')!==info.available_version){
+        const remindAfter=Number(localStorage.getItem('desktop_update_remind_after')||'0');
+        if(info.available_version && !info.portable && Date.now()>=remindAfter){
           await desktopInvoke('desktop_notify_update',{version:info.available_version});
           window.dispatchEvent(new CustomEvent('embroidery:update-available',{detail:info}));
         }
