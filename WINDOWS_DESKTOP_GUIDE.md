@@ -67,13 +67,13 @@ For CI artifacts, open **GitHub → Actions → Windows Desktop - Tauri Build Ch
 
 ## Windows installer smoke test
 
-The CI workflow runs `scripts/windows-installer-smoke.ps1` after creating the unsigned NSIS preview. It silently installs the setup executable, checks the uninstall registry entry and Desktop/Start Menu shortcuts, launches the app, checks first-run Windows autostart registration, sends a window-close message to verify the process remains in the tray, launches a second instance to verify single-instance behaviour, then terminates and uninstalls the test installation. This validates the installer path on a GitHub-hosted Windows runner; it does not replace a real Windows 10/11 desktop acceptance test.
+The CI workflow runs `scripts/windows-installer-smoke.ps1` after creating the unsigned NSIS preview. It silently installs the setup executable, checks the uninstall registry entry and Desktop/Start Menu shortcuts, launches the app, checks first-run Windows autostart registration in either HKCU or HKLM (the official Tauri plugin uses dynamic scope), sends a window-close message to verify the process remains in the tray, launches a second instance to verify single-instance behaviour, then terminates and uninstalls the test installation, verifying the autostart registry entry is removed. This validates the installer path on a GitHub-hosted Windows runner; it does not replace a real Windows 10/11 desktop acceptance test.
 
 ## Distribution formats
 
 ### Installed NSIS EXE
 
-The GitHub Release workflow builds a per-user Windows NSIS setup executable with the app icon, Start Menu entry and standard uninstaller. The installer handles WebView2 according to Tauri's Windows installer configuration. It is the recommended edition for native Windows toasts, startup registration and signed one-click updates.
+The GitHub Release workflow builds a per-user Windows NSIS setup executable with the app icon, Start Menu entry and standard uninstaller. A custom NSIS uninstaller hook removes the app's Windows Run registry entry on uninstall, preventing stale startup entries. The installer handles WebView2 according to Tauri's Windows installer configuration. It is the recommended edition for native Windows toasts, startup registration and signed one-click updates.
 
 ### Portable EXE
 
