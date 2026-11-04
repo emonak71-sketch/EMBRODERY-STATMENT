@@ -10,10 +10,10 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag matching package.json, Cargo.toml and tauri.conf.json (example: v1.0.0)'
+        description: 'Release tag matching package.json, Cargo.toml and tauri.conf.json (example: v1.0.2)'
         required: true
         type: string
-        default: 'v1.0.1'
+        default: 'v1.0.2'
 
 permissions:
   contents: write
