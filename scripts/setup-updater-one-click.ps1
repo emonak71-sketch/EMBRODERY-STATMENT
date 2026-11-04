@@ -63,9 +63,19 @@ if ($LASTEXITCODE -ne 0 -or $repoName.Trim() -ne $repo) {
   throw "The signed-in GitHub account cannot access $repo."
 }
 
-# Read only public variable text and secret NAMES; GitHub never returns secret values.
-$remotePublic = (& $ghCommand.Source variable get EMBROIDERY_UPDATE_PUBLIC_KEY --repo $repo 2>$null) -join "`n"
-$remotePublicExists = ($LASTEXITCODE -eq 0) -and -not [string]::IsNullOrWhiteSpace($remotePublic)
+# Read repository variables and secret NAMES without treating an absent first-run variable as an error.
+# GitHub CLI returns an empty JSON array when no repository variables exist.
+$variableListJson = & $ghCommand.Source variable list --repo $repo --json name,value
+if ($LASTEXITCODE -ne 0) { throw 'Could not inspect GitHub Actions repository variables.' }
+try {
+  $variableList = @($variableListJson | ConvertFrom-Json)
+} catch {
+  throw 'GitHub Actions returned an unreadable repository-variable list.'
+}
+$publicVariable = $variableList | Where-Object { $_.name -eq 'EMBROIDERY_UPDATE_PUBLIC_KEY' } | Select-Object -First 1
+$remotePublicExists = ($null -ne $publicVariable) -and -not [string]::IsNullOrWhiteSpace([string]$publicVariable.value)
+$remotePublic = if ($remotePublicExists) { [string]$publicVariable.value } else { '' }
+
 $existingSecrets = @(& $ghCommand.Source secret list --repo $repo)
 if ($LASTEXITCODE -ne 0) { throw 'Could not inspect existing GitHub Actions secret names.' }
 $remotePrivateExists = [bool]($existingSecrets | Where-Object { ($_ -split '\s+')[0] -eq 'TAURI_SIGNING_PRIVATE_KEY' })
@@ -163,8 +173,11 @@ if (-not ($secretNames | Where-Object { ($_ -split '\s+')[0] -eq 'TAURI_SIGNING_
     -not ($secretNames | Where-Object { ($_ -split '\s+')[0] -eq 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD' })) {
   throw 'GitHub Actions signing secrets were not both found after upload.'
 }
-$verifyPublic = (& $ghCommand.Source variable get EMBROIDERY_UPDATE_PUBLIC_KEY --repo $repo) -join "`n"
-if ($LASTEXITCODE -ne 0 -or $verifyPublic.Trim() -ne $publicKey) {
+$verifyVariableListJson = & $ghCommand.Source variable list --repo $repo --json name,value
+if ($LASTEXITCODE -ne 0) { throw 'Could not re-read GitHub Actions repository variables for verification.' }
+$verifyVariableList = @($verifyVariableListJson | ConvertFrom-Json)
+$verifyPublicVariable = $verifyVariableList | Where-Object { $_.name -eq 'EMBROIDERY_UPDATE_PUBLIC_KEY' } | Select-Object -First 1
+if (($null -eq $verifyPublicVariable) -or ([string]$verifyPublicVariable.value).Trim() -ne $publicKey) {
   throw 'GitHub Actions public-key variable verification failed.'
 }
 
