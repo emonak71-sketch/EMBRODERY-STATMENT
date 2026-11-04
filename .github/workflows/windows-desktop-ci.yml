@@ -1,8 +1,9 @@
 name: Windows Desktop - Tauri Build Check
 on:
-  # This work is developed through PR #18. Avoid duplicate push + PR builds
-  # racing each other under the same concurrency group.
-  pull_request:
+  # Run one Windows native build for each update to the desktop feature branch.
+  push:
+    branches:
+      - feature/tauri2-windows-desktop
   workflow_dispatch:
 concurrency:
   group: windows-desktop-${{ github.head_ref || github.ref_name }}
