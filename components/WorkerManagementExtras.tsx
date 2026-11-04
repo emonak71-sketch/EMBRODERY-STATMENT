@@ -167,7 +167,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
   const isBn = language === 'bn';
   const tr = (bn: string, en: string) => isBn ? bn : en;
 
-  const [tab, setTab] = useState<ExtraTab>('documents');
+  const [tab, setTab] = useState<ExtraTab>('advances');
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [selectedWorkerId, setSelectedWorkerId] = useState('');
   const [loading, setLoading] = useState(false);
