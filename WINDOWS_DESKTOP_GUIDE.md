@@ -60,11 +60,14 @@ cargo check --manifest-path src-tauri/Cargo.toml
 npm run desktop:dev
 ```
 
-When you are ready to create the Windows installer/EXE on your PC, run:
+When you are ready to create the signed Windows installer/EXE on your PC, generate the updater signing key once, then run:
 
 ```powershell
-npm run desktop:build
+powershell -ExecutionPolicy Bypass -File .\scripts\generate-tauri-signing-key.ps1
+npm run desktop:build:signed
 ```
+
+The signed-build script reads the private/public key files from `%USERPROFILE%\.tauri\`, prompts for the passphrase without echoing it, injects only the public key into the Tauri config, and passes the private key to the build process through environment variables. It does not print or commit the private key. The installer is created under `src-tauri/target/release/bundle/nsis/`.
 
 This is the final packaging step you will perform yourself. The source-check CI intentionally does **not** create or upload an EXE or installer.
 
