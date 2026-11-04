@@ -28,6 +28,8 @@ jobs:
         run: npm run build
       - name: Test attendance and reminder logic
         run: npm run test:attendance
+      - name: Test App Lock security contract
+        run: npm run test:app-lock
 
   edge-function:
     runs-on: ubuntu-latest

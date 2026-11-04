@@ -68,6 +68,8 @@ jobs:
 
       - name: Test attendance and Dhaka reminder logic
         run: npm run test:attendance
+      - name: Test App Lock security contract
+        run: npm run test:app-lock
 
       - name: Generate Windows icons
         run: npm run desktop:icons

@@ -236,17 +236,6 @@ const App: React.FC = () => {
     }
   }, [user, appLockState, refreshData, isMisconfigured]);
 
-  // Lock the current device whenever the app returns to the foreground.
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && currentUserId && appLockState === 'unlocked') {
-        void refreshAppLockStatus();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [currentUserId, appLockState, refreshAppLockStatus]);
-
   // Detect a password change made on another device and require the new password.
   useEffect(() => {
     if (!currentUserId || appLockState !== 'unlocked') return;
