@@ -20,6 +20,10 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Set up Deno for Supabase Edge Function checks
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -53,8 +57,10 @@ jobs:
           node --check scripts/bump-version.mjs
           node --check scripts/prepare-signed-desktop-release.mjs
           node --check scripts/prepare-local-signed-build.mjs
-      - name: Type-check the complete React and TypeScript application
+      - name: Type-check the React and TypeScript application
         run: npm run typecheck
+      - name: Type-check the Supabase Edge Function in its Deno runtime
+        run: deno check --no-lock supabase/functions/send-worker-sms/index.ts
       - name: Validate existing web/PWA production build
         run: npm run build
       - name: Test attendance completeness and Dhaka schedule
