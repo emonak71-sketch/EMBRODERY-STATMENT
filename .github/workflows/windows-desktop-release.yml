@@ -1,77 +1,149 @@
-name: Windows Desktop - Signed Release
+name: Windows Desktop Signed Release
+
 on:
   push:
+    branches:
+      - release
     tags:
-      - 'v[0-9]*.[0-9]*.[0-9]*'
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag matching package.json, Cargo.toml and tauri.conf.json (example: v1.0.0)'
+        required: true
+        type: string
+        default: 'v1.0.0'
+
 permissions:
   contents: write
+
+concurrency:
+  group: windows-desktop-release-${{ inputs.release_tag || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
-  windows-release:
-    runs-on: windows-latest
+  publish-windows:
+    runs-on: windows-2022
     timeout-minutes: 90
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+      EMBROIDERY_UPDATE_PUBLIC_KEY: ${{ vars.EMBROIDERY_UPDATE_PUBLIC_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+
+      - name: Initialize MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Set up Rust MSVC
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
-      - name: Install locked frontend dependencies
+
+      - name: Install locked dependencies
         run: npm ci
-      - name: Install Windows Rollup native optional binary
+
+      - name: Install Windows Rollup native binary
         run: npm install --no-save --no-package-lock @rollup/rollup-win32-x64-msvc@4.62.3
-      - name: Type-check the complete React and TypeScript application
+
+      - name: Type-check application
         run: npm run typecheck
-      - name: Verify attendance rules
+
+      - name: Test attendance and Dhaka reminder logic
         run: npm run test:attendance
-      - name: Generate official Windows branding
+
+      - name: Generate Windows icons
         run: npm run desktop:icons
-      - name: Validate signing and release version (never print private key)
-        env:
-          EMBROIDERY_UPDATE_PUBLIC_KEY: ${{ vars.EMBROIDERY_UPDATE_PUBLIC_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          GITHUB_REF_NAME: ${{ github.ref_name }}
-        run: node scripts/prepare-signed-desktop-release.mjs
-      - name: Build, sign and upload NSIS installer and latest.json
-        uses: tauri-apps/tauri-action@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EMBROIDERY_UPDATE_PUBLIC_KEY: ${{ vars.EMBROIDERY_UPDATE_PUBLIC_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Embroidery Statement ${{ github.ref_name }}
-          releaseBody: 'Windows installer, portable distribution, signed updater manifest and release notes.'
-          releaseDraft: true
-          prerelease: false
-          args: '--bundles nsis'
-          updaterJsonPreferNsis: true
-      - name: Smoke test the signed installer before publication
-        shell: pwsh
-        run: ./scripts/windows-installer-smoke.ps1
-      - name: Package portable build separately (preserve local data directory)
+
+      - name: Resolve release tag from app version on the release branch
+        if: github.ref == 'refs/heads/release'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path portable | Out-Null
-          Copy-Item "src-tauri/target/release/embroidery-statement.exe" "portable/"
-          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile "portable/MicrosoftEdgeWebView2Setup.exe"
-          if ((Get-Item "portable/MicrosoftEdgeWebView2Setup.exe").Length -lt 100000) { throw "WebView2 bootstrapper download looks incomplete." }
-          New-Item -ItemType File -Force -Path "portable/.portable" | Out-Null
-          "Portable Embroidery Statement: If WebView2 Runtime is missing, run MicrosoftEdgeWebView2Setup.exe (internet required). Keep this folder and data/ together during transfer or updates. Portable automatic updating is disabled; download a newer portable ZIP and replace ONLY the EXE. Windows native toast notifications require an installed app identity." | Set-Content -Path "portable/README.txt" -Encoding UTF8
-          Compress-Archive -Path portable -DestinationPath "Embroidery-Statement-${{ github.ref_name }}-Portable.zip" -Force
-      - name: Attach portable ZIP to the same GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: pwsh
-        run: gh release upload "${{ github.ref_name }}" "Embroidery-Statement-${{ github.ref_name }}-Portable.zip" --clobber
+          $version = (Get-Content 'package.json' -Raw | ConvertFrom-Json).version
+          "RELEASE_TAG=v$version" >> $env:GITHUB_ENV
 
-      - name: Publish release only after installer smoke tests pass
+      - name: Validate release version and configure updater public key
+        run: node scripts/prepare-signed-desktop-release.mjs
+
+      - name: Build signed Windows installer and updater artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npx --yes @tauri-apps/cli@2 build --bundles nsis
+          if ($LASTEXITCODE -ne 0) { throw 'Signed Tauri NSIS build failed.' }
+
+      - name: Generate Tauri updater manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (Get-Content 'package.json' -Raw | ConvertFrom-Json).version
+          $bundleDirectory = 'src-tauri/target/release/bundle/nsis'
+          $installer = Get-ChildItem $bundleDirectory -Filter '*.exe' |
+            Where-Object { $_.Name -notmatch 'uninstall' } |
+            Select-Object -First 1
+          if (-not $installer) { throw 'Signed NSIS installer was not generated.' }
+
+          $signaturePath = $installer.FullName + '.sig'
+          if (-not (Test-Path $signaturePath)) {
+            throw "Tauri updater signature is missing: $signaturePath"
+          }
+          $signature = [System.IO.File]::ReadAllText($signaturePath).Trim()
+          if ([string]::IsNullOrWhiteSpace($signature)) { throw 'Tauri updater signature is empty.' }
+
+          $encodedAssetName = [uri]::EscapeDataString($installer.Name)
+          $downloadUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/$encodedAssetName"
+          $manifest = [ordered]@{
+            version = $version
+            notes = "Embroidery Statement $version — Windows x64 update."
+            pub_date = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+            platforms = [ordered]@{
+              'windows-x86_64' = [ordered]@{
+                signature = $signature
+                url = $downloadUrl
+              }
+            }
+          }
+          $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path 'latest.json' -Encoding utf8
+          Write-Host "Updater manifest prepared for $version."
+
+      - name: Publish GitHub Release and updater manifest
+        shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: pwsh
-        run: gh release edit "${{ github.ref_name }}" --draft=false
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-ChildItem 'src-tauri/target/release/bundle/nsis' -Filter '*.exe' |
+            Where-Object { $_.Name -notmatch 'uninstall' } |
+            Select-Object -First 1
+          if (-not $installer) { throw 'Installer asset is missing.' }
+          $signature = $installer.FullName + '.sig'
+          if (-not (Test-Path $signature)) { throw 'Updater signature asset is missing.' }
+          $arguments = @(
+            'release', 'create', $env:RELEASE_TAG,
+            '--repo', $env:GITHUB_REPOSITORY,
+            '--title', "Embroidery Statement $env:RELEASE_TAG",
+            '--generate-notes',
+            '--latest',
+            '--target', $env:GITHUB_SHA,
+            $installer.FullName,
+            $signature,
+            'latest.json'
+          )
+          gh @arguments
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub Release creation failed.' }

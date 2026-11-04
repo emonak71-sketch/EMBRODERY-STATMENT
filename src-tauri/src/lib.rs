@@ -341,6 +341,12 @@ fn enable_autostart_on_first_installed_run(app: &AppHandle) {
 pub fn run() {
     prepare_portable_profile();
 
+    // Used only by the Windows installer CI smoke test. The installed app sends
+    // a real OS notification, then exits so the runner can verify dispatch.
+    let args = std::env::args().collect::<Vec<_>>();
+    let test_notification = args.iter().any(|arg| arg == "--test-notification");
+    let exit_after_test_notification = args.iter().any(|arg| arg == "--exit-after-test-notification");
+
     let mut builder = tauri::Builder::default()
         // Must be registered first so duplicate Windows launches focus the existing process.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -374,7 +380,7 @@ pub fn run() {
             desktop_check_update,
             desktop_install_update,
         ])
-        .setup(|app| {
+        .setup(move |app| {
             setup_tray(app)?;
             let handle = app.handle().clone();
             enable_autostart_on_first_installed_run(&handle);
@@ -401,6 +407,25 @@ pub fn run() {
                     navigate_to(&click_app, "workers", Some(session));
                 }
             })?;
+
+            if test_notification {
+                if is_portable() {
+                    return Err("Windows notification smoke test requires an installed build.".into());
+                }
+                app.notification()
+                    .builder()
+                    .title("Embroidery Statement — Windows Toast Test")
+                    .body("Windows desktop notification dispatch test.")
+                    .show()?;
+
+                if exit_after_test_notification {
+                    let test_handle = handle.clone();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(Duration::from_secs(2));
+                        test_handle.exit(0);
+                    });
+                }
+            }
 
             if std::env::args().any(|arg| arg == "--autostart")
                 && read_preferences(&handle).start_minimized

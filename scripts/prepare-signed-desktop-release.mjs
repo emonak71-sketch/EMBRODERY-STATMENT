@@ -4,7 +4,7 @@ const configFile = 'src-tauri/tauri.conf.json';
 const config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
 const publicKey = (process.env.EMBROIDERY_UPDATE_PUBLIC_KEY || '').trim();
 const version = config.version;
-const tag = process.env.GITHUB_REF_NAME || '';
+const tag = process.env.RELEASE_TAG || process.env.GITHUB_REF_NAME || '';
 
 if (!publicKey.startsWith('untrusted comment:') || !publicKey.includes('RW')) {
   throw new Error('Set the real Tauri signer PUBLIC KEY as GitHub repository variable EMBROIDERY_UPDATE_PUBLIC_KEY before releasing.');
