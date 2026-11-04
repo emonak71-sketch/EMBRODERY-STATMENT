@@ -3,7 +3,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../services/supabaseClient';
 import { dbService } from '../services/supabaseService';
 import {
-  attendanceCompleteness, bangladeshClock, dueSessions, reminderTranslations,
+  attendanceCompleteness, bangladeshClock, dueCheckpoints, reminderTranslations,
   AttendanceSession,
 } from './attendanceCore';
 import {desktopInvoke, desktopListen, isWindowsDesktop, navigateDesktop, DesktopNavigation} from './tauriBridge';
@@ -32,8 +32,8 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
       const prefs=readReminderPreferences();
       if (!prefs.enabled) return;
       const clock=bangladeshClock();
-      const sessions=dueSessions(clock.minutes,prefs);
-      if (sessions.length===0) return;
+      const checkpoints=dueCheckpoints(clock,prefs);
+      if (checkpoints.length===0) return;
 
       checkingRef.current=true;
       try {
@@ -41,16 +41,16 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
         if (sessionError || !session?.user) return;
         const userId=session.user.id;
         const workers=await dbService.getWorkers();
-        for(const attendanceSession of sessions) {
-          const idempotency='desktop:reminder:v1:'+userId+':'+clock.date+':'+attendanceSession;
+        for(const {session:attendanceSession,date:attendanceDate} of checkpoints) {
+          const idempotency='desktop:reminder:v1:'+userId+':'+attendanceDate+':'+attendanceSession;
           if (localStorage.getItem(idempotency)==='sent') continue;
           const rows=attendanceSession==='morning'
-            ? await dbService.getWorkerAttendance(clock.date)
-            : await dbService.getWorkerNightAttendance(clock.date);
-          const result=attendanceCompleteness(workers,rows,clock.date);
+            ? await dbService.getWorkerAttendance(attendanceDate)
+            : await dbService.getWorkerNightAttendance(attendanceDate);
+          const result=attendanceCompleteness(workers,rows,attendanceDate);
           if (result.complete || result.expected===0) continue;
 
-          const claimed=await dbService.claimAttendanceReminder(clock.date,attendanceSession);
+          const claimed=await dbService.claimAttendanceReminder(attendanceDate,attendanceSession);
           if(!claimed){
             localStorage.setItem(idempotency,'sent');
             continue;
@@ -63,9 +63,9 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
           let successfullyNotified = false;
           try {
             const current=attendanceSession==='morning'
-              ? await dbService.getWorkerAttendance(clock.date)
-              : await dbService.getWorkerNightAttendance(clock.date);
-            if (!attendanceCompleteness(workers,current,clock.date).complete) {
+              ? await dbService.getWorkerAttendance(attendanceDate)
+              : await dbService.getWorkerNightAttendance(attendanceDate);
+            if (!attendanceCompleteness(workers,current,attendanceDate).complete) {
               const translated=reminderTranslations[languageRef.current];
               await desktopInvoke('desktop_notify_attendance',{
                 title:translated.title,
@@ -77,7 +77,7 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
             }
           } finally {
             if(!successfullyNotified) {
-              await dbService.releaseAttendanceReminder(clock.date,attendanceSession);
+              await dbService.releaseAttendanceReminder(attendanceDate,attendanceSession);
             }
           }
         }
