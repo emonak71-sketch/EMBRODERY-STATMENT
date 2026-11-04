@@ -23,12 +23,12 @@ assert.deepEqual(dueSessions(23*60,{morning:'11:00',night:'23:00'}),['morning','
 assert.equal(bangladeshClock(new Date('2026-11-04T05:00:00.000Z')).minutes, 11*60);
 assert.deepEqual(
   dueCheckpoints({date:'2026-11-05',minutes:8*60},{morning:'11:00',night:'23:00'}),
-  [{date:'2026-11-04',session:'night'}],
-  'Startup after midnight should recover a missed previous-night checkpoint'
+  [{date:'2026-11-04',session:'morning'},{date:'2026-11-04',session:'night'}],
+  'Startup after midnight should recover both still-recent missed sessions'
 );
 assert.deepEqual(
   dueCheckpoints({date:'2026-11-05',minutes:12*60},{morning:'11:00',night:'23:00'}),
-  [{date:'2026-11-05',session:'morning'}],
-  'A checkpoint older than 24 hours should not create a stale reminder'
+  [{date:'2026-11-04',session:'night'},{date:'2026-11-05',session:'morning'}],
+  'Recover a recent previous-night session but exclude the previous morning after 24 hours'
 );
 console.log('Attendance reminder core tests passed.');
