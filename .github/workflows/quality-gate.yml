@@ -17,6 +17,8 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Type-check React and TypeScript application
+        run: npm run typecheck
       - name: Dependency security audit
         run: npm audit --audit-level=high
       - name: Production build
