@@ -1,0 +1,42 @@
+name: Shared App Lock Validation
+
+on:
+  push:
+    branches:
+      - feature/shared-app-lock-password
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Type-check React application
+        run: npm run typecheck
+      - name: Build web application
+        run: npm run build
+      - name: Test attendance and reminder logic
+        run: npm run test:attendance
+
+  edge-function:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check App Lock Edge Function
+        run: deno check supabase/functions/app-lock/index.ts

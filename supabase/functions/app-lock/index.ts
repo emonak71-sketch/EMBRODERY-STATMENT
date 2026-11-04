@@ -172,7 +172,7 @@ Deno.serve(async (req: Request) => {
       if (!validatePassword(body.newPassword)) return jsonResponse({ ok: false, error: "New password must be 8–128 characters." }, 400);
       const otpClient = createClient(projectUrl, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
       const { data: otpData, error: otpError } = await otpClient.auth.verifyOtp({ email, token: otp, type: "recovery" });
-      const verifiedUserId = otpData.user?.id || otpData.session?.user?.id;
+      const verifiedUserId = otpData?.user?.id || otpData?.session?.user?.id;
       if (otpError || verifiedUserId !== user.id) return jsonResponse({ ok: false, error: "The Gmail OTP is invalid or expired. Request a new code." }, 400);
       const record = await getLockRecord(admin, user.id);
       if (!record) return jsonResponse({ ok: false, error: "App Lock is not set up for this account. Create it first." }, 409);
