@@ -75,6 +75,14 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
               });
               successfullyNotified=true;
               localStorage.setItem(idempotency,'sent');
+              try {
+                const completed = await dbService.completeAttendanceReminder(attendanceDate,attendanceSession);
+                if (!completed) console.warn('Reminder was displayed but its database delivery state was not completed.');
+              } catch (deliveryError) {
+                // Keep the lease until expiry. The local sent marker prevents this
+                // instance from showing it again; another device can recover later.
+                console.warn('Reminder displayed, but delivery state could not be confirmed.',deliveryError);
+              }
             }
           } finally {
             if(!successfullyNotified) {
