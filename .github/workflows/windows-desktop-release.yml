@@ -21,6 +21,8 @@ jobs:
           workspaces: src-tauri -> target
       - name: Install locked frontend dependencies
         run: npm ci
+      - name: Install Windows Rollup native optional binary
+        run: npm install --no-save --no-package-lock @rollup/rollup-win32-x64-msvc@4.62.3
       - name: Verify attendance rules
         run: npm run test:attendance
       - name: Generate official Windows branding
