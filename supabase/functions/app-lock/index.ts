@@ -35,7 +35,10 @@ function constantTimeEqual(left: Uint8Array, right: Uint8Array): boolean {
 }
 async function derivePasswordHash(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations, hash: "SHA-256" }, key, HASH_BYTES * 8);
+  // Copy to a fresh ArrayBuffer-backed view for the Web Crypto BufferSource type.
+  const saltBuffer = new Uint8Array(salt.byteLength);
+  saltBuffer.set(salt);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: saltBuffer.buffer, iterations, hash: "SHA-256" }, key, HASH_BYTES * 8);
   return new Uint8Array(bits);
 }
 async function createPasswordRecord(password: string) {
