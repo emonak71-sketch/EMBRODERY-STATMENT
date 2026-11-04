@@ -20,7 +20,7 @@ permissions:
 
 concurrency:
   group: windows-desktop-release-${{ inputs.release_tag || github.ref_name }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   publish-windows:
