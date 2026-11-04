@@ -252,20 +252,31 @@ export const dbService = {
   },
   claimAttendanceReminder: async (date:string, attendanceSession:'morning'|'night') => {
     const {data:{session}} = await supabase.auth.getSession();
-    const uid = session?.user?.id;
-    if (!uid) throw new Error('Please sign in again.');
-    const {error} = await supabase.from('WorkerReminderDeliveries')
-      .insert({user_id:uid, attendance_date:date, session:attendanceSession});
-    if (error?.code === '23505') return false;
+    if (!session?.user?.id) throw new Error('Please sign in again.');
+    const {data,error} = await supabase.rpc('claim_worker_attendance_reminder',{
+      p_attendance_date:date,
+      p_session:attendanceSession,
+    });
     if (error) throw handleDbError(error,'claiming attendance reminder');
-    return true;
+    return data === true;
+  },
+  completeAttendanceReminder: async (date:string, attendanceSession:'morning'|'night') => {
+    const {data:{session}} = await supabase.auth.getSession();
+    if (!session?.user?.id) throw new Error('Please sign in again.');
+    const {data,error} = await supabase.rpc('complete_worker_attendance_reminder',{
+      p_attendance_date:date,
+      p_session:attendanceSession,
+    });
+    if (error) throw handleDbError(error,'completing attendance reminder');
+    return data === true;
   },
   releaseAttendanceReminder: async (date:string, attendanceSession:'morning'|'night') => {
     const {data:{session}} = await supabase.auth.getSession();
     const uid = session?.user?.id;
     if (!uid) return;
     const {error} = await supabase.from('WorkerReminderDeliveries')
-      .delete().eq('user_id',uid).eq('attendance_date',date).eq('session',attendanceSession);
+      .delete().eq('user_id',uid).eq('attendance_date',date)
+      .eq('session',attendanceSession).eq('status','pending');
     if(error) console.warn('Unable to release failed notification claim:',error.message);
   },
   getWorkerPayroll: async (month:string) => {
