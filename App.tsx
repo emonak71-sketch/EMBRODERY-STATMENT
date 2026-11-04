@@ -14,6 +14,7 @@ import PartiesList from './components/PartiesList';
 import { BiometricLock } from './components/BiometricLock';
 import WorkerAttendance from './components/WorkerAttendance';
 import SplashScreen from './components/SplashScreen';
+import { bangladeshClock } from './desktop/attendanceCore';
 
 const sendSMSAlert = async (phone: string, message: string) => {
   try {
@@ -105,21 +106,17 @@ const App: React.FC = () => {
       const totalCredit = activeTransactions.reduce((sum, item) => sum + (Number(item.credit) || 0), 0);
       const totalCollected = activeTransactions.reduce((sum, item) => sum + (Number(item.payment) || 0), 0);
       
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth();
-      const currentYear = currentDate.getFullYear();
-      
-      const monthlyCollected = activeTransactions.filter(t => {
-        if (!t.date) return false;
-        const d = new Date(t.date);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-      }).reduce((sum, item) => sum + (Number(item.payment) || 0), 0);
-
-      const monthlyWork = activeTransactions.filter(t => {
-        if (!t.date) return false;
-        const d = new Date(t.date);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-      }).reduce((sum, item) => sum + (Number(item.credit) || 0), 0);
+      // Use the business timezone so every device calculates the same reporting month.
+      const currentMonthKey = bangladeshClock().date.slice(0, 7);
+      const currentMonthTransactions = activeTransactions.filter(
+        item => typeof item.date === 'string' && item.date.slice(0, 7) === currentMonthKey
+      );
+      const monthlyCollected = currentMonthTransactions.reduce(
+        (sum, item) => sum + (Number(item.payment) || 0), 0
+      );
+      const monthlyWork = currentMonthTransactions.reduce(
+        (sum, item) => sum + (Number(item.credit) || 0), 0
+      );
 
       setStats({
         totalCredit,
@@ -189,9 +186,16 @@ const App: React.FC = () => {
       refreshData();
       const channel = supabase
         .channel('db_changes')
-        .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-          refreshData();
-          window.dispatchEvent(new CustomEvent('embroidery:remote-data-changed'));
+        .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+          const table = payload.table;
+          // Business ledger data belongs to the main dashboard state. Worker tables
+          // are refreshed by their own screens to avoid unnecessary database reads.
+          if (['Parties', 'Transactions', 'Products', 'Expenses', 'Sales'].includes(table)) {
+            refreshData();
+          }
+          window.dispatchEvent(new CustomEvent('embroidery:remote-data-changed', {
+            detail: { table, eventType: payload.eventType }
+          }));
         })
         .subscribe();
 
