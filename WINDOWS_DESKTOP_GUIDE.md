@@ -4,7 +4,7 @@ This is a desktop enhancement of the **existing React/Vite/TypeScript + Supabase
 
 ## Current implementation status
 
-The desktop integration is developed in the `feature/tauri2-windows-desktop` branch. Production `main` is unchanged. The new SQL migration has been applied additively to the connected EMBRODERY-STATMENT Supabase project and its owner-scoped RLS policies were checked. The web build and pure attendance tests have passed in Windows CI; native compilation and end-to-end Windows 10/11 verification must be confirmed separately in the current GitHub Actions run.
+The desktop integration is developed in the `feature/tauri2-windows-desktop` branch. Production `main` is unchanged. The two additive SQL migrations `supabase/worker-night-attendance-additive.sql` and `supabase/worker-reminder-lease-migration.sql` have been applied to the connected EMBRODERY-STATMENT Supabase project. Owner-scoped RLS policies and both invoker-security reminder RPCs were inspected. A rollback-only SQL test verified first claim, duplicate blocking, stale pending-claim recovery, marking a delivery as sent, and blocking a second sent claim. The web build and pure attendance tests have passed in Windows CI; native compilation and end-to-end Windows 10/11 verification must be confirmed separately in the current GitHub Actions run.
 
 **Do not publish v1.0.0 until the Windows build, signing, notification navigation, install/uninstall, update and clean-machine tests pass.** Do not publish incomplete features to production.
 
@@ -28,6 +28,15 @@ A session is complete only if every active worker who has joined by that date ha
 The native app emits regular scheduler ticks even when its window is hidden in the tray. The webview reads the authenticated, user-scoped Workers and attendance records from Supabase. Network failure means **retry later**, not “absence.” If the app starts after 11 AM or 11 PM, it reevaluates the currently due sessions. There is no notification when the PC is off or the app has been exited; Windows autostart recovers missed checks on next sign-in.
 
 To avoid duplicate reminders across multiple devices, `WorkerReminderDeliveries` has a unique (user, date, morning/night) key. Claims are attempted only after an incomplete session is verified. The database is checked a second time after the claim, reducing the risk of a reminder racing with another device saving attendance. This claim protocol offers **at-most-once best effort**, not an exactly-once distributed delivery guarantee: if Windows suppresses notifications at the OS level, the app cannot guarantee visible delivery.
+
+## Database migration order
+
+For a fresh Supabase project, run these SQL files in this order using the Supabase SQL Editor:
+
+1. `supabase/worker-night-attendance-additive.sql`
+2. `supabase/worker-reminder-lease-migration.sql`
+
+The first creates the separate night register and reminder-delivery table. The second adds expiring pending claims and the `claim_worker_attendance_reminder` / `complete_worker_attendance_reminder` RPCs. Both are additive; the original morning attendance table is not dropped or rewritten.
 
 ## Building on Windows
 
