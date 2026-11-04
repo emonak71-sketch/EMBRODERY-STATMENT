@@ -56,25 +56,29 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
             continue;
           }
 
-          // Re-check after atomic claim to avoid notifications if another device just saved attendance.
-          const current=attendanceSession==='morning'
-            ? await dbService.getWorkerAttendance(clock.date)
-            : await dbService.getWorkerNightAttendance(clock.date);
-          if (attendanceCompleteness(workers,current,clock.date).complete){
-            await dbService.releaseAttendanceReminder(clock.date,attendanceSession);
-            continue;
-          }
-          const translated=reminderTranslations[languageRef.current];
+          // Re-check after atomic claim to avoid a reminder if another
+          // device saved attendance during the claim race.
+          // On ANY verification or native-notification failure, release the
+          // claim so the next scheduler tick can retry.
+          let successfullyNotified = false;
           try {
-            await desktopInvoke('desktop_notify_attendance',{
-              title:translated.title,
-              body:translated[attendanceSession],
-              session:attendanceSession,
-            });
-            localStorage.setItem(idempotency,'sent');
-          } catch(notifyError) {
-            await dbService.releaseAttendanceReminder(clock.date,attendanceSession);
-            console.warn('Windows attendance notification was not delivered',notifyError);
+            const current=attendanceSession==='morning'
+              ? await dbService.getWorkerAttendance(clock.date)
+              : await dbService.getWorkerNightAttendance(clock.date);
+            if (!attendanceCompleteness(workers,current,clock.date).complete) {
+              const translated=reminderTranslations[languageRef.current];
+              await desktopInvoke('desktop_notify_attendance',{
+                title:translated.title,
+                body:translated[attendanceSession],
+                session:attendanceSession,
+              });
+              successfullyNotified=true;
+              localStorage.setItem(idempotency,'sent');
+            }
+          } finally {
+            if(!successfullyNotified) {
+              await dbService.releaseAttendanceReminder(clock.date,attendanceSession);
+            }
           }
         }
       } catch (error) {
