@@ -46,9 +46,42 @@ if ($LASTEXITCODE -ne 0 -or $repoName.Trim() -ne $repo) {
   throw "The signed-in GitHub account cannot access $repo."
 }
 
-if (-not (Test-Path $keyPath) -and -not (Test-Path $publicKeyPath)) {
+# Never rotate a published updater key accidentally. GitHub cannot reveal private
+# secrets, so compare the readable public key and refuse to replace an unknown key.
+$remotePublic = (& $ghCommand.Source variable get EMBROIDERY_UPDATE_PUBLIC_KEY --repo $repo 2>$null) -join "`n"
+$remotePublicExists = ($LASTEXITCODE -eq 0) -and -not [string]::IsNullOrWhiteSpace($remotePublic)
+$existingSecrets = & $ghCommand.Source secret list --repo $repo
+if ($LASTEXITCODE -ne 0) { throw 'Could not inspect existing GitHub Actions secret names.' }
+$remotePrivateExists = $existingSecrets -match 'TAURI_SIGNING_PRIVATE_KEY'
+$remotePasswordExists = $existingSecrets -match 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD'
+
+$localPrivateExists = Test-Path $keyPath
+$localPublicExists = Test-Path $publicKeyPath
+if ($localPrivateExists -xor $localPublicExists) {
+  throw 'Only one local signing-key file exists. Restore both original key files before continuing.'
+}
+$localKeyExists = $localPrivateExists -and $localPublicExists
+
+if (-not $localKeyExists -and ($remotePublicExists -or $remotePrivateExists -or $remotePasswordExists)) {
+  throw 'A signing key is already configured in GitHub, but its matching local key is missing. I stopped to protect existing installations. Restore the original .key and .pub files; do not generate a replacement key.'
+}
+if ($remotePrivateExists -xor $remotePasswordExists) {
+  throw 'GitHub has only part of the updater signing secrets configured. Resolve the existing configuration before continuing.'
+}
+if ($localKeyExists -and $remotePublicExists) {
+  $localPublic = [System.IO.File]::ReadAllText($publicKeyPath).Trim()
+  if ($localPublic -ne $remotePublic.Trim()) {
+    throw 'The local public key does not match the key already configured in GitHub. I stopped to prevent breaking updates for existing installations.'
+  }
+}
+if ($localKeyExists -and -not $remotePublicExists -and ($remotePrivateExists -or $remotePasswordExists)) {
+  throw 'GitHub already has updater secrets but no readable public-key variable. I stopped rather than overwrite an unknown signing setup.'
+}
+
+if (-not $localKeyExists) {
   New-Item -ItemType Directory -Path $keyDirectory -Force | Out-Null
   Write-Host ''
+  Write-Host 'No previous updater key was found locally or in GitHub.'
   Write-Host 'Create a strong signing-key passphrase and store it in your password manager.'
   Write-Host 'You will be asked for the same passphrase once more before uploading the secret.'
   & npx --yes @tauri-apps/cli@2 signer generate -w $keyPath
