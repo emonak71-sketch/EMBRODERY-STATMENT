@@ -46,10 +46,19 @@ if ($LASTEXITCODE -ne 0 -or $repoName.Trim() -ne $repo) {
   throw "The signed-in GitHub account cannot access $repo."
 }
 
-# Never rotate a published updater key accidentally. GitHub cannot reveal private
-# secrets, so compare the readable public key and refuse to replace an unknown key.
-$remotePublic = (& $ghCommand.Source variable get EMBROIDERY_UPDATE_PUBLIC_KEY --repo $repo 2>$null) -join "`n"
-$remotePublicExists = ($LASTEXITCODE -eq 0) -and -not [string]::IsNullOrWhiteSpace($remotePublic)
+# Read repository variables and secret NAMES without treating an absent first-run
+# public key variable as a fatal error. GitHub CLI returns [] when none exist.
+$variableListJson = & $ghCommand.Source variable list --repo $repo --json name,value
+if ($LASTEXITCODE -ne 0) { throw 'Could not inspect GitHub Actions repository variables.' }
+try {
+  $variableList = @($variableListJson | ConvertFrom-Json)
+} catch {
+  throw 'GitHub Actions returned an unreadable repository-variable list.'
+}
+$publicVariable = $variableList | Where-Object { $_.name -eq 'EMBROIDERY_UPDATE_PUBLIC_KEY' } | Select-Object -First 1
+$remotePublicExists = ($null -ne $publicVariable) -and -not [string]::IsNullOrWhiteSpace([string]$publicVariable.value)
+$remotePublic = if ($remotePublicExists) { [string]$publicVariable.value } else { '' }
+
 $existingSecrets = & $ghCommand.Source secret list --repo $repo
 if ($LASTEXITCODE -ne 0) { throw 'Could not inspect existing GitHub Actions secret names.' }
 $remotePrivateExists = $existingSecrets -match 'TAURI_SIGNING_PRIVATE_KEY'
@@ -99,6 +108,14 @@ if (-not $publicKey.StartsWith('untrusted comment:') -or -not $publicKey.Contain
 Write-Host 'Saving the public key as a GitHub Actions repository variable...'
 & $ghCommand.Source variable set EMBROIDERY_UPDATE_PUBLIC_KEY --repo $repo --body $publicKey
 if ($LASTEXITCODE -ne 0) { throw 'Could not set EMBROIDERY_UPDATE_PUBLIC_KEY.' }
+
+$verifyVariableListJson = & $ghCommand.Source variable list --repo $repo --json name,value
+if ($LASTEXITCODE -ne 0) { throw 'Could not re-read GitHub Actions repository variables for verification.' }
+$verifyVariableList = @($verifyVariableListJson | ConvertFrom-Json)
+$verifyPublicVariable = $verifyVariableList | Where-Object { $_.name -eq 'EMBROIDERY_UPDATE_PUBLIC_KEY' } | Select-Object -First 1
+if (($null -eq $verifyPublicVariable) -or ([string]$verifyPublicVariable.value).Trim() -ne $publicKey) {
+  throw 'GitHub Actions public-key variable verification failed.'
+}
 
 function Set-GitHubSecretFromText([string]$Name, [string]$Value) {
   $start = New-Object System.Diagnostics.ProcessStartInfo
