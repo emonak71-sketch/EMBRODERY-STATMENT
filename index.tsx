@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { LanguageProvider } from './contexts/LanguageContext';
 import DesktopHost from './desktop/DesktopHost';
+import OnlineOnlyGate from './OnlineOnlyGate';
 
 console.log('Mounting Embrodery Statement App...');
 
@@ -14,6 +15,6 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <LanguageProvider><DesktopHost><App /></DesktopHost></LanguageProvider>
+    <OnlineOnlyGate><LanguageProvider><DesktopHost><App /></DesktopHost></LanguageProvider></OnlineOnlyGate>
   </React.StrictMode>
 );
