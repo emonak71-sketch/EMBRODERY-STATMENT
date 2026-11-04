@@ -39,4 +39,4 @@ jobs:
         with:
           deno-version: v2.x
       - name: Type-check App Lock Edge Function
-        run: deno check supabase/functions/app-lock/index.ts
+        run: deno check --node-modules-dir=none supabase/functions/app-lock/index.ts
