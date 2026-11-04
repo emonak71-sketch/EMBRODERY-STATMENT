@@ -2,7 +2,7 @@ name: Windows Desktop - Signed Release
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]*.[0-9]*.[0-9]*'
 permissions:
   contents: write
 jobs:
@@ -23,6 +23,8 @@ jobs:
         run: npm ci
       - name: Install Windows Rollup native optional binary
         run: npm install --no-save --no-package-lock @rollup/rollup-win32-x64-msvc@4.62.3
+      - name: Type-check the complete React and TypeScript application
+        run: npm run typecheck
       - name: Verify attendance rules
         run: npm run test:attendance
       - name: Generate official Windows branding
