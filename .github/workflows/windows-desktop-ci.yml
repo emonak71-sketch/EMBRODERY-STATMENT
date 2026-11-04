@@ -29,6 +29,7 @@ jobs:
         run: |
           $scripts = @(
             'scripts/generate-tauri-signing-key.ps1',
+            'scripts/build-windows-desktop-signed.ps1',
             'scripts/configure-github-updater-secrets.ps1',
             'scripts/windows-installer-smoke.ps1'
           )
@@ -51,6 +52,7 @@ jobs:
         run: |
           node --check scripts/bump-version.mjs
           node --check scripts/prepare-signed-desktop-release.mjs
+          node --check scripts/prepare-local-signed-build.mjs
       - name: Type-check the complete React and TypeScript application
         run: npm run typecheck
       - name: Validate existing web/PWA production build
