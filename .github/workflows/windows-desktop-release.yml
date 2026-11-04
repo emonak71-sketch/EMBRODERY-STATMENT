@@ -148,3 +148,5 @@ jobs:
           )
           gh @arguments
           if ($LASTEXITCODE -ne 0) { throw 'GitHub Release creation failed.' }
+
+# Signing credentials are provisioned by the one-time local updater setup.
