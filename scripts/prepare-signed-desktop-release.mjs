@@ -19,8 +19,10 @@ if (!/^v\d+\.\d+\.\d+$/.test(tag) || tag !== 'v' + version) {
   throw new Error('Release tag ' + tag + ' does not match app version v' + version);
 }
 const packageVersion = JSON.parse(fs.readFileSync('package.json','utf8')).version;
-if (packageVersion !== version) {
-  throw new Error('package.json and src-tauri/tauri.conf.json versions differ');
+const cargoToml = fs.readFileSync('src-tauri/Cargo.toml','utf8');
+const cargoVersion = cargoToml.match(/^version\\s*=\\s*"([^"]+)"/m)?.[1];
+if (packageVersion !== version || cargoVersion !== version) {
+  throw new Error('package.json, src-tauri/Cargo.toml and src-tauri/tauri.conf.json versions must match');
 }
 config.plugins.updater.pubkey = publicKey;
 fs.writeFileSync(configFile,JSON.stringify(config,null,2)+'\n');
