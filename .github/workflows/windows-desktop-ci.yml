@@ -1,0 +1,73 @@
+name: Windows Desktop - Source and Native Code Checks
+on:
+  # Run one Windows native build for each update to the desktop feature branch.
+  push:
+    branches:
+      - feature/tauri2-windows-desktop
+  workflow_dispatch:
+concurrency:
+  group: windows-desktop-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  windows-build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Set up Deno for Supabase Edge Function checks
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - name: Validate PowerShell setup and installer scripts
+        shell: pwsh
+        run: |
+          $scripts = @(
+            'scripts/generate-tauri-signing-key.ps1',
+            'scripts/build-windows-desktop-signed.ps1',
+            'scripts/configure-github-updater-secrets.ps1',
+            'scripts/windows-installer-smoke.ps1'
+          )
+          foreach ($script in $scripts) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Join-Path $PWD $script), [ref]$tokens, [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) {
+              throw "PowerShell syntax error in $($script): $($errors -join '; ')"
+            }
+            Write-Host "PASS: PowerShell syntax $script"
+          }
+      - name: Install locked frontend dependencies
+        run: npm ci
+      - name: Install Windows Rollup native optional binary
+        run: npm install --no-save --no-package-lock @rollup/rollup-win32-x64-msvc@4.62.3
+      - name: Validate Node release helper syntax
+        run: |
+          node --check scripts/bump-version.mjs
+          node --check scripts/prepare-signed-desktop-release.mjs
+          node --check scripts/prepare-local-signed-build.mjs
+      - name: Type-check the React and TypeScript application
+        run: npm run typecheck
+      - name: Type-check the Supabase Edge Function in its Deno runtime
+        run: deno check --no-lock supabase/functions/send-worker-sms/index.ts
+      - name: Validate existing web/PWA production build
+        run: npm run build
+      - name: Test attendance completeness and Dhaka schedule
+        run: npm run test:attendance
+      - name: Generate Windows application icons from the official logo
+        run: npm run desktop:icons
+      - name: Validate Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+      - name: Compile Tauri 2 native Windows code without producing an EXE or installer
+        run: cargo check --manifest-path src-tauri/Cargo.toml

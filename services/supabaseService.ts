@@ -67,14 +67,19 @@ export const dbService = {
       return { success: false, message: 'এই Gmail দিয়ে ইতোমধ্যে একটি অ্যাকাউন্ট আছে। লগ-ইন করুন অথবা Forgot Password ব্যবহার করুন।' };
     }
 
-    const requiresVerification = !data.session;
+    // A session returned directly from signUp means email confirmation is
+    // disabled (or an auto-confirm trigger is still active). Never silently
+    // bypass the product's required eight-digit Gmail verification step.
+    if (data.session) {
+      await supabase.auth.signOut({ scope: 'local' });
+      return { success: false, message: 'EMAIL_CONFIRMATION_REQUIRED' };
+    }
+
     return {
       success: true,
-      requiresVerification,
+      requiresVerification: true,
       user: { id: data.user.id, email: data.user.email!, business_name: businessName },
-      message: requiresVerification
-        ? 'আপনার Gmail-এ ৮ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে। অ্যাকাউন্ট চালু করতে কোডটি লিখুন।'
-        : 'অ্যাকাউন্ট তৈরি ও ইমেইল যাচাই সফল হয়েছে।'
+      message: 'আপনার Gmail-এ ৮ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে। অ্যাকাউন্ট চালু করতে কোডটি লিখুন।'
     };
   },
 
@@ -229,6 +234,55 @@ export const dbService = {
     const payload=rows.map(r=>({...r,user_id:uid,updated_at:new Date().toISOString()}));
     const {data,error}=await supabase.from('WorkerAttendance').upsert(payload,{onConflict:'user_id,worker_id,attendance_date'}).select();
     if(error) throw handleDbError(error,'saving attendance'); return data||[];
+  },
+  getWorkerNightAttendance: async (date:string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.from('WorkerNightAttendance')
+      .select('*').eq('user_id', uid).eq('attendance_date', date);
+    if (error) throw handleDbError(error, 'loading night attendance');
+    return data || [];
+  },
+  saveWorkerNightAttendance: async (rows:Array<{worker_id:string;attendance_date:string;status:string;check_in?:string|null;check_out?:string|null;note?:string}>) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const updated_at = new Date().toISOString();
+    const payload = rows.map(row => ({...row, user_id:uid, updated_at}));
+    const { data, error } = await supabase.from('WorkerNightAttendance')
+      .upsert(payload, {onConflict:'user_id,worker_id,attendance_date'}).select();
+    if (error) throw handleDbError(error, 'saving night attendance');
+    return data || [];
+  },
+  claimAttendanceReminder: async (date:string, attendanceSession:'morning'|'night') => {
+    const {data:{session}} = await supabase.auth.getSession();
+    if (!session?.user?.id) throw new Error('Please sign in again.');
+    const {data,error} = await supabase.rpc('claim_worker_attendance_reminder',{
+      p_attendance_date:date,
+      p_session:attendanceSession,
+    });
+    if (error) throw handleDbError(error,'claiming attendance reminder');
+    return data === true;
+  },
+  completeAttendanceReminder: async (date:string, attendanceSession:'morning'|'night') => {
+    const {data:{session}} = await supabase.auth.getSession();
+    if (!session?.user?.id) throw new Error('Please sign in again.');
+    const {data,error} = await supabase.rpc('complete_worker_attendance_reminder',{
+      p_attendance_date:date,
+      p_session:attendanceSession,
+    });
+    if (error) throw handleDbError(error,'completing attendance reminder');
+    return data === true;
+  },
+  releaseAttendanceReminder: async (date:string, attendanceSession:'morning'|'night') => {
+    const {data:{session}} = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return;
+    const {error} = await supabase.from('WorkerReminderDeliveries')
+      .delete().eq('user_id',uid).eq('attendance_date',date)
+      .eq('session',attendanceSession).eq('status','pending');
+    if(error) console.warn('Unable to release failed notification claim:',error.message);
   },
   getWorkerPayroll: async (month:string) => {
     const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;

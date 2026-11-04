@@ -1,12 +1,20 @@
 {
   "name": "embrodery-statement",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "typecheck": "tsc --noEmit",
+    "version:bump": "node scripts/bump-version.mjs",
+    "preview": "vite preview",
+    "test:attendance": "node desktop/attendanceCore.test.mjs",
+    "desktop:icons": "npx --yes @tauri-apps/cli@2 icon public/embroidery-statement-logo.svg --output src-tauri/icons",
+    "desktop:dev": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 dev",
+    "desktop:build": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 build",
+    "desktop:build:signed": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-windows-desktop-signed.ps1",
+    "desktop:check": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 build --no-bundle"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",

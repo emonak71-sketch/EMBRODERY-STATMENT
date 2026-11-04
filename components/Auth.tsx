@@ -27,6 +27,12 @@ const Auth: React.FC<AuthProps> = ({
   const tr = (bangla: string, english: string) => bn ? bangla : english;
   // The backend can return Bengali feedback even while the UI is set to English.
   const localizedMessage = (message: string | undefined, bangla: string, english: string) => {
+    if (message === 'EMAIL_CONFIRMATION_REQUIRED') {
+      return tr(
+        'নতুন অ্যাকাউন্টের ৮ সংখ্যার OTP চালু করতে Supabase Auth-এ Confirm Email চালু করুন এবং Email OTP Length 8 সেট করুন।',
+        'Email confirmation is disabled. Enable Confirm Email and set Email OTP Length to 8 in Supabase Auth settings.'
+      );
+    }
     if (!message?.trim()) return tr(bangla, english);
     const messageIsBengali = /[\u0980-\u09FF]/.test(message);
     return messageIsBengali === bn ? message : tr(bangla, english);

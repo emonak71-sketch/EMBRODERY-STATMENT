@@ -47,6 +47,27 @@ const isMobileDevice = () => {
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const [attendanceRequest,setAttendanceRequest] = useState<{session:'morning'|'night';nonce:number}|null>(null);
+
+  useEffect(() => {
+    const onDesktopNavigate = (event:Event) => {
+      const requested=(event as CustomEvent<{tab:'workers'|'settings';session?:'morning'|'night'}>).detail;
+      if(!requested) return;
+      if(requested.tab==='workers') {
+        setAttendanceRequest({session:requested.session||'morning',nonce:Date.now()});
+        setActiveTab('workers');
+      } else if(requested.tab==='settings') {
+        setActiveTab('settings');
+      }
+    };
+    window.addEventListener('embroidery:desktop-navigation',onDesktopNavigate);
+    return ()=>window.removeEventListener('embroidery:desktop-navigation',onDesktopNavigate);
+  }, []);
+
+  const selectSidebarTab=(tab:TabType)=>{
+    if(tab==='workers') setAttendanceRequest(null);
+    setActiveTab(tab);
+  };
   const [parties, setParties] = useState<Party[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
@@ -170,6 +191,7 @@ const App: React.FC = () => {
         .channel('db_changes')
         .on('postgres_changes', { event: '*', schema: 'public' }, () => {
           refreshData();
+          window.dispatchEvent(new CustomEvent('embroidery:remote-data-changed'));
         })
         .subscribe();
 
@@ -388,7 +410,7 @@ const App: React.FC = () => {
     <div className="app-shell flex h-[100dvh] min-h-[100svh] w-full max-w-full overflow-hidden">
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={selectSidebarTab} 
         parties={parties}
         selectedParty={selectedParty}
         setSelectedParty={setSelectedParty}
@@ -403,7 +425,7 @@ const App: React.FC = () => {
       />
 
       <main className="app-main min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 no-print">
-        {activeTab === 'workers' && <WorkerAttendance userId={user.id} companyName={user.business_name} />}
+        {activeTab === 'workers' && <WorkerAttendance userId={user.id} companyName={user.business_name} requestedAttendance={attendanceRequest} />}
         {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} />}
         {activeTab === 'parties' && <PartiesList parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
         {activeTab === 'ledger' && (

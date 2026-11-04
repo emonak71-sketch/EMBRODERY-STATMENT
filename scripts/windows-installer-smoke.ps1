@@ -24,6 +24,13 @@ $installDirectory = Split-Path -Parent $uninstallerPath
 $appExe = Join-Path $installDirectory 'embroidery-statement.exe'
 if (-not (Test-Path $appExe)) { throw "Installed application EXE not found: $appExe" }
 
+# Tauri's Windows app_config_dir is under %APPDATA%/<application identifier>.
+# The installer/uninstaller must leave this user data intact.
+$appConfigDirectory = Join-Path $env:APPDATA 'com.embroidery.statement'
+New-Item -ItemType Directory -Force -Path $appConfigDirectory | Out-Null
+$preservationFile = Join-Path $appConfigDirectory 'installer-data-preservation-smoke.txt'
+'keep-existing-user-data' | Set-Content -Path $preservationFile -Encoding UTF8
+
 $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Embroidery Statement.lnk'
 if (-not (Test-Path $desktopShortcut)) { throw 'Desktop shortcut was not created by the silent installer.' }
 $startMenuRoot = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
@@ -37,13 +44,34 @@ try {
   $first.Refresh()
   if ($first.HasExited) { throw 'The installed desktop process exited unexpectedly during startup.' }
 
-  $runKey = Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -ErrorAction SilentlyContinue
-  $autostartEntry = if ($runKey) {
-    $runKey.PSObject.Properties | Where-Object {
-      $_.Name -notmatch '^PS' -and [string]$_.Value -match [regex]::Escape($appExe)
-    } | Select-Object -First 1
+  # Tauri's Windows autostart backend uses Dynamic mode: on elevated CI
+  # runners it may register HKLM; on normal users' PCs it falls back to HKCU.
+  $runPaths = @(
+    'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run',
+    'HKLM:\Software\Microsoft\Windows\CurrentVersion\Run'
+  )
+  $autostartEntry = $null
+  $autostartHive = $null
+  foreach ($runPath in $runPaths) {
+    $runKey = Get-ItemProperty -Path $runPath -ErrorAction SilentlyContinue
+    if ($runKey) {
+      $candidate = $runKey.PSObject.Properties | Where-Object {
+        $_.Name -eq 'Embroidery Statement' -and [string]$_.Value -match [regex]::Escape($appExe)
+      } | Select-Object -First 1
+      if ($candidate) { $autostartEntry = $candidate; $autostartHive = $runPath; break }
+    }
   }
-  if (-not $autostartEntry) { throw 'First installed launch did not register Windows sign-in autostart.' }
+  if (-not $autostartEntry) {
+    $diagnostics = foreach ($runPath in $runPaths) {
+      $runKey = Get-ItemProperty -Path $runPath -ErrorAction SilentlyContinue
+      if ($runKey) {
+        $runKey.PSObject.Properties | Where-Object { $_.Name -notmatch '^PS' } |
+          ForEach-Object { "$($_.Name)=$($_.Value)" }
+      }
+    }
+    throw "First installed launch did not register Windows sign-in autostart in HKCU or HKLM. Registry values: $($diagnostics -join '; ')"
+  }
+  Write-Host "PASS: Windows sign-in autostart registered in $autostartHive ($($autostartEntry.Name))."
 
   Write-Host 'Sending WM_CLOSE to verify close-to-tray behavior...'
   Add-Type -Namespace EmbroideryWin32 -Name NativeMethods -MemberDefinition @'
@@ -81,4 +109,14 @@ finally {
   }
 }
 if (Test-Path $appExe) { throw 'Application files remain after uninstall.' }
-Write-Host 'PASS: silent installation, desktop shortcut, app startup, single-instance and uninstall.'
+if (Test-Path $desktopShortcut) { throw 'Desktop shortcut remains after uninstall.' }
+if ($startMenuShortcut -and (Test-Path $startMenuShortcut.FullName)) { throw 'Start Menu shortcut remains after uninstall.' }
+if (-not (Test-Path $preservationFile)) { throw 'User application data was deleted during uninstall.' }
+Remove-Item -Path $preservationFile -Force
+foreach ($runPath in $runPaths) {
+  $runKey = Get-ItemProperty -Path $runPath -ErrorAction SilentlyContinue
+  if ($runKey -and $runKey.PSObject.Properties['Embroidery Statement']) {
+    throw "Autostart registry entry was left behind after uninstall: $runPath"
+  }
+}
+Write-Host 'PASS: silent installation, desktop/Start Menu shortcuts, autostart, close-to-tray, single-instance, uninstall and autostart cleanup.'

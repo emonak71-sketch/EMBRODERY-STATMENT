@@ -891,3 +891,111 @@ body {
   border-color: #c8edff !important;
 }
 .auth-panel .border-t { border-color: rgba(71,85,105,.18) !important; }
+
+
+/* Motion-only premium interaction layer.
+   Existing layout, spacing, colours, typography and application behaviour stay unchanged. */
+.app-main > div {
+  animation: premium-page-arrive 460ms cubic-bezier(.22,1,.36,1) both;
+  transform-origin: top center;
+}
+@keyframes premium-page-arrive {
+  0% { opacity: 0; transform: translate3d(0,12px,0) scale(.997); filter: blur(1.5px); }
+  72% { opacity: 1; transform: translate3d(0,-1px,0) scale(1); filter: blur(0); }
+  100% { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); }
+}
+
+/* Existing dashboard cards: entrance timing, hover lift and a moving light sweep. */
+.dashboard-stat-card {
+  animation: premium-stat-arrive 560ms cubic-bezier(.22,1,.36,1) both;
+  will-change: transform;
+}
+@keyframes premium-stat-arrive {
+  from { opacity: 0; transform: translate3d(0,15px,0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0,0,0) scale(1); }
+}
+.dashboard-stat-card::after {
+  transition: transform 720ms cubic-bezier(.22,1,.36,1), opacity 420ms ease;
+}
+@media (hover:hover) and (pointer:fine) {
+  .dashboard-stat-card:hover::after {
+    transform: translateX(-185%) rotate(28deg);
+    opacity: .9;
+  }
+  .dashboard-stat-card:hover .text-xl {
+    transition: color 220ms ease, transform 260ms cubic-bezier(.22,1,.36,1);
+    transform: translateX(2px);
+  }
+}
+
+/* Sidebar: retain the exact navigation structure; animate only its existing items. */
+.app-sidebar nav button {
+  position: relative;
+  transform-origin: center left;
+}
+.app-sidebar nav button svg {
+  transition: transform 260ms cubic-bezier(.22,1,.36,1), filter 260ms ease;
+}
+@media (hover:hover) and (pointer:fine) {
+  .app-sidebar nav button:hover svg {
+    transform: translateX(2px) scale(1.045);
+    filter: drop-shadow(0 2px 4px rgba(14,165,233,.18));
+  }
+}
+.app-sidebar nav button[class~="bg-primary-600"] {
+  animation: premium-nav-select 320ms cubic-bezier(.22,1,.36,1) both;
+}
+.app-sidebar nav button[class~="bg-primary-600"] svg {
+  animation: premium-nav-icon 360ms cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes premium-nav-select {
+  from { transform: translateX(-3px) scale(.985); }
+  to { transform: translateX(0) scale(1); }
+}
+@keyframes premium-nav-icon {
+  0% { transform: scale(.86); }
+  65% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+/* Tactile click feedback across the app without changing button dimensions or colours. */
+.app-main button:active:not(:disabled),
+.app-sidebar button:active:not(:disabled) {
+  transform: scale(.965);
+  filter: brightness(.97) saturate(1.08);
+  box-shadow: 0 0 0 3px rgba(14,165,233,.10);
+}
+.app-main button:active:not(:disabled) svg,
+.app-sidebar button:active:not(:disabled) svg {
+  transform: scale(.9);
+}
+.app-main button:disabled,
+.app-sidebar button:disabled {
+  cursor: not-allowed;
+}
+
+/* Dialogs and popovers keep their existing markup; make their entrance feel smoother. */
+.app-main [class~="animate-in"],
+.app-sidebar [class~="animate-in"] {
+  animation-timing-function: cubic-bezier(.22,1,.36,1);
+}
+
+/* Keep motion comfortable and avoid animation overhead on small touch devices. */
+@media (max-width: 640px) {
+  .dashboard-stat-card { animation-duration: 420ms; }
+  .app-main > div { animation-duration: 380ms; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-main > div,
+  .dashboard-stat-card,
+  .app-sidebar nav button[class~="bg-primary-600"],
+  .app-sidebar nav button[class~="bg-primary-600"] svg {
+    animation: none !important;
+  }
+  .dashboard-stat-card::after,
+  .app-sidebar nav button svg,
+  .app-main button,
+  .app-sidebar button {
+    transition-duration: .01ms !important;
+  }
+}
