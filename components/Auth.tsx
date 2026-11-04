@@ -31,8 +31,8 @@ const Auth: React.FC<AuthProps> = ({
     const messageIsBengali = /[\u0980-\u09FF]/.test(message);
     return messageIsBengali === bn ? message : tr(bangla, english);
   };
-  // Supabase email OTP length is configurable from 6 to 10 digits.
-  const validOtp = (code: string) => /^\d{6,10}$/.test(code);
+  // Email OTP is configured as exactly eight digits for this application.
+  const validOtp = (code: string) => /^\d{8}$/.test(code);
 
   const [mode, setMode] = useState<AuthMode>(isResetting ? 'reset' : 'login');
   const [email, setEmail] = useState(() => localStorage.getItem('saved_email') || '');
@@ -92,7 +92,7 @@ const Auth: React.FC<AuthProps> = ({
         else if (result.requiresVerification !== false) {
           localStorage.setItem('saved_email', cleanEmail);
           switchMode('signup-verify');
-          setInfoMsg(localizedMessage(result.message, 'আপনার Gmail-এ যাচাইকরণ কোড পাঠানো হয়েছে। অ্যাকাউন্ট চালু করতে কোডটি লিখুন।', 'A verification code has been sent to your email. Enter it to activate your account.'));
+          setInfoMsg(localizedMessage(result.message, 'আপনার Gmail-এ ৮ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে। অ্যাকাউন্ট চালু করতে কোডটি লিখুন।', 'An 8-digit verification code has been sent to your email. Enter it to activate your account.'));
         } else {
           localStorage.setItem('saved_email', cleanEmail);
           setInfoMsg(localizedMessage(result.message, 'অ্যাকাউন্ট তৈরি হয়েছে।', 'Your account has been created.'));
@@ -100,7 +100,7 @@ const Auth: React.FC<AuthProps> = ({
       } else if (mode === 'signup-verify') {
         const code = otp.replace(/\D/g, '');
         if (!validOtp(code)) {
-          setErrorMsg(tr('ইমেইলে পাওয়া সম্পূর্ণ কোডটি লিখুন (৬–১০ সংখ্যা)।', 'Enter the complete code from your email (6–10 digits).'));
+          setErrorMsg(tr('ইমেইলে পাওয়া সঠিক ৮ সংখ্যার কোডটি লিখুন।', 'Enter the exact 8-digit code sent to your email.'));
           return;
         }
         const result = await onVerifySignupCode(cleanEmail, code);
@@ -112,12 +112,12 @@ const Auth: React.FC<AuthProps> = ({
         else {
           setMode('verify');
           setOtp('');
-          setInfoMsg(localizedMessage(result.message, 'আপনার ইমেইলে যাচাইকরণ কোড পাঠানো হয়েছে।', 'A verification code has been sent to your email.'));
+          setInfoMsg(localizedMessage(result.message, 'আপনার ইমেইলে ৮ সংখ্যার যাচাইকরণ কোড পাঠানো হয়েছে।', 'An 8-digit verification code has been sent to your email.'));
         }
       } else if (mode === 'verify') {
         const code = otp.replace(/\D/g, '');
         if (!validOtp(code)) {
-          setErrorMsg(tr('ইমেইলে পাওয়া সম্পূর্ণ কোডটি লিখুন (৬–১০ সংখ্যা)।', 'Enter the complete code from your email (6–10 digits).'));
+          setErrorMsg(tr('ইমেইলে পাওয়া সঠিক ৮ সংখ্যার কোডটি লিখুন।', 'Enter the exact 8-digit code sent to your email.'));
           return;
         }
         const result = await onVerifyResetCode(cleanEmail, code);
@@ -158,7 +158,7 @@ const Auth: React.FC<AuthProps> = ({
         ? await onResendSignupCode(cleanEmail)
         : await onResetPassword(cleanEmail);
       if (!result.success) setErrorMsg(localizedMessage(result.message, 'নতুন কোড পাঠানো যায়নি।', 'Could not send a new code.'));
-      else setInfoMsg(tr('নতুন যাচাইকরণ কোড পাঠানোর অনুরোধ সফল হয়েছে।', 'A new verification code has been requested.'));
+      else setInfoMsg(tr('নতুন ৮ সংখ্যার যাচাইকরণ কোড পাঠানোর অনুরোধ সফল হয়েছে।', 'A new 8-digit verification code has been requested.'));
     } catch {
       setErrorMsg(tr('কোড পুনরায় পাঠানো যায়নি। আবার চেষ্টা করুন।', 'Could not resend the code. Please try again.'));
     } finally {
@@ -177,16 +177,16 @@ const Auth: React.FC<AuthProps> = ({
   const subtitle: Record<AuthMode, string> = {
     login: tr('আপনার Embroidery ব্যবসার হিসাব নিরাপদে পরিচালনা করুন।', 'Sign in to manage your embroidery business workspace.'),
     signup: tr('আপনার ব্যবসার জন্য নিরাপদ Workspace তৈরি করুন।', 'Create a secure workspace for your business.'),
-    'signup-verify': tr('আপনার Gmail-এ পাঠানো যাচাইকরণ কোড লিখুন।', 'Enter the verification code sent to your email.'),
-    forgot: tr('আপনার অ্যাকাউন্টের ইমেইল দিন। আমরা যাচাইকরণ কোড পাঠাব।', 'Enter your account email. We will send a verification code.'),
-    verify: tr('ইমেইলে পাওয়া সম্পূর্ণ কোডটি এখানে লিখুন।', 'Enter the complete code sent to your email.'),
+    'signup-verify': tr('আপনার Gmail-এ পাঠানো ৮ সংখ্যার যাচাইকরণ কোড লিখুন।', 'Enter the 8-digit verification code sent to your email.'),
+    forgot: tr('আপনার অ্যাকাউন্টের ইমেইল দিন। আমরা ৮ সংখ্যার যাচাইকরণ কোড পাঠাব।', 'Enter your account email. We will send an 8-digit verification code.'),
+    verify: tr('ইমেইলে পাওয়া ৮ সংখ্যার কোডটি এখানে লিখুন।', 'Enter the 8-digit code sent to your email.'),
     reset: tr('যাচাইকরণ সম্পন্ন হয়েছে। এখন নতুন পাসওয়ার্ড তৈরি করুন।', 'Verification complete. Create a new password.')
   };
   const buttonText: Record<AuthMode, string> = {
     login: tr('নিরাপদে লগ-ইন করুন', 'Sign in securely'),
     signup: tr('অ্যাকাউন্ট তৈরি করুন', 'Create account'),
     'signup-verify': tr('ইমেইল যাচাই করুন', 'Verify email'),
-    forgot: tr('যাচাইকরণ কোড পাঠান', 'Send verification code'),
+    forgot: tr('৮ সংখ্যার কোড পাঠান', 'Send 8-digit code'),
     verify: tr('কোড যাচাই করুন', 'Verify code'),
     reset: tr('নতুন পাসওয়ার্ড সংরক্ষণ করুন', 'Save new password')
   };
@@ -253,8 +253,8 @@ const Auth: React.FC<AuthProps> = ({
 
             {(mode === 'verify' || mode === 'signup-verify') && (
               <label className="auth-field block space-y-2">
-                <span><KeyRound className="inline h-4 w-4" /> {tr('ইমেইল যাচাইকরণ কোড', 'Email verification code')}</span>
-                <input type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6,10}" maxLength={10} required value={otp} onChange={event => setOtp(event.target.value.replace(/\D/g, '').slice(0, 10))} className="auth-input auth-otp-input text-center text-2xl font-black" placeholder="••••••••" />
+                <span><KeyRound className="inline h-4 w-4" /> {tr('৮ সংখ্যার যাচাইকরণ কোড', '8-digit verification code')}</span>
+                <input type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{8}" maxLength={8} required value={otp} onChange={event => setOtp(event.target.value.replace(/\D/g, '').slice(0, 8))} className="auth-input auth-otp-input text-center text-2xl font-black" placeholder="••••••••" />
               </label>
             )}
 
