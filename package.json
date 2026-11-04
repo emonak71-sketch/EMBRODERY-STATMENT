@@ -13,6 +13,7 @@
     "desktop:icons": "npx --yes @tauri-apps/cli@2 icon public/embroidery-statement-logo.svg --output src-tauri/icons",
     "desktop:dev": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 dev",
     "desktop:build": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 build",
+    "desktop:build:signed": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-windows-desktop-signed.ps1",
     "desktop:check": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 build --no-bundle"
   },
   "dependencies": {
