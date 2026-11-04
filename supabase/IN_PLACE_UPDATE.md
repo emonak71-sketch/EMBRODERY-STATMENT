@@ -11,8 +11,9 @@ The application accepts **exactly eight digits** for both new-account verificati
 3. Open **Authentication → Email Templates → Confirm signup**. Set the subject to **Your Embroidery Statement verification code** and use the complete contents of [confirmation-email.html](./templates/confirmation-email.html). Keep `{{ .Token }}` in the template.
 4. Open **Authentication → Email Templates → Reset Password**. Set the subject to **Your Embroidery Statement password reset code** and use [recovery-email.html](./templates/recovery-email.html). Keep `{{ .Token }}` in the template; the app verifies it with `verifyOtp({ type: 'recovery' })`.
 5. Configure a production SMTP provider under **Authentication → SMTP Settings** so verification and recovery messages reliably reach Gmail inboxes. Supabase's default mail service is rate-limited and is not suitable for broad commercial distribution.
-6. Apply [enable-signup-email-otp.sql](./enable-signup-email-otp.sql) to the existing project's SQL Editor if it has not already been applied. It removes only the legacy `BEFORE INSERT` auto-confirm trigger. It does not delete, recreate, or unconfirm existing accounts.
-7. Test with an email account you control: create a new account, verify the eight-digit signup code, request a password reset, verify its eight-digit recovery code, set a new password, and sign in.
+6. In **Authentication → Password Security**, enable leaked-password protection so compromised passwords are rejected.
+7. Apply [enable-signup-email-otp.sql](./enable-signup-email-otp.sql) to the existing project's SQL Editor if it has not already been applied. It removes only the legacy `BEFORE INSERT` auto-confirm trigger. It does not delete, recreate, or unconfirm existing accounts.
+8. Test with an email account you control: create a new account, verify the eight-digit signup code, request a password reset, verify its eight-digit recovery code, set a new password, and sign in.
 
 **Important:** The source code now refuses to silently complete signup if Supabase returns an authenticated session before email verification. If Auth is configured for auto-confirm, the UI explains that Confirm email and eight-digit OTP must be enabled. This prevents the app from claiming that OTP verification occurred when it did not.
 
