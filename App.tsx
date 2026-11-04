@@ -403,7 +403,6 @@ const App: React.FC = () => {
       />
 
       <main className="app-main min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 no-print">
-        <div key={activeTab + '-' + (selectedParty?.id ?? 'none')} className="app-page-transition">
         {activeTab === 'workers' && <WorkerAttendance userId={user.id} companyName={user.business_name} />}
         {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} />}
         {activeTab === 'parties' && <PartiesList parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
@@ -434,7 +433,6 @@ const App: React.FC = () => {
              <h2 className="text-xl font-black uppercase tracking-widest text-slate-400">Coming Soon</h2>
           </div>
         )}
-        </div>
       </main>
 
       <div className="hidden print:block fixed inset-0 bg-white z-[100] p-0 overflow-visible">
