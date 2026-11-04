@@ -1,9 +1,4 @@
-use std::{
-    fs,
-    path::PathBuf,
-    sync::Mutex,
-    time::Duration,
-};
+use std::{fs, path::PathBuf, sync::Mutex, time::Duration};
 
 use serde::{Deserialize, Serialize};
 use tauri::{
@@ -42,7 +37,10 @@ struct DesktopInfo {
 fn portable_directory() -> Option<PathBuf> {
     let exe = std::env::current_exe().ok()?;
     let directory = exe.parent()?;
-    directory.join(".portable").is_file().then(|| directory.to_path_buf())
+    directory
+        .join(".portable")
+        .is_file()
+        .then(|| directory.to_path_buf())
 }
 
 fn is_portable() -> bool {
@@ -199,10 +197,14 @@ fn desktop_notify_update(app: AppHandle, version: String) -> Result<(), String> 
     if is_portable() {
         return Ok(());
     }
-    app.notification().builder()
+    app.notification()
+        .builder()
         .title("Embroidery Statement — Update Available")
-        .body(format!("Version {version} is available. Open Settings to update securely."))
-        .show().map_err(|e| e.to_string())
+        .body(format!(
+            "Version {version} is available. Open Settings to update securely."
+        ))
+        .show()
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -211,11 +213,22 @@ fn desktop_test_notification(app: AppHandle, language: String) -> Result<(), Str
         return Err("Portable edition may not have a Windows notification identity.".into());
     }
     let (title, body) = if language == "bn" {
-        ("Embroidery Statement — হাজিরা", "এটি একটি পরীক্ষামূলক নোটিফিকেশন।")
+        (
+            "Embroidery Statement — হাজিরা",
+            "এটি একটি পরীক্ষামূলক নোটিফিকেশন।",
+        )
     } else {
-        ("Embroidery Statement — Attendance", "This is a test attendance notification.")
+        (
+            "Embroidery Statement — Attendance",
+            "This is a test attendance notification.",
+        )
     };
-    app.notification().builder().title(title).body(body).show().map_err(|e| e.to_string())
+    app.notification()
+        .builder()
+        .title(title)
+        .body(body)
+        .show()
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -250,10 +263,13 @@ async fn desktop_install_update(app: AppHandle) -> Result<(), String> {
         .download_and_install(
             move |chunk_length, total_length| {
                 downloaded += chunk_length as u64;
-                let _ = handle.emit("desktop:update-progress", serde_json::json!({
-                    "downloaded": downloaded,
-                    "total": total_length,
-                }));
+                let _ = handle.emit(
+                    "desktop:update-progress",
+                    serde_json::json!({
+                        "downloaded": downloaded,
+                        "total": total_length,
+                    }),
+                );
             },
             || {},
         )
@@ -267,7 +283,13 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     let open = MenuItem::with_id(app, "open", "Open Embroidery Statement", true, None::<&str>)?;
     let attendance = MenuItem::with_id(app, "attendance", "Open Attendance", true, None::<&str>)?;
     let updates = MenuItem::with_id(app, "updates", "Check for Updates", true, None::<&str>)?;
-    let reminders = MenuItem::with_id(app, "reminders", "Attendance Reminder Settings", true, None::<&str>)?;
+    let reminders = MenuItem::with_id(
+        app,
+        "reminders",
+        "Attendance Reminder Settings",
+        true,
+        None::<&str>,
+    )?;
     let exit = MenuItem::with_id(app, "exit", "Exit Application", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &attendance, &updates, &reminders, &exit])?;
 
@@ -309,7 +331,9 @@ fn enable_autostart_on_first_installed_run(app: &AppHandle) {
                 preferences.autostart = Some(true);
                 let _ = save_preferences(app, &preferences);
             }
-            Err(error) => eprintln!("Unable to register Embroidery Statement for Windows sign-in: {error}"),
+            Err(error) => {
+                eprintln!("Unable to register Embroidery Statement for Windows sign-in: {error}")
+            }
         }
     }
 }
@@ -371,7 +395,9 @@ pub fn run() {
                 } else if title.contains("Attendance") || title.contains("হাজিরা") {
                     let session = if body.contains("night") || body.contains("রাতের") {
                         "night"
-                    } else { "morning" };
+                    } else {
+                        "morning"
+                    };
                     navigate_to(&click_app, "workers", Some(session));
                 }
             })?;
