@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Landmark, FileText, Package, ShoppingCart, Receipt, Search, Users, Sun, Moon, LogOut, Menu, X, MoreVertical, Edit2, Trash2, Settings, Plus, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Landmark, FileText, Package, ShoppingCart, Receipt, Search, Users, Sun, Moon, LogOut, Menu, X, MoreVertical, Edit2, Trash2, Settings, Plus, RotateCcw } from 'lucide-react';
 import { Party, TabType } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -28,7 +28,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { t, language, setLanguage } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [showAddParty, setShowAddParty] = useState(false);
   const [newPartyName, setNewPartyName] = useState('');
@@ -81,30 +80,25 @@ const Sidebar: React.FC<SidebarProps> = ({
         <Menu className="w-6 h-6" />
       </button>
 
-      <aside data-collapsed={isCollapsed} className={`app-sidebar fixed inset-y-0 left-0 z-[70] w-[88vw] max-w-72 border-r border-white/70 dark:border-white/10 shadow-2xl shadow-slate-900/10 transition-transform duration-500 ease-[cubic-bezier(.22,1,.36,1)] md:relative md:w-72 md:max-w-none md:translate-x-0 no-print ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="sidebar-inner p-6 h-full flex flex-col overflow-hidden">
-          <div className="sidebar-header flex items-center justify-between mb-8">
-            <div className="sidebar-brand flex min-w-0 items-center gap-3 font-black text-lg text-slate-900 dark:text-white uppercase tracking-tighter">
-              <div className="sidebar-logo h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white shadow-md shadow-sky-500/10 ring-1 ring-sky-100 dark:ring-sky-900/40">
+      <aside className={`app-sidebar fixed inset-y-0 left-0 z-[70] w-[88vw] max-w-72 border-r border-white/70 dark:border-white/10 shadow-2xl shadow-slate-900/10 transition-transform duration-500 ease-[cubic-bezier(.22,1,.36,1)] md:relative md:w-72 md:max-w-none md:translate-x-0 no-print ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-6 h-full flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex min-w-0 items-center gap-3 font-black text-lg text-slate-900 dark:text-white uppercase tracking-tighter">
+              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white shadow-md shadow-sky-500/10 ring-1 ring-sky-100 dark:ring-sky-900/40">
                 <img
                   src="/embroidery-statement-logo.jpg"
                   alt="Embroidery Statement"
                   className="h-full w-full scale-[1.55] origin-top object-cover object-top"
                 />
               </div>
-              <span className="sidebar-brand-copy leading-none">EMBROIDERY<br/><span className="text-[9px] font-bold text-slate-400">STATEMENT</span></span>
+              <span className="leading-none">EMBROIDERY<br/><span className="text-[9px] font-bold text-slate-400">STATEMENT</span></span>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setIsOpen(false)} aria-label="Close navigation" className="md:hidden p-1">
-                <X className="w-5 h-5" />
-              </button>
-              <button type="button" onClick={() => setIsCollapsed(value => !value)} title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"} className="sidebar-collapse-toggle hidden md:inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
-                {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-              </button>
-            </div>
+            <button onClick={() => setIsOpen(false)} className="md:hidden p-1">
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <nav className="sidebar-nav flex-shrink-0 space-y-1 mb-6">
+          <nav className="flex-shrink-0 space-y-1 mb-6">
             {[
               { id: 'dashboard', label: t('dashboard'), icon: <Landmark className="w-5 h-5" /> },
               { id: 'parties', label: t('parties'), icon: <Users className="w-5 h-5" /> },
@@ -115,21 +109,19 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => { setActiveTab(item.id as TabType); setIsOpen(false); }}
-                title={isCollapsed ? item.label : undefined}
-                aria-current={activeTab === item.id ? "page" : undefined}
-                className={`sidebar-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                   activeTab === item.id 
                   ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20' 
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 {item.icon}
-                <span className="sidebar-nav-label">{item.label}</span>
+                <span>{item.label}</span>
               </button>
             ))}
           </nav>
 
-          <div className="sidebar-party-panel flex-1 flex flex-col min-h-0 border-t border-slate-100 dark:border-slate-800 pt-6">
+          <div className="flex-1 flex flex-col min-h-0 border-t border-slate-100 dark:border-slate-800 pt-6">
             <div className="flex items-center justify-between mb-4 px-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Client Parties</h3>
@@ -232,7 +224,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           <div className="mt-auto pt-4 border-t border-slate-200 dark:border-slate-800 space-y-1">
             {/* Language Toggle */}
-            <div className="sidebar-language-toggle flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 mb-2">
+            <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 mb-2">
               <button
                 onClick={() => setLanguage('en')}
                 className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${language === 'en' ? 'bg-white dark:bg-slate-700 text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
@@ -246,11 +238,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                 বাংলা
               </button>
             </div>
-            <button onClick={toggleDarkMode} title={isDarkMode ? t('light') : t('dark')} className="sidebar-bottom-action w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-[9px] font-black uppercase tracking-widest">
+            <button onClick={toggleDarkMode} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-[9px] font-black uppercase tracking-widest">
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               <span>{isDarkMode ? t('light') : t('dark')}</span>
             </button>
-            <button onClick={onLogout} title={t('logout')} className="sidebar-bottom-action w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-rose-50 text-rose-600 dark:hover:bg-rose-900/10 transition-colors text-[9px] font-black uppercase tracking-widest">
+            <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-rose-50 text-rose-600 dark:hover:bg-rose-900/10 transition-colors text-[9px] font-black uppercase tracking-widest">
               <LogOut className="w-4 h-4" />
               <span>{t('logout')}</span>
             </button>
