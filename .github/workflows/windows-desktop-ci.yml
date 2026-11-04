@@ -1,8 +1,7 @@
 name: Windows Desktop - Tauri Build Check
 on:
-  push:
-    branches:
-      - feature/tauri2-windows-desktop
+  # This work is developed through PR #18. Avoid duplicate push + PR builds
+  # racing each other under the same concurrency group.
   pull_request:
   workflow_dispatch:
 concurrency:
@@ -24,6 +23,25 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
+      - name: Validate PowerShell setup and installer scripts
+        shell: pwsh
+        run: |
+          $scripts = @(
+            'scripts/generate-tauri-signing-key.ps1',
+            'scripts/configure-github-updater-secrets.ps1',
+            'scripts/windows-installer-smoke.ps1'
+          )
+          foreach ($script in $scripts) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Join-Path $PWD $script), [ref]$tokens, [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) {
+              throw "PowerShell syntax error in $($script): $($errors -join '; ')"
+            }
+            Write-Host "PASS: PowerShell syntax $script"
+          }
       - name: Install locked frontend dependencies
         run: npm ci
       - name: Install Windows Rollup native optional binary
