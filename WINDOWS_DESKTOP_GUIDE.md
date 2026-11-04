@@ -72,9 +72,8 @@ A raw EXE uses the already-installed Microsoft WebView2 runtime. Windows native 
 
 The repository does NOT contain signing private keys. A signed updater build requires:
 
-1. Generate your own Tauri signing pair *locally*, e.g. `npx @tauri-apps/cli@2 signer generate -w $HOME/.tauri/embroidery-statement.key` on Windows PowerShell with a secure passphrase; read the public key from the accompanying `.pub` file.
-2. Back up the signing private key and passphrase securely **outside** GitHub. Losing the original key prevents existing installed clients from accepting future signed updates.
-3. In **GitHub → Repository Settings → Secrets and variables → Actions**, add repository **variable** `EMBROIDERY_UPDATE_PUBLIC_KEY` (full public key content) and repository **secrets** `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+1. On your Windows PC, run `powershell -ExecutionPolicy Bypass -File .\\scripts\\generate-tauri-signing-key.ps1`. The script generates a key pair under `%USERPROFILE%\\.tauri`; choose a strong passphrase and back up the private key + passphrase in a password manager or encrypted offline backup.
+2. In **GitHub → Repository Settings → Secrets and variables → Actions**, add repository **variable** `EMBROIDERY_UPDATE_PUBLIC_KEY` (the complete contents of `embroidery-statement.key.pub`) and repository **secrets** `TAURI_SIGNING_PRIVATE_KEY` (complete contents of `embroidery-statement.key`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (the passphrase). The private key must never be pasted into chat, committed, or added as a repository variable.
 4. Review and merge this branch only after CI and installed-app testing pass.
 5. Keep versions aligned in `package.json`, `package-lock.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`.
 6. Push a tag exactly matching that version (e.g. `v1.0.0` for the initial signed desktop release), with descriptive GitHub Release notes. Workflow `windows-desktop-release.yml` runs on the tag.
@@ -95,6 +94,10 @@ The Settings page on Windows exposes:
 - Test native notification; app version; check and install signed releases.
 
 The English/Bangla notification wording is defined in `desktop/attendanceCore.ts` and matches the product requirements exactly. Switch language in the original Sidebar; desktop reminders follow the latest app selection.
+
+## Windows Authenticode signing (separate from updater signing)
+
+The Tauri updater key above signs update packages and manifests. It does **not** apply a Windows Authenticode signature to the installer executable. Authenticode signing is optional for functional testing but recommended for commercial distribution and SmartScreen reputation. It requires a valid code-signing certificate from a trusted certificate authority (normally supplied as a PFX plus its password). No certificate has been supplied or installed, so the current preview EXEs are unsigned. Do not use a self-signed certificate for public distribution or promise that it removes SmartScreen warnings.
 
 ## Security
 
