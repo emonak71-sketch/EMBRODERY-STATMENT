@@ -52,7 +52,8 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
 
           const claimed=await dbService.claimAttendanceReminder(attendanceDate,attendanceSession);
           if(!claimed){
-            localStorage.setItem(idempotency,'sent');
+            // Another device owns the delivery claim. Do not mark this device
+            // as sent: the owner may release the claim if Windows rejects it.
             continue;
           }
 
