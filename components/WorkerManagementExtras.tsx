@@ -312,6 +312,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
         return;
       }
       if (table === 'WorkerSalaryIncrements' && tab === 'increments') {
+        void loadWorkers();
         void loadIncrements();
         return;
       }
@@ -340,7 +341,9 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
   ]);
 
   const refreshAll = async () => {
-    await Promise.all([loadWorkers(), loadDocuments(), loadIncrements(), loadAdvances(), loadAnnual(), loadMonthPayroll()]);
+    const tasks = [loadWorkers(), loadDocuments(), loadIncrements(), loadAdvances(), loadAnnual(), loadMonthPayroll()];
+    if (tab === 'sms') tasks.push(loadSmsLogs());
+    await Promise.all(tasks);
     setNotice(tr('তথ্য রিফ্রেশ হয়েছে।', 'Data refreshed.'));
   };
 
