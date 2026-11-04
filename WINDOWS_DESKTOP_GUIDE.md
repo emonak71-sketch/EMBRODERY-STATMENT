@@ -4,7 +4,7 @@ This is a desktop enhancement of the **existing React/Vite/TypeScript + Supabase
 
 ## Current implementation status
 
-The desktop integration is developed in the `feature/tauri2-windows-desktop` branch. Production `main` is unchanged. The two additive SQL migrations `supabase/worker-night-attendance-additive.sql` and `supabase/worker-reminder-lease-migration.sql` have been applied to the connected EMBRODERY-STATMENT Supabase project. Owner-scoped RLS policies and both invoker-security reminder RPCs were inspected. A rollback-only SQL test verified first claim, duplicate blocking, stale pending-claim recovery, marking a delivery as sent, and blocking a second sent claim. The web build and pure attendance tests have passed in Windows CI; native compilation and end-to-end Windows 10/11 verification must be confirmed separately in the current GitHub Actions run.
+The desktop integration is developed in the `feature/tauri2-windows-desktop` branch. Production `main` is unchanged. The two additive SQL migrations `supabase/worker-night-attendance-additive.sql` and `supabase/worker-reminder-lease-migration.sql` have been applied to the connected EMBRODERY-STATMENT Supabase project. Owner-scoped RLS policies and both invoker-security reminder RPCs were inspected. A rollback-only SQL test verified first claim, duplicate blocking, stale pending-claim recovery, marking a delivery as sent, and blocking a second sent claim. The existing web production build, attendance unit tests, Tauri native Windows compilation, and unsigned NSIS/portable packaging have passed in a completed Windows CI run. A newer CI run is adding the installer runtime smoke checks (silent install, shortcuts, autostart, app launch, close-to-tray, single-instance, and uninstall); its result must be green before treating those checks as passed. Actual Windows 10 and Windows 11 user-PC verification remains outstanding.
 
 **Do not publish v1.0.0 until the Windows build, signing, notification navigation, install/uninstall, update and clean-machine tests pass.** Do not publish incomplete features to production.
 
@@ -25,9 +25,9 @@ The desktop integration is developed in the `feature/tauri2-windows-desktop` bra
 
 A session is complete only if every active worker who has joined by that date has a persisted status of `present`, `absent`, `late`, `half_day` or `leave`. A session with no expected active workers does not generate a notification.
 
-The native app emits regular scheduler ticks even when its window is hidden in the tray. The webview reads the authenticated, user-scoped Workers and attendance records from Supabase. Network failure means **retry later**, not “absence.” If the app starts after 11 AM or 11 PM, it reevaluates the currently due sessions. There is no notification when the PC is off or the app has been exited; Windows autostart recovers missed checks on next sign-in.
+The native app emits regular scheduler ticks even when its window is hidden in the tray. The webview reads the authenticated, user-scoped Workers and attendance records from Supabase. Network failure means **retry later**, not “absence.” If the app starts after a checkpoint, it reevaluates the currently due sessions and can recover missed checkpoints from the previous 24 hours. It intentionally ignores older checkpoints to avoid stale alerts. There is no notification when the PC is off or the app has been exited; Windows autostart recovers recent missed checks on next sign-in.
 
-To avoid duplicate reminders across multiple devices, `WorkerReminderDeliveries` has a unique (user, date, morning/night) key. Claims are attempted only after an incomplete session is verified. The database is checked a second time after the claim, reducing the risk of a reminder racing with another device saving attendance. This claim protocol offers **at-most-once best effort**, not an exactly-once distributed delivery guarantee: if Windows suppresses notifications at the OS level, the app cannot guarantee visible delivery.
+To avoid duplicate reminders across multiple devices, `WorkerReminderDeliveries` has a unique (user, date, morning/night) key. Claims are attempted only after an incomplete session is verified. The database is checked a second time after the claim, reducing the risk of a reminder racing with another device saving attendance. Claims have a three-minute lease: a crash before delivery leaves a pending claim that can be reclaimed after expiry; successful notifications are marked sent. This protocol offers **at-most-once best effort**, not an exactly-once distributed delivery guarantee: if Windows suppresses notifications at the OS level, the app cannot guarantee visible delivery.
 
 ## Database migration order
 
@@ -64,6 +64,10 @@ npm run desktop:build
 The app uses a native window. Pressing X hides it to the Windows tray; use the tray menu's Exit Application command to terminate it. A second instance focuses the existing one.
 
 For CI artifacts, open **GitHub → Actions → Windows Desktop - Tauri Build Check**, select the latest successful branch run and download `windows-portable-preview-unsigned`. Preview artifacts are **unsigned** and not production releases.
+
+## Windows installer smoke test
+
+The CI workflow runs `scripts/windows-installer-smoke.ps1` after creating the unsigned NSIS preview. It silently installs the setup executable, checks the uninstall registry entry and Desktop/Start Menu shortcuts, launches the app, checks first-run Windows autostart registration, sends a window-close message to verify the process remains in the tray, launches a second instance to verify single-instance behaviour, then terminates and uninstalls the test installation. This validates the installer path on a GitHub-hosted Windows runner; it does not replace a real Windows 10/11 desktop acceptance test.
 
 ## Distribution formats
 
