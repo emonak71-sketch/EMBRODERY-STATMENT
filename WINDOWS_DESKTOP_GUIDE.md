@@ -77,9 +77,9 @@ The GitHub Release workflow builds a per-user Windows NSIS setup executable with
 
 ### Portable EXE
 
-The CI/release workflow packages a raw `embroidery-statement.exe` plus a `.portable` marker and README. Place them together in a writable folder. The app stores its WebView2 user data in its adjacent `data/` directory where supported. Do not delete or replace `data/` when upgrading; replace only the EXE. Do not run multiple copies of the same portable folder simultaneously.
+The CI/release workflow packages `embroidery-statement.exe`, a `.portable` marker, README and Microsoft's small Evergreen WebView2 bootstrapper. Place them together in a writable folder. If WebView2 Runtime is missing, run `MicrosoftEdgeWebView2Setup.exe` (internet required) before launching the app. The app stores its WebView2 user data in its adjacent `data/` directory where supported. Do not delete or replace `data/` when upgrading; replace only the EXE. Do not run multiple copies of the same portable folder simultaneously.
 
-A raw EXE uses the already-installed Microsoft WebView2 runtime. Windows native toasts may require installed app identity; **portable notification and fully automatic portable update equivalence are not guaranteed**. On untrusted computers use the installer instead.
+A raw EXE uses the installed Microsoft WebView2 runtime; the included bootstrapper can install it when missing (internet required). Windows native toasts may require installed app identity; **portable notification and fully automatic portable update equivalence are not guaranteed**. On untrusted computers use the installer instead.
 
 ## Secure GitHub Releases & one-click updates
 
