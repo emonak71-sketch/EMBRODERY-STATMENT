@@ -76,9 +76,34 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path portable | Out-Null
           Copy-Item "src-tauri/target/release/embroidery-statement.exe" "portable/"
+          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile "portable/MicrosoftEdgeWebView2Setup.exe"
+          if ((Get-Item "portable/MicrosoftEdgeWebView2Setup.exe").Length -lt 100000) { throw "WebView2 bootstrapper download looks incomplete." }
           New-Item -ItemType File -Force -Path "portable/.portable" | Out-Null
-          "Portable preview: Requires Microsoft WebView2 Runtime. Keep data/ in this directory when replacing the EXE. Native Windows notifications may require installation." | Set-Content -Path "portable/README.txt" -Encoding UTF8
+          "Portable preview: If Microsoft WebView2 Runtime is missing, run MicrosoftEdgeWebView2Setup.exe (internet required). Keep data/ in this directory when replacing the EXE. Native Windows toast notifications may require installation." | Set-Content -Path "portable/README.txt" -Encoding UTF8
           Compress-Archive -Path portable -DestinationPath Embroidery-Statement-Portable-PREVIEW.zip -Force
+      - name: Smoke test portable edition and adjacent data profile
+        shell: pwsh
+        run: |
+          $zip = Join-Path $PWD 'Embroidery-Statement-Portable-PREVIEW.zip'
+          $folder = Join-Path $env:TEMP 'EmbroideryStatementPortableSmoke'
+          if (Test-Path $folder) { Remove-Item $folder -Recurse -Force }
+          Expand-Archive -Path $zip -DestinationPath $folder
+          $portableRoot = Join-Path $folder 'portable'
+          $portableExe = Join-Path $portableRoot 'embroidery-statement.exe'
+          $dataDirectory = Join-Path $portableRoot 'data'
+          if (-not (Test-Path $portableExe)) { throw 'Portable EXE missing from portable package.' }
+          if (-not (Test-Path (Join-Path $portableRoot 'MicrosoftEdgeWebView2Setup.exe'))) { throw 'WebView2 bootstrapper missing from portable package.' }
+          $process = Start-Process -FilePath $portableExe -PassThru
+          Start-Sleep -Seconds 10
+          $process.Refresh()
+          if ($process.HasExited) { throw 'Portable application failed to remain open on the Windows runner.' }
+          if (-not (Test-Path $dataDirectory)) { throw 'Portable adjacent data directory was not created.' }
+          $sentinel = Join-Path $dataDirectory 'portable-profile-smoke-test.txt'
+          'profile-persistence-check' | Set-Content -Path $sentinel -Encoding UTF8
+          Get-Process -Name 'embroidery-statement' -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 2
+          if (-not (Test-Path $sentinel)) { throw 'Portable adjacent data was not preserved after process exit.' }
+          Write-Host 'PASS: portable EXE launches and adjacent data folder persists.'
       - uses: actions/upload-artifact@v4
         with:
           name: windows-portable-preview-unsigned
