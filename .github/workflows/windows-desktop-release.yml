@@ -45,10 +45,13 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: Embroidery Statement ${{ github.ref_name }}
           releaseBody: 'Windows installer, portable distribution, signed updater manifest and release notes.'
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
           args: '--bundles nsis'
           updaterJsonPreferNsis: true
+      - name: Smoke test the signed installer before publication
+        shell: pwsh
+        run: ./scripts/windows-installer-smoke.ps1
       - name: Package portable build separately (preserve local data directory)
         shell: pwsh
         run: |
@@ -62,3 +65,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
         run: gh release upload "${{ github.ref_name }}" "Embroidery-Statement-${{ github.ref_name }}-Portable.zip" --clobber
+
+      - name: Publish release only after installer smoke tests pass
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: gh release edit "${{ github.ref_name }}" --draft=false
