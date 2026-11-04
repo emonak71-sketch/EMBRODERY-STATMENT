@@ -12,6 +12,9 @@ if (!publicKey.startsWith('untrusted comment:') || !publicKey.includes('RW')) {
 if (!process.env.TAURI_SIGNING_PRIVATE_KEY) {
   throw new Error('Set TAURI_SIGNING_PRIVATE_KEY as a GitHub Actions SECRET before releasing.');
 }
+if (!process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
+  throw new Error('Set TAURI_SIGNING_PRIVATE_KEY_PASSWORD as a GitHub Actions SECRET before releasing.');
+}
 if (!/^v\d+\.\d+\.\d+$/.test(tag) || tag !== 'v' + version) {
   throw new Error('Release tag ' + tag + ' does not match app version v' + version);
 }
