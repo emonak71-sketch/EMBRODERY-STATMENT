@@ -6,6 +6,7 @@
 ; Remove only the Embroidery Statement autostart value when the user uninstalls.
 ; The Tauri autostart plugin uses this stable app_name for its Run value.
 !macro NSIS_HOOK_PREUNINSTALL
+  Delete "$DESKTOP\${PRODUCTNAME}.lnk"
   SetRegView 64
   ClearErrors
   DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Embroidery Statement"
