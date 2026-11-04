@@ -230,6 +230,44 @@ export const dbService = {
     const {data,error}=await supabase.from('WorkerAttendance').upsert(payload,{onConflict:'user_id,worker_id,attendance_date'}).select();
     if(error) throw handleDbError(error,'saving attendance'); return data||[];
   },
+  getWorkerNightAttendance: async (date:string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.from('WorkerNightAttendance')
+      .select('*').eq('user_id', uid).eq('attendance_date', date);
+    if (error) throw handleDbError(error, 'loading night attendance');
+    return data || [];
+  },
+  saveWorkerNightAttendance: async (rows:Array<{worker_id:string;attendance_date:string;status:string;check_in?:string|null;check_out?:string|null;note?:string}>) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const updated_at = new Date().toISOString();
+    const payload = rows.map(row => ({...row, user_id:uid, updated_at}));
+    const { data, error } = await supabase.from('WorkerNightAttendance')
+      .upsert(payload, {onConflict:'user_id,worker_id,attendance_date'}).select();
+    if (error) throw handleDbError(error, 'saving night attendance');
+    return data || [];
+  },
+  claimAttendanceReminder: async (date:string, attendanceSession:'morning'|'night') => {
+    const {data:{session}} = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const {error} = await supabase.from('WorkerReminderDeliveries')
+      .insert({user_id:uid, attendance_date:date, session:attendanceSession});
+    if (error?.code === '23505') return false;
+    if (error) throw handleDbError(error,'claiming attendance reminder');
+    return true;
+  },
+  releaseAttendanceReminder: async (date:string, attendanceSession:'morning'|'night') => {
+    const {data:{session}} = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return;
+    const {error} = await supabase.from('WorkerReminderDeliveries')
+      .delete().eq('user_id',uid).eq('attendance_date',date).eq('session',attendanceSession);
+    if(error) console.warn('Unable to release failed notification claim:',error.message);
+  },
   getWorkerPayroll: async (month:string) => {
     const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
     if(!uid) throw new Error('Please sign in again.');
