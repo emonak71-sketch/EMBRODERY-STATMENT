@@ -37,13 +37,34 @@ try {
   $first.Refresh()
   if ($first.HasExited) { throw 'The installed desktop process exited unexpectedly during startup.' }
 
-  $runKey = Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -ErrorAction SilentlyContinue
-  $autostartEntry = if ($runKey) {
-    $runKey.PSObject.Properties | Where-Object {
-      $_.Name -notmatch '^PS' -and [string]$_.Value -match [regex]::Escape($appExe)
-    } | Select-Object -First 1
+  # Tauri's Windows autostart backend uses Dynamic mode: on elevated CI
+  # runners it may register HKLM; on normal users' PCs it falls back to HKCU.
+  $runPaths = @(
+    'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run',
+    'HKLM:\Software\Microsoft\Windows\CurrentVersion\Run'
+  )
+  $autostartEntry = $null
+  $autostartHive = $null
+  foreach ($runPath in $runPaths) {
+    $runKey = Get-ItemProperty -Path $runPath -ErrorAction SilentlyContinue
+    if ($runKey) {
+      $candidate = $runKey.PSObject.Properties | Where-Object {
+        $_.Name -notmatch '^PS' -and [string]$_.Value -match [regex]::Escape($appExe)
+      } | Select-Object -First 1
+      if ($candidate) { $autostartEntry = $candidate; $autostartHive = $runPath; break }
+    }
   }
-  if (-not $autostartEntry) { throw 'First installed launch did not register Windows sign-in autostart.' }
+  if (-not $autostartEntry) {
+    $diagnostics = foreach ($runPath in $runPaths) {
+      $runKey = Get-ItemProperty -Path $runPath -ErrorAction SilentlyContinue
+      if ($runKey) {
+        $runKey.PSObject.Properties | Where-Object { $_.Name -notmatch '^PS' } |
+          ForEach-Object { "$($_.Name)=$($_.Value)" }
+      }
+    }
+    throw "First installed launch did not register Windows sign-in autostart in HKCU or HKLM. Registry values: $($diagnostics -join '; ')"
+  }
+  Write-Host "PASS: Windows sign-in autostart registered in $autostartHive ($($autostartEntry.Name))."
 
   Write-Host 'Sending WM_CLOSE to verify close-to-tray behavior...'
   Add-Type -Namespace EmbroideryWin32 -Name NativeMethods -MemberDefinition @'
