@@ -47,19 +47,19 @@ begin
   if tg_op = 'INSERT' then
     v_new := to_jsonb(new);
     v_row := v_new;
-    v_user_id := nullif(v_new->>'user_id','')::uuid;
+    v_user_id := coalesce(nullif(v_new->>'user_id','')::uuid, auth.uid());
     v_record_id := coalesce(v_new->>'id', v_new->>'worker_code');
   elsif tg_op = 'UPDATE' then
     v_old := to_jsonb(old);
     v_new := to_jsonb(new);
     if v_old = v_new then return new; end if;
     v_row := v_new;
-    v_user_id := coalesce(nullif(v_new->>'user_id','')::uuid, nullif(v_old->>'user_id','')::uuid);
+    v_user_id := coalesce(nullif(v_new->>'user_id','')::uuid, nullif(v_old->>'user_id','')::uuid, auth.uid());
     v_record_id := coalesce(v_new->>'id', v_old->>'id', v_new->>'worker_code', v_old->>'worker_code');
   else
     v_old := to_jsonb(old);
     v_row := v_old;
-    v_user_id := nullif(v_old->>'user_id','')::uuid;
+    v_user_id := coalesce(nullif(v_old->>'user_id','')::uuid, auth.uid());
     v_record_id := coalesce(v_old->>'id', v_old->>'worker_code');
   end if;
 
@@ -85,6 +85,9 @@ declare
   v_tables text[] := array[
     'Parties',
     'Transactions',
+    'Products',
+    'Expenses',
+    'Sales',
     'Workers',
     'WorkerAttendance',
     'WorkerNightAttendance',

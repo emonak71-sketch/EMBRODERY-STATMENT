@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, ArrowDownRight, ArrowUpRight, Clock3, Filter, History, RefreshCw, Search, ShieldCheck } from 'lucide-react';
+import { Activity, ArrowDownRight, ArrowUpRight, Clock3, History, RefreshCw, Search, ShieldCheck } from 'lucide-react';
 import { dbService } from '../services/supabaseService';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -10,7 +10,6 @@ type ActivityRow = {
   changed_at: string;
 };
 const titleCase = (value: string) => value.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-const safeValue = (value: unknown) => value === null || value === undefined || value === '' ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value);
 const ActivityHistory: React.FC = () => {
   const { language } = useLanguage();
   const bn = language === 'bn';
