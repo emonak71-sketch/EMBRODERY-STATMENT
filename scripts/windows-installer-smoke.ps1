@@ -26,6 +26,9 @@ if (-not (Test-Path $appExe)) { throw "Installed application EXE not found: $app
 
 $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Embroidery Statement.lnk'
 if (-not (Test-Path $desktopShortcut)) { throw 'Desktop shortcut was not created by the silent installer.' }
+$startMenuRoot = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
+$startMenuShortcut = Get-ChildItem -Path $startMenuRoot -Filter 'Embroidery Statement.lnk' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $startMenuShortcut) { throw 'Start Menu shortcut was not created by the installer.' }
 
 try {
   Write-Host 'Launching the installed desktop application...'
@@ -33,6 +36,26 @@ try {
   Start-Sleep -Seconds 8
   $first.Refresh()
   if ($first.HasExited) { throw 'The installed desktop process exited unexpectedly during startup.' }
+
+  $runKey = Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -ErrorAction SilentlyContinue
+  $autostartEntry = if ($runKey) {
+    $runKey.PSObject.Properties | Where-Object {
+      $_.Name -notmatch '^PS' -and [string]$_.Value -match [regex]::Escape($appExe)
+    } | Select-Object -First 1
+  }
+  if (-not $autostartEntry) { throw 'First installed launch did not register Windows sign-in autostart.' }
+
+  Write-Host 'Sending WM_CLOSE to verify close-to-tray behavior...'
+  Add-Type -Namespace EmbroideryWin32 -Name NativeMethods -MemberDefinition @'
+[System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+public static extern bool PostMessage(System.IntPtr hWnd, uint msg, System.IntPtr wParam, System.IntPtr lParam);
+'@
+  $first.Refresh()
+  if ($first.MainWindowHandle -eq [IntPtr]::Zero) { throw 'Main application window handle is unavailable for close-to-tray smoke test.' }
+  [EmbroideryWin32.NativeMethods]::PostMessage($first.MainWindowHandle, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+  Start-Sleep -Seconds 3
+  $first.Refresh()
+  if ($first.HasExited) { throw 'Closing the main window terminated the process instead of hiding it to tray.' }
 
   Write-Host 'Launching a second instance to verify single-instance handling...'
   $second = Start-Process -FilePath $appExe -PassThru
@@ -45,7 +68,7 @@ try {
   if (-not $first.HasExited -and $instances.Count -ne 1) {
     throw "Expected exactly one running application process; found $($instances.Count)."
   }
-  Write-Host 'PASS: installed app launches and only one instance remains.'
+  Write-Host 'PASS: install, desktop/Start Menu shortcuts, autostart, launch, close-to-tray and single-instance.'
 }
 finally {
   Get-Process -Name 'embroidery-statement' -ErrorAction SilentlyContinue |
