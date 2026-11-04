@@ -20,7 +20,7 @@ if (!/^v\d+\.\d+\.\d+$/.test(tag) || tag !== 'v' + version) {
 }
 const packageVersion = JSON.parse(fs.readFileSync('package.json','utf8')).version;
 const cargoToml = fs.readFileSync('src-tauri/Cargo.toml','utf8');
-const cargoVersion = cargoToml.match(/^version\\s*=\\s*"([^"]+)"/m)?.[1];
+const cargoVersion = cargoToml.match(/^version\s*=\s*"([^"]+)"/m)?.[1];
 if (packageVersion !== version || cargoVersion !== version) {
   throw new Error('package.json, src-tauri/Cargo.toml and src-tauri/tauri.conf.json versions must match');
 }
