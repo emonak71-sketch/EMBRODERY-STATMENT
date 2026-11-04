@@ -55,6 +55,7 @@ const DesktopSettings: React.FC = () => {
       setAutostart(enabled);
       setStartMinimized(minimized);
       setInfo(current);
+      if (current.configured && !current.portable) void checkUpdates();
     }).catch(error => setMessage(String(error)));
   }, []);
 
@@ -84,6 +85,7 @@ const DesktopSettings: React.FC = () => {
       setInfo(next);
       setMessage(next.portable
         ? 'Portable edition uses manual replacement. Keep the data folder when updating.'
+        : !next.configured ? 'Secure updates are not configured. Set the official signing keys before releasing.'
         : next.available_version ? 'A signed update is available.' : 'No new version is available.');
     } catch(e){setMessage('Update check unavailable: ' + String(e));}
     finally{setBusy(false);}
