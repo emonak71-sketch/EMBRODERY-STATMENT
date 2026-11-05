@@ -17,7 +17,6 @@ import WorkerAttendance from './components/WorkerAttendance';
 import SubscriptionBilling from './components/SubscriptionBilling';
 import SupportCenter from './components/SupportCenter';
 import NotificationCenter from './components/NotificationCenter';
-import AndroidUpdateBanner from './components/AndroidUpdateBanner';
 import SplashScreen from './components/SplashScreen';
 
 const sendSMSAlert = async (phone: string, message: string) => {
@@ -543,7 +542,6 @@ const App: React.FC = () => {
 
       <main className="app-main min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 no-print">
         <div className="mb-4 flex justify-end"><NotificationCenter userId={user.id}/></div>
-        <AndroidUpdateBanner/>
         {trialStatus?.is_trial_active && hasPaidAccess===true && <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sky-900 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100"><div><div className="text-xs font-black uppercase tracking-wider">15-Day Free Trial</div><div className="mt-1 text-sm font-semibold">{trialDaysRemaining} {trialDaysRemaining===1?"day":"days"} remaining. Your data stays saved when the trial ends.</div></div><button type="button" onClick={()=>selectSidebarTab('billing')} className="rounded-xl bg-sky-700 px-4 py-2 text-xs font-black text-white hover:bg-sky-800">View Subscription Plans</button></div>}
         {hasPaidAccess===false ? (
           activeTab==='support' ? <SupportCenter userId={user.id} email={user.email}/> : <SubscriptionBilling onAccessRefresh={refreshSubscriptionAccess} />
