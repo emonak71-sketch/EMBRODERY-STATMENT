@@ -54,6 +54,10 @@ type CustomerLookup = {
 type AccessGrant = {
   grant_id:string;
   granted_days:number;
+  payment_date:string|null;
+  payment_amount_bdt:number|null;
+  payment_method:string|null;
+  payment_reference:string|null;
   starts_at:string;
   ends_at:string;
   note:string|null;
@@ -81,6 +85,10 @@ const SubscriptionBilling:React.FC<{onAccessRefresh?:()=>void|Promise<void>}>=({
  const [durationChoice,setDurationChoice]=useState('30');
  const [customDays,setCustomDays]=useState('30');
  const [paymentNote,setPaymentNote]=useState('');
+ const [paymentDate,setPaymentDate]=useState(()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Dhaka'}).format(new Date()));
+ const [paymentAmount,setPaymentAmount]=useState('');
+ const [paymentMethod,setPaymentMethod]=useState('Nagad Personal');
+ const [paymentReference,setPaymentReference]=useState('');
  const [searching,setSearching]=useState(false);
  const [granting,setGranting]=useState(false);
 
@@ -124,16 +132,22 @@ const SubscriptionBilling:React.FC<{onAccessRefresh?:()=>void|Promise<void>}>=({
   const days=durationChoice==='custom'?Number(customDays):Number(durationChoice);
   if(!Number.isInteger(days)||days<1||days>3650){setError('Enter a whole number between 1 and 3650 days.');return;}
   if(!customer.email_verified){setError('Customer must verify their registered email before access can be granted.');return;}
+  const amount=Number(paymentAmount);
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Dhaka'}).format(new Date());
+  if(!paymentDate||paymentDate>today){setError('Payment date must be today or earlier.');return;}
+  if(paymentAmount.trim()===''||!Number.isFinite(amount)||amount<0||amount>99999999){setError('Enter the verified payment amount in BDT. Use 0 only for complimentary access.');return;}
   const confirmed=window.confirm(
-   `Grant ${days} days of app access to ${customer.customer_email}? Any remaining trial or current paid access will be preserved; the new period starts after it ends.`
+   `Grant ${days} days of app access to ${customer.customer_email} and record ${money(amount)} received by ${paymentMethod} on ${paymentDate}? Any remaining trial or current paid access will be preserved.`
   );
   if(!confirmed)return;
   setGranting(true);setError('');setNotice('');
   try{
-   const result=await dbService.ownerGrantCustomerAccess(customer.customer_email,days,paymentNote);
+   const result=await dbService.ownerGrantCustomerAccess(customer.customer_email,days,{
+    note:paymentNote,paymentDate,amount,method:paymentMethod,reference:paymentReference
+   });
    if(!result)throw new Error('The access grant was not returned by the server.');
-   setNotice(`Access granted for ${days} days. Starts: ${dateLabel(result.starts_at)} · Ends: ${dateLabel(result.ends_at)}.`);
-   setPaymentNote('');
+   setNotice(`Access granted for ${days} days. Payment recorded: ${money(amount)} on ${paymentDate}. Starts: ${dateLabel(result.starts_at)} · Ends: ${dateLabel(result.ends_at)}.`);
+   setPaymentNote('');setPaymentReference('');setPaymentAmount('');
    const updated=await dbService.ownerSearchCustomerByEmail(customer.customer_email);
    if(updated){
     setCustomer(updated as CustomerLookup);
@@ -223,8 +237,22 @@ const SubscriptionBilling:React.FC<{onAccessRefresh?:()=>void|Promise<void>}>=({
          <span className="flex items-center rounded-xl bg-slate-100 px-3 text-xs font-bold text-slate-500 dark:bg-slate-800">Days</span>
         </div>
        </label>
-       <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Payment reference / note (optional)
-        <input value={paymentNote} onChange={e=>setPaymentNote(e.target.value)} maxLength={160} placeholder="Nagad TxnID or payment note" className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-800"/>
+       <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Payment date
+        <input required type="date" max={new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Dhaka'}).format(new Date())} value={paymentDate} onChange={e=>setPaymentDate(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-800"/>
+       </label>
+       <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Amount received (BDT)
+        <input required type="number" min="0" max="99999999" step="0.01" value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)} placeholder="e.g. 99.00" className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-800"/>
+       </label>
+       <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Payment method
+        <select value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-800">
+         <option value="Nagad Personal">Nagad Personal</option><option value="Cash">Cash</option><option value="Bank Transfer">Bank Transfer</option><option value="Other">Other</option>
+        </select>
+       </label>
+       <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Payment reference / Nagad TxnID (optional)
+        <input value={paymentReference} onChange={e=>setPaymentReference(e.target.value)} maxLength={160} placeholder="Enter transaction reference" className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-800"/>
+       </label>
+       <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Internal note (optional)
+        <input value={paymentNote} onChange={e=>setPaymentNote(e.target.value)} maxLength={160} placeholder="Owner note" className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-800"/>
        </label>
       </div>
       <p className="mt-3 flex items-start gap-2 text-[11px] text-slate-500"><LockKeyhole size={13} className="mt-0.5 shrink-0"/>The new period starts after any remaining trial, subscription, or previously granted access. No existing days are lost.</p>
@@ -235,7 +263,7 @@ const SubscriptionBilling:React.FC<{onAccessRefresh?:()=>void|Promise<void>}>=({
 
      <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
       <div className="mb-3 flex items-center gap-2 text-sm font-black"><History size={16}/>Access Grant History</div>
-      {grantHistory.length?<div className="overflow-x-auto"><table className="w-full min-w-[600px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase text-slate-500 dark:bg-slate-800"><tr>{['Granted','Duration','Starts','Expires','Payment Note','Status'].map(x=><th key={x} className="p-3">{x}</th>)}</tr></thead><tbody>{grantHistory.map(row=><tr key={row.grant_id} className="border-t border-slate-100 dark:border-slate-800"><td className="p-3">{shortDate(row.created_at)}</td><td className="p-3 font-black">{row.granted_days} days</td><td className="p-3">{dateLabel(row.starts_at)}</td><td className="p-3">{dateLabel(row.ends_at)}</td><td className="p-3">{row.note||'—'}</td><td className="p-3"><span className={'rounded-full px-2 py-1 font-bold '+(row.revoked_at?'bg-rose-100 text-rose-700':new Date(row.ends_at).getTime()>Date.now()?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-600')}>{row.revoked_at?'Revoked':new Date(row.ends_at).getTime()>Date.now()?'Active / Scheduled':'Expired'}</span></td></tr>)}</tbody></table></div>:<p className="py-5 text-center text-xs text-slate-500">No manual access grants have been recorded for this customer.</p>}
+      {grantHistory.length?<div className="overflow-x-auto"><table className="w-full min-w-[1050px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase text-slate-500 dark:bg-slate-800"><tr>{['Payment Date','Amount','Method','Txn Reference','Duration','Access Starts','Access Expires','Status'].map(x=><th key={x} className="p-3">{x}</th>)}</tr></thead><tbody>{grantHistory.map(row=><tr key={row.grant_id} className="border-t border-slate-100 dark:border-slate-800"><td className="p-3">{shortDate(row.payment_date||row.created_at)}</td><td className="p-3 font-black">{row.payment_amount_bdt===null?'—':money(Number(row.payment_amount_bdt))}</td><td className="p-3">{row.payment_method||'—'}</td><td className="p-3">{row.payment_reference||row.note||'—'}</td><td className="p-3 font-black">{row.granted_days} days</td><td className="p-3">{dateLabel(row.starts_at)}</td><td className="p-3">{dateLabel(row.ends_at)}</td><td className="p-3"><span className={'rounded-full px-2 py-1 font-bold '+(row.revoked_at?'bg-rose-100 text-rose-700':new Date(row.ends_at).getTime()>Date.now()?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-600')}>{row.revoked_at?'Revoked':new Date(row.ends_at).getTime()>Date.now()?'Active / Scheduled':'Expired'}</span></td></tr>)}</tbody></table></div>:<p className="py-5 text-center text-xs text-slate-500">No manual access grants have been recorded for this customer.</p>}
      </div>
     </div>}
    </section>:<section className="rounded-2xl border border-sky-200 bg-sky-50 p-5 dark:border-sky-900 dark:bg-sky-950/30">
