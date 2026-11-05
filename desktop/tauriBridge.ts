@@ -20,6 +20,10 @@ export function isTauriApp(): boolean {
   return typeof window !== 'undefined' && Boolean(window.__TAURI__?.core?.invoke);
 }
 
+export function isAndroidTauriApp(): boolean {
+  return isTauriApp() && typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+}
+
 export function isWindowsDesktop(): boolean {
   if (!isTauriApp()) return false;
   return !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
