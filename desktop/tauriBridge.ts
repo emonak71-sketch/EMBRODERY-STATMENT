@@ -16,8 +16,13 @@ declare global {
   }
 }
 
-export function isWindowsDesktop(): boolean {
+export function isTauriApp(): boolean {
   return typeof window !== 'undefined' && Boolean(window.__TAURI__?.core?.invoke);
+}
+
+export function isWindowsDesktop(): boolean {
+  if (!isTauriApp()) return false;
+  return !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
 export async function desktopInvoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
