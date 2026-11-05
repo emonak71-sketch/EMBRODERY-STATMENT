@@ -62,8 +62,27 @@ Deno.serve(async (req: Request) => {
   });
   if (messageError) return json({ error: "Your message could not be saved. Please try again." }, 500);
 
+  const { data: recentMessages, error: historyError } = await admin
+    .from("support_messages")
+    .select("sender_role, body")
+    .eq("ticket_id", ticketId)
+    .order("created_at", { ascending: false })
+    .limit(12);
+  if (historyError) console.error("Could not load support conversation history:", historyError);
+  const conversation = (recentMessages || [])
+    .slice()
+    .reverse()
+    .map((entry: { sender_role: string; body: string }) => ({
+      role: entry.sender_role === "customer" ? "user" : "model",
+      parts: [{ text: entry.body }],
+    }));
+  if (conversation.length === 0) {
+    conversation.push({ role: "user", parts: [{ text: message }] });
+  }
+
   const apiKey = Deno.env.get("GEMINI_API_KEY");
-  const model = Deno.env.get("GEMINI_MODEL") || "gemini-3.5-flash-lite";
+  const configuredModel = (Deno.env.get("GEMINI_MODEL") || "").trim();
+  const model = configuredModel === "gemini-3.8-flash" ? configuredModel : "gemini-3.5-flash-lite";
   let reply = "";
   let needsHuman = false;
   let modelUsed: string | null = null;
@@ -78,15 +97,10 @@ Deno.serve(async (req: Request) => {
           body: JSON.stringify({
             systemInstruction: {
               parts: [{
-                text: "You are the official Embroidery Statement product-support assistant. Reply in the customer's language: Bangla, English or Banglish. Product context: this app manages embroidery-business customers/parties, money-in and money-out transactions, customer ledger balances, transaction receipts, workers, monthly attendance, attendance bonuses, weekly advances, overtime, payroll, salary history, annual summaries, account login, 8-digit email OTP, 15-day free trial, owner-granted Pro subscriptions, Windows/PWA/Android clients and data synchronization. Give short, numbered, practical troubleshooting steps. For a sync issue, ask the customer to check internet access and sign in to the same verified Gmail account on each device; never advise clearing app data or reinstalling before confirming data is synced. For a worker/attendance/payroll discrepancy, ask for the relevant worker, month and non-sensitive screenshot/details, but do not claim to inspect records. For subscription issues, tell them the Owner verifies Nagad Personal payment and activates access; never ask for a Nagad PIN or OTP. Never claim to have inspected their account, database, payment or device. Never request passwords, OTPs, Nagad PINs or secret keys. Do not invent features or promise a fix. If the issue requires account access, payment verification, data repair, a bug fix, or you are uncertain, set needs_human=true and say the support team has been notified. Return JSON only with fields reply (string) and needs_human (boolean)."
+                text: "You are the official Embroidery Statement product-support assistant. Reply in the customer's language: Bangla, English or Banglish. Ticket context: subject is '" + ticket.subject + "' and category is '" + ticket.category + "'. Conversation messages are shown chronologically below. Product context: this app manages embroidery-business customers/parties, money-in and money-out transactions, customer ledger balances, transaction receipts, workers, monthly attendance, attendance bonuses, weekly advances, overtime, payroll, salary history, annual summaries, account login, 8-digit email OTP, 15-day free trial, owner-granted Pro subscriptions, Windows/PWA/Android clients and data synchronization. Give short, numbered, practical troubleshooting steps. For a sync issue, ask the customer to check internet access and sign in to the same verified Gmail account on each device; never advise clearing app data or reinstalling before confirming data is synced. For a worker/attendance/payroll discrepancy, ask for the relevant worker, month and non-sensitive screenshot/details, but do not claim to inspect records. For subscription issues, tell them the Owner verifies Nagad Personal payment and activates access; never ask for a Nagad PIN or OTP. Never claim to have inspected their account, database, payment or device. Never request passwords, OTPs, Nagad PINs or secret keys. Do not invent features or promise a fix. If the issue requires account access, payment verification, data repair, a bug fix, or you are uncertain, set needs_human=true and say the support team has been notified. Return JSON only with fields reply (string) and needs_human (boolean)."
               }]
             },
-            contents: [{
-              role: "user",
-              parts: [{
-                text: "Ticket subject: " + ticket.subject + "\nCategory: " + ticket.category + "\nCustomer message: " + message
-              }]
-            }],
+            contents: conversation,
             generationConfig: { temperature: 0.25, responseMimeType: "application/json" },
           }),
         },
