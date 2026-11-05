@@ -53,9 +53,9 @@ jobs:
         run: npx --yes @tauri-apps/cli@2 android init --ci --skip-targets-install
 
       - name: Build customer APK and Android App Bundle
-        env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
-        run: npx --yes @tauri-apps/cli@2 android build --apk --aab --ci --target aarch64
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
+          npx --yes @tauri-apps/cli@2 android build --apk --aab --ci --target aarch64
 
       - name: Upload Android build artifacts
         uses: actions/upload-artifact@v4
