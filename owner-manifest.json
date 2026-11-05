@@ -1,0 +1,25 @@
+{
+  "id": "/owner.html",
+  "name": "Embroidery Statement Owner Control Center",
+  "short_name": "ES Owner",
+  "description": "Owner-only customer, subscription and support management.",
+  "start_url": "/owner.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#071a35",
+  "theme_color": "#071a35",
+  "icons": [
+    {
+      "src": "/embroidery-statement-logo-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/embroidery-statement-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
