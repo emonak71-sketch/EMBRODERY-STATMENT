@@ -256,11 +256,17 @@ export const dbService = {
     if (error) throw handleDbError(error, 'searching customer by registered email');
     return Array.isArray(data) ? data[0] || null : data || null;
   },
-  ownerGrantCustomerAccess: async (email: string, days: number, note = '') => {
+  ownerGrantCustomerAccess: async (email: string, days: number, payment: {
+    note?: string; paymentDate: string; amount: number; method: string; reference?: string;
+  }) => {
     const { data, error } = await supabase.rpc('owner_grant_customer_access', {
       p_email: email.trim().toLowerCase(),
       p_days: days,
-      p_note: note.trim() || null
+      p_note: payment.note?.trim() || null,
+      p_payment_date: payment.paymentDate,
+      p_payment_amount_bdt: payment.amount,
+      p_payment_method: payment.method,
+      p_payment_reference: payment.reference?.trim() || null
     });
     if (error) throw handleDbError(error, 'granting customer subscription access');
     return Array.isArray(data) ? data[0] || null : data || null;
