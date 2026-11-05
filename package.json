@@ -17,7 +17,7 @@
     "desktop:check": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 build --no-bundle",
     "test:app-lock": "node scripts/app-lock-contract.test.mjs",
     "build:owner": "vite build --outDir dist-owner",
-    "desktop:owner:build": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 build --config src-tauri/tauri.owner.conf.json",
+    "desktop:owner:build": "npm run desktop:icons && node scripts/build-owner-desktop.mjs",
     "android:customer:build": "npx --yes @tauri-apps/cli@2 android build --apk --aab --ci"
   },
   "dependencies": {
