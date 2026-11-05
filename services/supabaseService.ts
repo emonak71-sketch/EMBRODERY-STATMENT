@@ -229,16 +229,44 @@ export const dbService = {
     const { data: { session } } = await supabase.auth.getSession();
     const uid = session?.user?.id;
     if (!uid) return false;
-    const [adminResult, subscriptionResult] = await Promise.all([
+    const [adminResult, subscriptionResult, trialResult] = await Promise.all([
       supabase.from('billing_admins').select('user_id').eq('user_id',uid).maybeSingle(),
       supabase.from('subscriptions').select('status,current_period_end')
         .eq('user_id',uid).in('status',['active','trialing'])
-        .order('current_period_end',{ascending:false}).limit(1).maybeSingle()
+        .order('current_period_end',{ascending:false}).limit(1).maybeSingle(),
+      supabase.from('account_trials').select('trial_ends_at').eq('user_id',uid).maybeSingle()
     ]);
     if (adminResult.error) throw handleDbError(adminResult.error,'checking billing admin access');
     if (subscriptionResult.error) throw handleDbError(subscriptionResult.error,'checking subscription access');
+    if (trialResult.error) throw handleDbError(trialResult.error,'checking free trial access');
     if (adminResult.data?.user_id) return true;
-    return Boolean(subscriptionResult.data && new Date(subscriptionResult.data.current_period_end).getTime()>Date.now());
+    const paid = Boolean(subscriptionResult.data && new Date(subscriptionResult.data.current_period_end).getTime()>Date.now());
+    const trial = Boolean(trialResult.data && new Date(trialResult.data.trial_ends_at).getTime()>Date.now());
+    return paid || trial;
+  },
+  getMyTrialStatus: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return null;
+    const [adminResult, subscriptionResult, trialResult] = await Promise.all([
+      supabase.from('billing_admins').select('user_id').eq('user_id',uid).maybeSingle(),
+      supabase.from('subscriptions').select('status,current_period_end')
+        .eq('user_id',uid).in('status',['active','trialing'])
+        .order('current_period_end',{ascending:false}).limit(1).maybeSingle(),
+      supabase.from('account_trials').select('trial_started_at,trial_ends_at').eq('user_id',uid).maybeSingle()
+    ]);
+    if (adminResult.error) throw handleDbError(adminResult.error,'checking billing admin trial status');
+    if (subscriptionResult.error) throw handleDbError(subscriptionResult.error,'checking paid subscription trial status');
+    if (trialResult.error) throw handleDbError(trialResult.error,'loading free trial status');
+    if (!trialResult.data) return null;
+    const hasPaid = Boolean(adminResult.data?.user_id || (subscriptionResult.data && new Date(subscriptionResult.data.current_period_end).getTime()>Date.now()));
+    const isTrialActive = !hasPaid && new Date(trialResult.data.trial_ends_at).getTime()>Date.now();
+    return {
+      trial_started_at: trialResult.data.trial_started_at,
+      trial_ends_at: trialResult.data.trial_ends_at,
+      is_trial_active: isTrialActive,
+      is_trial_expired: !hasPaid && !isTrialActive
+    };
   },
   getMyBillingTransactions: async (limit = 100) => {
     const { data: { session } } = await supabase.auth.getSession();
