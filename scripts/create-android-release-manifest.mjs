@@ -3,12 +3,12 @@ import crypto from 'node:crypto';
 
 const [apkPath, releaseTag, repository] = process.argv.slice(2);
 if (!apkPath || !releaseTag || !repository) {
-  throw new Error('Usage: node scripts/create-android-release-manifest.mjs <apk-path> <vX.Y.Z> <owner/repository>');
+  throw new Error('Usage: node scripts/create-android-release-manifest.mjs <apk-path> <android-vX.Y.Z> <owner/repository>');
 }
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const version = packageJson.version;
 if (releaseTag !== 'android-v' + version) {
-  throw new Error('Android release tag ' + releaseTag + ' does not match package version v' + version + '.');
+  throw new Error('Android release tag ' + releaseTag + ' does not match package version android-v' + version + '.');
 }
 if (!fs.existsSync(apkPath)) throw new Error('Signed APK not found: ' + apkPath);
 
