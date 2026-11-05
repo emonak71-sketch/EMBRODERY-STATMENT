@@ -22,7 +22,10 @@ jobs:
       - name: Production customer and Owner Web/PWA build
         run: npm run build
 
-      - name: Verify separate Owner PWA output
+      - name: Verify customer-only desktop and Android bundle
+        run: npm run build:customer
+
+      - name: Verify separate Owner PWA and desktop bundle
         run: npm run build:owner
 
   windows-desktop:
