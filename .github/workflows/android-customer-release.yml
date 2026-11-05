@@ -80,6 +80,29 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
+      - name: Generate Android launcher icons
+        run: npm run desktop:icons
+      - name: Set up Python for Android icon normalization
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Normalize Tauri Android icon to RGBA
+        run: |
+          python -m pip install --disable-pip-version-check Pillow==11.3.0
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          icon = Path("src-tauri/icons/icon.png")
+          if not icon.is_file():
+              raise SystemExit(f"Missing Tauri icon: {icon}")
+          with Image.open(icon) as source:
+              source.convert("RGBA").save(icon, format="PNG")
+          with Image.open(icon) as check:
+              if check.mode != "RGBA":
+                  raise SystemExit(f"Android icon must be RGBA, got {check.mode}")
+          print(f"Verified RGBA Android icon: {icon}")
+          PY
+
       - name: Initialize Tauri Android project
         run: npx --yes @tauri-apps/cli@2 android init --ci --skip-targets-install
 
