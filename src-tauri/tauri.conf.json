@@ -6,8 +6,8 @@
   "build": {
     "beforeDevCommand": "npm run dev -- --host 127.0.0.1",
     "devUrl": "http://127.0.0.1:5173",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist"
+    "beforeBuildCommand": "npm run build:customer",
+    "frontendDist": "../dist-customer"
   },
   "app": {
     "withGlobalTauri": true,
