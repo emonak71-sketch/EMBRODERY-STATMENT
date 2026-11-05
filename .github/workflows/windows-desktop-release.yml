@@ -228,9 +228,23 @@ jobs:
             if ($manifest.version -ne $version) { throw "Updater manifest version mismatch: expected $version, got $($manifest.version)." }
             if (-not $manifest.platforms.'windows-x86_64'.signature) { throw 'An updater manifest has no Windows signature.' }
           }
-          if ($customerManifest.platforms.'windows-x86_64'.url -ne $customerInstaller.browser_download_url) { throw 'Customer updater URL does not match its uploaded installer.' }
-          if ($ownerManifest.platforms.'windows-x86_64'.url -ne $ownerInstaller.browser_download_url) { throw 'Owner updater URL does not match its uploaded installer.' }
-          if ($legacyManifest.platforms.'windows-x86_64'.url -ne $customerInstaller.browser_download_url) { throw 'Legacy updater URL does not match the Customer installer.' }
+          function Assert-UpdaterAssetUrl([string]$manifestUrl, $asset, [string]$channel) {
+            if ([string]::IsNullOrWhiteSpace($manifestUrl)) { throw "$channel updater URL is empty." }
+            $uri = [Uri]$manifestUrl
+            $expectedPrefix = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/"
+            $expectedUri = [Uri]$expectedPrefix
+            $actualName = [Uri]::UnescapeDataString(($uri.AbsolutePath -split '/')[-1])
+            $expectedPath = [Uri]::UnescapeDataString($expectedUri.AbsolutePath)
+            if ($uri.Scheme -ne 'https' -or $uri.Host -ne 'github.com' -or
+                -not $uri.AbsolutePath.StartsWith($expectedUri.AbsolutePath, [StringComparison]::Ordinal) -or
+                $actualName -ne $asset.name) {
+              throw "$channel updater URL does not resolve to its uploaded installer asset: $manifestUrl"
+            }
+            Write-Host "$channel updater URL matches uploaded asset: $($asset.name)"
+          }
+          Assert-UpdaterAssetUrl $customerManifest.platforms.'windows-x86_64'.url $customerInstaller 'Customer'
+          Assert-UpdaterAssetUrl $ownerManifest.platforms.'windows-x86_64'.url $ownerInstaller 'Owner'
+          Assert-UpdaterAssetUrl $legacyManifest.platforms.'windows-x86_64'.url $customerInstaller 'Legacy Customer channel'
 
           $latestUrls = @(
             "https://github.com/$env:GITHUB_REPOSITORY/releases/latest/download/latest-customer.json",
