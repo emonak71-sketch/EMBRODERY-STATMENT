@@ -54,6 +54,21 @@ jobs:
       - name: Initialize Tauri Android project
         run: npx --yes @tauri-apps/cli@2 android init --ci --skip-targets-install
 
+      - name: Configure Android release signing when upload-key secrets are present
+        if: ${{ secrets.ANDROID_KEY_BASE64 != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' && secrets.ANDROID_STORE_PASSWORD != '' }}
+        env:
+          ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          cd src-tauri/gen/android
+          printf "keyAlias=%s\\nkeyPassword=%s\\nstorePassword=%s\\n" "$ANDROID_KEY_ALIAS" "$ANDROID_KEY_PASSWORD" "$ANDROID_STORE_PASSWORD" > keystore.properties
+          echo "storeFile=$RUNNER_TEMP/embroidery-upload-key.jks" >> keystore.properties
+          printf "%s" "$ANDROID_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/embroidery-upload-key.jks"
+          cd ../../..
+          node scripts/configure-android-signing.mjs
+
       - name: Build customer APK and Android App Bundle
         run: |
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
