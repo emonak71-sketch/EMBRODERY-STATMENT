@@ -226,14 +226,19 @@ export const dbService = {
     return data;
   },
   getMySubscriptionAccess: async () => {
-    const [admin, subscription] = await Promise.all([
-      dbService.isBillingAdmin(),
-      dbService.getMySubscription()
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return false;
+    const [adminResult, subscriptionResult] = await Promise.all([
+      supabase.from('billing_admins').select('user_id').eq('user_id',uid).maybeSingle(),
+      supabase.from('subscriptions').select('status,current_period_end')
+        .eq('user_id',uid).in('status',['active','trialing'])
+        .order('current_period_end',{ascending:false}).limit(1).maybeSingle()
     ]);
-    if (admin) return true;
-    if (!subscription) return false;
-    const validStatus = subscription.status === 'active' || subscription.status === 'trialing';
-    return validStatus && new Date(subscription.current_period_end).getTime() > Date.now();
+    if (adminResult.error) throw handleDbError(adminResult.error,'checking billing admin access');
+    if (subscriptionResult.error) throw handleDbError(subscriptionResult.error,'checking subscription access');
+    if (adminResult.data?.user_id) return true;
+    return Boolean(subscriptionResult.data && new Date(subscriptionResult.data.current_period_end).getTime()>Date.now());
   },
   getMyBillingTransactions: async (limit = 100) => {
     const { data: { session } } = await supabase.auth.getSession();
