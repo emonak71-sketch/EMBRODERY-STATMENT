@@ -8,6 +8,13 @@ type NativeApi = {
   event: {
     listen: <T>(event: string, handler: (event: NativeEvent<T>) => void) => Promise<() => void>;
   };
+  opener: {
+    openUrl: (url: string, openWith?: string) => Promise<void>;
+  };
+  notification?: {
+    isPermissionGranted: () => Promise<boolean>;
+    requestPermission: () => Promise<string>;
+  };
 };
 
 declare global {
@@ -16,12 +23,38 @@ declare global {
   }
 }
 
-export function isWindowsDesktop(): boolean {
+export function isTauriApp(): boolean {
   return typeof window !== 'undefined' && Boolean(window.__TAURI__?.core?.invoke);
 }
 
+export function isAndroidTauriApp(): boolean {
+  return isTauriApp() && typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+}
+
+export function isWindowsDesktop(): boolean {
+  if (!isTauriApp()) return false;
+  return !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+export async function desktopOpenUrl(url: string): Promise<void> {
+  const parsed = new URL(url);
+  if (
+    parsed.protocol !== 'https:' ||
+    parsed.hostname !== 'github.com' ||
+    !parsed.pathname.startsWith('/emonak71-sketch/EMBRODERY-STATMENT/releases/download/') ||
+    !parsed.pathname.endsWith('/Embroidery-Statement-Android.apk')
+  ) {
+    throw new Error('Only official Embroidery Statement release URLs can be opened.');
+  }
+  if (!isTauriApp()) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  await window.__TAURI__!.opener.openUrl(url);
+}
+
 export async function desktopInvoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
-  if (!isWindowsDesktop()) throw new Error('Windows desktop feature is unavailable in the web application.');
+  if (!isTauriApp()) throw new Error('Native application feature is unavailable in the web application.');
   return window.__TAURI__!.core.invoke<T>(command, args);
 }
 

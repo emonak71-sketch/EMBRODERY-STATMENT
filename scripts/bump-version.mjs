@@ -10,6 +10,8 @@ const packagePath = 'package.json';
 const lockPath = 'package-lock.json';
 const cargoPath = 'src-tauri/Cargo.toml';
 const tauriConfigPath = 'src-tauri/tauri.conf.json';
+const ownerTauriConfigPath = 'src-tauri/tauri.owner.conf.json';
+const appVersionPath = 'desktop/appVersion.ts';
 const cargoLockPath = 'src-tauri/Cargo.lock';
 
 const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
@@ -44,6 +46,15 @@ const tauriConfig = JSON.parse(fs.readFileSync(tauriConfigPath, 'utf8'));
 tauriConfig.version = next;
 fs.writeFileSync(tauriConfigPath, JSON.stringify(tauriConfig, null, 2) + '\n');
 
+if (fs.existsSync(ownerTauriConfigPath)) {
+  const ownerConfig = JSON.parse(fs.readFileSync(ownerTauriConfigPath, 'utf8'));
+  ownerConfig.version = next;
+  fs.writeFileSync(ownerTauriConfigPath, JSON.stringify(ownerConfig, null, 2) + '\n');
+}
+if (fs.existsSync(appVersionPath)) {
+  fs.writeFileSync(appVersionPath, `// Keep synchronized by scripts/bump-version.mjs.\nexport const APP_VERSION = '${next}';\n`);
+}
+
 if (fs.existsSync(cargoLockPath)) {
   let cargoLock = fs.readFileSync(cargoLockPath, 'utf8');
   const packageEntry = /(\[\[package\]\]\s*\nname = "embroidery_statement"\s*\nversion = ")[^"]+(")/;
@@ -55,4 +66,6 @@ if (fs.existsSync(cargoLockPath)) {
 
 console.log(`Version updated: ${current} -> ${next}`);
 console.log(`Next release tag: v${next}`);
+console.log(`Next Android APK tag: android-v${next}`);
+console.log('Customer, Owner and Android app versions are synchronized.');
 console.log('Review the changelog and run the source checks before creating the release tag.');

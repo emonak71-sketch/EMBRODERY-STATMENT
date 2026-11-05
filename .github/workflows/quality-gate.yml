@@ -1,4 +1,8 @@
 name: Existing app quality gate
+concurrency:
+  group: embroidery-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
@@ -19,8 +23,14 @@ jobs:
         run: npm ci
       - name: Dependency security audit
         run: npm audit --audit-level=high
-      - name: Production build
+      - name: Production customer and Owner Web/PWA build
         run: npm run build
+
+      - name: Verify customer-only desktop and Android bundle
+        run: npm run build:customer
+
+      - name: Verify separate Owner PWA and desktop bundle
+        run: npm run build:owner
 
   windows-desktop:
     runs-on: windows-2022
@@ -47,12 +57,28 @@ jobs:
           workspaces: src-tauri -> target
       - name: Install locked dependencies
         run: npm ci
+      - name: Check Windows updater signing configuration (presence only)
+        shell: pwsh
+        env:
+          UPDATE_PUBLIC_KEY: ${{ vars.EMBROIDERY_UPDATE_PUBLIC_KEY }}
+          SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $missing = @()
+          if ([string]::IsNullOrWhiteSpace($env:UPDATE_PUBLIC_KEY)) { $missing += 'EMBROIDERY_UPDATE_PUBLIC_KEY repository variable' }
+          if ([string]::IsNullOrWhiteSpace($env:SIGNING_PRIVATE_KEY)) { $missing += 'TAURI_SIGNING_PRIVATE_KEY repository secret' }
+          if ([string]::IsNullOrWhiteSpace($env:SIGNING_PRIVATE_KEY_PASSWORD)) { $missing += 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD repository secret' }
+          if ($missing.Count -eq 0) { Write-Host 'Windows updater signing credentials: configured (values not displayed).' }
+          else { Write-Warning ('Signed Windows release is blocked; missing: ' + ($missing -join ', ')) }
+
       - name: Install Windows Rollup native binary
         run: npm install --no-save --no-package-lock @rollup/rollup-win32-x64-msvc@4.62.3
       - name: Type-check application
         run: npm run typecheck
       - name: Test attendance and Dhaka reminder logic
         run: npm run test:attendance
+      - name: Test App Lock security contract
+        run: npm run test:app-lock
       - name: Generate Windows icons
         run: npm run desktop:icons
       - name: Build unsigned NSIS installer for CI only
@@ -69,5 +95,119 @@ jobs:
         with:
           name: Embroidery-Statement-Windows-CI-${{ github.run_number }}
           path: src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove Customer installer from shared bundle output
+        shell: pwsh
+        run: |
+          Get-ChildItem 'src-tauri/target/release/bundle/nsis' -Filter '*.exe' |
+            Where-Object { $_.Name -notmatch 'Owner' } |
+            Remove-Item -Force
+
+      - name: Build separate Owner Control Center Windows installer
+        shell: pwsh
+        env:
+          EMBROIDERY_OWNER_BUILD: '1'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npx --yes @tauri-apps/cli@2 build --bundles nsis --config src-tauri/tauri.owner.conf.json --config src-tauri/tauri.unsigned.conf.json
+          if ($LASTEXITCODE -ne 0) { throw 'Owner Control Center NSIS build failed.' }
+
+      - name: Install and smoke-test Owner Control Center
+        shell: pwsh
+        run: ./scripts/windows-owner-installer-smoke.ps1
+
+      - name: Upload Owner Control Center Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Embroidery-Statement-Owner-Windows-CI-${{ github.run_number }}
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  android-customer:
+    name: Android customer APK compile check
+    runs-on: ubuntu-latest
+    needs: build-and-audit
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - name: Install Android SDK and NDK components
+        run: |
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.0.12077973"
+      - name: Set up Rust Android target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Check Android release signing configuration (presence only)
+        shell: bash
+        env:
+          ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          missing=()
+          [[ -n "$ANDROID_KEY_BASE64" ]] || missing+=("ANDROID_KEY_BASE64")
+          [[ -n "$ANDROID_KEY_ALIAS" ]] || missing+=("ANDROID_KEY_ALIAS")
+          [[ -n "$ANDROID_KEY_PASSWORD" ]] || missing+=("ANDROID_KEY_PASSWORD")
+          [[ -n "$ANDROID_STORE_PASSWORD" ]] || missing+=("ANDROID_STORE_PASSWORD")
+          if (( ${#missing[@]} == 0 )); then
+            echo "Android release signing credentials: configured (values not displayed)."
+          else
+            echo "::warning::Signed Android release is blocked; missing: ${missing[*]}"
+          fi
+      - name: Generate Android launcher icons
+        run: npm run desktop:icons
+      - name: Set up Python for Android icon normalization
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Normalize Tauri Android icon to RGBA
+        run: |
+          python -m pip install --disable-pip-version-check Pillow==11.3.0
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          icon = Path("src-tauri/icons/icon.png")
+          if not icon.is_file():
+              raise SystemExit(f"Missing Tauri icon: {icon}")
+          with Image.open(icon) as source:
+              source.convert("RGBA").save(icon, format="PNG")
+          with Image.open(icon) as check:
+              if check.mode != "RGBA":
+                  raise SystemExit(f"Android icon must be RGBA, got {check.mode}")
+          print(f"Verified RGBA Android icon: {icon}")
+          PY
+      - name: Initialize Tauri Android project
+        run: npx --yes @tauri-apps/cli@2 android init --ci --skip-targets-install
+      - name: Compile customer APK in debug mode (QA only)
+        run: |
+          export NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
+          export ANDROID_NDK_HOME="$NDK_HOME"
+          npx --yes @tauri-apps/cli@2 android build --apk --debug --ci --target aarch64
+      - name: Upload Android QA APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Embroidery-Statement-Android-APK-QA-${{ github.run_number }}
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
           retention-days: 7

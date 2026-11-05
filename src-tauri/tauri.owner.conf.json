@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Embroidery Statement Owner Control Center",
+  "version": "1.0.3",
+  "identifier": "com.embroidery.statement.owner",
+  "build": {
+    "beforeDevCommand": "npm run dev -- --host 127.0.0.1",
+    "devUrl": "http://127.0.0.1:5173/owner.html",
+    "beforeBuildCommand": "npm run build:owner",
+    "frontendDist": "../dist-owner"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Embroidery Statement Owner Control Center",
+        "url": "owner.html",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 900,
+        "minHeight": 650,
+        "center": true,
+        "visible": true
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
+    "icon": ["icons/icon.png", "icons/icon.ico"],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "installMode": "currentUser",
+        "displayLanguageSelector": false
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": [
+        "https://github.com/emonak71-sketch/EMBRODERY-STATMENT/releases/latest/download/latest-owner.json"
+      ],
+      "windows": { "installMode": "passive" }
+    }
+  }
+}

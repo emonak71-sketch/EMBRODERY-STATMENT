@@ -86,8 +86,12 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=5').then(reg => { reg.update(); return reg; }).then(reg => {
-          console.log('SW registered!', reg);
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => { if (!refreshing) { refreshing = true; window.location.reload(); } });
+        navigator.serviceWorker.register('/sw.js?v=6').then(reg => {
+          reg.update();
+          window.setInterval(() => reg.update(), 30 * 60 * 1000);
+          console.log('Customer app update checks enabled.', reg);
         }).catch(err => {
           console.log('SW registration failed: ', err);
         });

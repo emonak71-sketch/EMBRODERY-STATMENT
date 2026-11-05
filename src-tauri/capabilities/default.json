@@ -6,6 +6,15 @@
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://github.com/emonak71-sketch/EMBRODERY-STATMENT/releases/download/**/Embroidery-Statement-Android.apk"
+        }
+      ]
+    },
+    "notification:default"
   ]
 }
