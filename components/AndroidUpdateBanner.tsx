@@ -33,14 +33,18 @@ const AndroidUpdateBanner:React.FC = () => {
     checkingRef.current=true;
     setChecking(true);setError('');
     try{
-      const response=await fetch('https://github.com/emonak71-sketch/EMBRODERY-STATMENT/releases/latest/download/latest-android.json?check='+Date.now(),{
+      const response=await fetch('https://api.github.com/repos/emonak71-sketch/EMBRODERY-STATMENT/releases?per_page=20&check='+Date.now(),{
         cache:'no-store',
-        headers:{Accept:'application/json'}
+        headers:{Accept:'application/vnd.github+json'}
       });
-      if(response.status===404){setRelease(null);return;}
       if(!response.ok)throw new Error('Update server returned HTTP '+response.status);
-      const data=await response.json() as AndroidRelease;
-      if(!data.version||!data.apk_url||data.package_id!=='com.embroidery.statement')throw new Error('The Android update manifest is invalid.');
+      const releases=await response.json() as Array<{tag_name:string;body?:string;draft:boolean;prerelease:boolean;assets:Array<{name:string;browser_download_url:string}>}>;
+      const latest=releases.find(item=>!item.draft&&!item.prerelease&&/^v\\d+\\.\\d+\\.\\d+$/.test(item.tag_name)&&item.assets.some(asset=>asset.name==='Embroidery-Statement-Android.apk'));
+      if(!latest){setRelease(null);return;}
+      const version=latest.tag_name.slice(1);
+      const apk=latest.assets.find(asset=>asset.name==='Embroidery-Statement-Android.apk');
+      if(!apk)throw new Error('The Android APK release asset is missing.');
+      const data:AndroidRelease={version,apk_url:apk.browser_download_url,notes:(latest.body||'').slice(0,500),package_id:'com.embroidery.statement'};
       if(compareVersions(data.version,APP_VERSION)>0)setRelease(data);
       else setRelease(null);
     }catch(e:any){
