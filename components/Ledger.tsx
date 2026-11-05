@@ -137,6 +137,7 @@ const Ledger: React.FC<LedgerProps> = ({
       };
 
       let dataUrl: string;
+      let fileExtension = 'jpg';
       try {
         dataUrl = await htmlToImage.toJpeg(node, options);
       } catch (jpegError) {
@@ -145,13 +146,14 @@ const Ledger: React.FC<LedgerProps> = ({
           ...options,
           quality: undefined,
         });
+        fileExtension = 'png';
       }
 
       const safePartyName = (selectedParty?.name || 'Customer')
         .replace(/[\\/:*?"<>|]+/g, '-')
         .trim() || 'Customer';
       const link = document.createElement('a');
-      link.download = `${safePartyName}_Statement_${date}.jpg`;
+      link.download = `${safePartyName}_Statement_${date}.${fileExtension}`;
       link.href = dataUrl;
       link.rel = 'noopener';
       document.body.appendChild(link);
