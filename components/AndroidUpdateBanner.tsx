@@ -73,7 +73,7 @@ const AndroidUpdateBanner:React.FC = () => {
   if(!release&&!error)return null;
   if(dismissed&&release)return null;
 
-  return <section className="mb-5 rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-white p-4 shadow-sm dark:border-sky-900 dark:from-sky-950/50 dark:to-slate-900">
+  return <section className="fixed left-1/2 top-3 z-[1000] w-[calc(100%-1.5rem)] max-w-5xl -translate-x-1/2 rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-white p-4 shadow-sm dark:border-sky-900 dark:from-sky-950/50 dark:to-slate-900">
     {release?<div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-200"><Smartphone size={20}/></div>
