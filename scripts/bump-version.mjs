@@ -66,5 +66,6 @@ if (fs.existsSync(cargoLockPath)) {
 
 console.log(`Version updated: ${current} -> ${next}`);
 console.log(`Next release tag: v${next}`);
+console.log(`Next Android APK tag: android-v${next}`);
 console.log('Customer, Owner and Android app versions are synchronized.');
 console.log('Review the changelog and run the source checks before creating the release tag.');
