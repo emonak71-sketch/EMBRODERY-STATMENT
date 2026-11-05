@@ -108,7 +108,7 @@ const Ledger: React.FC<LedgerProps> = ({
       node.style.overflow = 'visible';
 
       if (document.fonts?.ready) await document.fonts.ready;
-      await Promise.all(Array.from(node.querySelectorAll('img')).map(async image => {
+      await Promise.all(Array.from(node.querySelectorAll<HTMLImageElement>('img')).map(async image => {
         if (image.complete) return;
         await new Promise<void>(resolve => {
           image.addEventListener('load', () => resolve(), { once: true });
