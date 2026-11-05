@@ -171,9 +171,12 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, onAppLockUpd
           </div>
         </div>
         <div className="mt-5 border-t border-slate-100 pt-4 text-xs leading-relaxed text-slate-600 dark:border-slate-800 dark:text-slate-300">
-          <p><strong>Logo concept and visual design:</strong> Created with OpenAI ChatGPT (AI-assisted design), commissioned by the Embroidery Statement project owner.</p>
-          <p className="mt-2"><strong>Brand ownership:</strong> Embroidery Statement project owner.</p>
-          <p className="mt-2 text-slate-400">Design provenance record · 5 November 2026</p>
+          <p><strong>Owner:</strong> Em On</p>
+          <p className="mt-2"><strong>Brand:</strong> Embroidery Statement</p>
+          <p className="mt-2"><strong>Facebook:</strong> <a className="font-semibold text-primary-600 hover:underline" href="https://www.facebook.com/embroderystatment/" target="_blank" rel="noreferrer">facebook.com/embroderystatment</a></p>
+          <p className="mt-2"><strong>WhatsApp:</strong> <a className="font-semibold text-primary-600 hover:underline" href="https://wa.me/8801650206700" target="_blank" rel="noreferrer">01650206700</a></p>
+          <p className="mt-2"><strong>Brand &amp; logo ownership:</strong> Embroidery Statement</p>
+          <p className="mt-2 text-slate-400">Official brand information and contact details.</p>
         </div>
       </section>
     </div>
