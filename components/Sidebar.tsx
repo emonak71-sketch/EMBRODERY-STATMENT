@@ -18,12 +18,13 @@ interface SidebarProps {
   onDeleteParty: (id: string) => Promise<void>;
   onRestoreParty: (id: string) => Promise<void>;
   onPermanentDeleteParty: (id: string) => Promise<void>;
+  subscriptionLocked?: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
   activeTab, setActiveTab, parties, selectedParty, setSelectedParty, 
   isDarkMode, toggleDarkMode, onLogout, onAddParty, onEditParty, onDeleteParty,
-  onRestoreParty, onPermanentDeleteParty
+  onRestoreParty, onPermanentDeleteParty, subscriptionLocked = false
 }) => {
   const { t, language, setLanguage } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
@@ -106,7 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               { id: 'workers', label: 'Workers & Payroll', icon: <Users className="w-5 h-5" /> },
               { id: 'billing', label: 'Subscription & Billing', icon: <CreditCard className="w-5 h-5" /> },
               { id: 'settings', label: t('settings'), icon: <Settings className="w-5 h-5" /> },
-            ].map((item) => (
+            ].filter((item) => !subscriptionLocked || item.id === 'billing').map((item) => (
               <button
                 key={item.id}
                 onClick={() => { setActiveTab(item.id as TabType); setIsOpen(false); }}
