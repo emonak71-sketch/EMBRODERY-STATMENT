@@ -55,7 +55,7 @@ const SubscriptionBilling:React.FC<{user:User;onAccessRefresh?:()=>void|Promise<
    await onAccessRefresh?.();
   }catch(e:any){setError(e.message||'Could not load subscription and billing history.');}
   finally{setLoading(false);}
- },[]);
+ },[onAccessRefresh]);
  useEffect(()=>{void load();},[load]);
 
  const invoiceByTransaction=useMemo(()=>new Map(invoices.map(i=>[i.transaction_id,i])),[invoices]);
