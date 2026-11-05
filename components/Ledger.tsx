@@ -441,7 +441,7 @@ const Ledger: React.FC<LedgerProps> = ({
       {showDownloadSuccess && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-6">
           <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Statement Saved to Gallery</span>
+          <span className="text-[10px] font-black uppercase tracking-widest">Statement Downloaded Successfully</span>
         </div>
       )}
 
