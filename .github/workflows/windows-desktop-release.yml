@@ -9,17 +9,17 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag matching package.json, Cargo.toml and tauri.conf.json (example: v1.0.0)'
+        description: 'Release tag matching package.json, Cargo.toml and tauri.conf.json (example: v1.0.2)'
         required: true
         type: string
-        default: 'v1.0.0'
+        default: 'v1.0.2'
 
 permissions:
   contents: write
 
 concurrency:
   group: windows-desktop-release-${{ inputs.release_tag || github.ref_name }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   publish-windows:
@@ -67,12 +67,14 @@ jobs:
 
       - name: Test attendance and Dhaka reminder logic
         run: npm run test:attendance
+      - name: Test App Lock security contract
+        run: npm run test:app-lock
 
       - name: Generate Windows icons
         run: npm run desktop:icons
 
       - name: Resolve release tag from app version on the release branch
-        if: github.ref == 'refs/heads/release'
+        if: startsWith(github.ref, 'refs/heads/release')
         shell: pwsh
         run: |
           $version = (Get-Content 'package.json' -Raw | ConvertFrom-Json).version
@@ -122,7 +124,18 @@ jobs:
           $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path 'latest.json' -Encoding utf8
           Write-Host "Updater manifest prepared for $version."
 
-      - name: Publish GitHub Release and updater manifest
+      - name: Verify 1.0.1 to 1.0.2 in-place upgrade and user-data preservation
+        shell: pwsh
+        env:
+          PREVIOUS_INSTALLER_URL: https://github.com/emonak71-sketch/EMBRODERY-STATMENT/releases/download/v1.0.1/Embroidery.Statement_1.0.1_x64-setup.exe
+          PREVIOUS_INSTALLER_SHA256: 919ff2393c44b66f2c2d3561a9c2c69c02d1c3546e1cf873ce073a8757836289
+        run: ./scripts/windows-upgrade-smoke.ps1
+
+      - name: Run Windows installer, tray and native notification smoke test
+        shell: pwsh
+        run: ./scripts/windows-installer-smoke.ps1
+
+      - name: Publish or update signed GitHub Release and updater manifest
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -134,16 +147,17 @@ jobs:
           if (-not $installer) { throw 'Installer asset is missing.' }
           $signature = $installer.FullName + '.sig'
           if (-not (Test-Path $signature)) { throw 'Updater signature asset is missing.' }
-          $arguments = @(
-            'release', 'create', $env:RELEASE_TAG,
-            '--repo', $env:GITHUB_REPOSITORY,
-            '--title', "Embroidery Statement $env:RELEASE_TAG",
-            '--generate-notes',
-            '--latest',
-            '--target', $env:GITHUB_SHA,
-            $installer.FullName,
-            $signature,
-            'latest.json'
-          )
-          gh @arguments
-          if ($LASTEXITCODE -ne 0) { throw 'GitHub Release creation failed.' }
+          $assets = @($installer.FullName, $signature, 'latest.json')
+
+          gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $env:RELEASE_TAG already exists; replacing only its signed installer, signature and updater manifest."
+            gh release upload $env:RELEASE_TAG @assets --repo $env:GITHUB_REPOSITORY --clobber
+            if ($LASTEXITCODE -ne 0) { throw 'Updating the existing GitHub Release assets failed.' }
+            gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file 'RELEASE_NOTES_1.0.2.md' --latest
+            if ($LASTEXITCODE -ne 0) { throw 'Updating the GitHub Release metadata failed.' }
+          } else {
+            gh release create $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file 'RELEASE_NOTES_1.0.2.md' --latest --target $env:GITHUB_SHA @assets
+            if ($LASTEXITCODE -ne 0) { throw 'GitHub Release creation failed.' }
+          }
+# Signing credentials are provisioned by the one-time local updater setup.

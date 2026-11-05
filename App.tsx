@@ -11,6 +11,7 @@ import Settings from './components/Settings';
 import MonthlyReports from './components/MonthlyReports';
 import MonthlyCollections from './components/MonthlyCollections';
 import PartiesList from './components/PartiesList';
+import AppLockGate from './components/AppLockGate';
 import { BiometricLock } from './components/BiometricLock';
 import WorkerAttendance from './components/WorkerAttendance';
 import SplashScreen from './components/SplashScreen';
@@ -78,6 +79,9 @@ const App: React.FC = () => {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const [isLocked, setIsLocked] = useState(() => localStorage.getItem('app_lock_enabled') === 'true');
+  const [appLockState, setAppLockState] = useState<'checking' | 'setup' | 'locked' | 'unavailable' | 'unlocked'>('checking');
+  const [appLockUpdatedAt, setAppLockUpdatedAt] = useState<string | null>(null);
+  const currentUserId = user?.id;
   const [stats, setStats] = useState({
     totalCredit: 0,
     totalCollected: 0,
@@ -90,6 +94,28 @@ const App: React.FC = () => {
     const splashTimer = window.setTimeout(() => setSplashComplete(true), 5000);
     return () => window.clearTimeout(splashTimer);
   }, []);
+
+  const refreshAppLockStatus = useCallback(async () => {
+    if (!currentUserId) return;
+    setAppLockState('checking');
+    try {
+      const status = await dbService.getAppLockStatus();
+      setAppLockUpdatedAt(status.updatedAt);
+      setAppLockState(status.enabled ? 'locked' : 'setup');
+    } catch (error) {
+      console.error('Could not load shared App Lock status:', error);
+      setAppLockState('unavailable');
+    }
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!currentUserId) {
+      setAppLockState('checking');
+      setAppLockUpdatedAt(null);
+      return;
+    }
+    void refreshAppLockStatus();
+  }, [currentUserId, refreshAppLockStatus]);
 
   const refreshData = useCallback(async () => {
     if (!user) return;
@@ -169,6 +195,8 @@ const App: React.FC = () => {
         });
       } else {
         setUser(null);
+        setAppLockState('checking');
+        setAppLockUpdatedAt(null);
         setParties([]);
         setTransactions([]);
         setStats({
@@ -185,7 +213,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (user && !isMisconfigured) {
+    if (user && !isMisconfigured && appLockState === 'unlocked' && !isLocked) {
       refreshData();
       const channel = supabase
         .channel('db_changes')
@@ -199,9 +227,33 @@ const App: React.FC = () => {
         supabase.removeChannel(channel);
       };
     }
-  }, [user, refreshData, isMisconfigured]);
+  }, [user, appLockState, isLocked, refreshData, isMisconfigured]);
 
-  
+  // Keep setup screens in sync when another device creates the first App Lock,
+  // and require the new password after a remote password change.
+  useEffect(() => {
+    if (!currentUserId || (appLockState !== 'unlocked' && appLockState !== 'setup')) return;
+    const checkRemoteLockVersion = async () => {
+      try {
+        const status = await dbService.getAppLockStatus();
+        if (!status.enabled) {
+          setAppLockUpdatedAt(null);
+          if (appLockState !== 'setup') setAppLockState('setup');
+        } else if (appLockState === 'setup') {
+          setAppLockUpdatedAt(status.updatedAt);
+          setAppLockState('locked');
+        } else if (appLockUpdatedAt && status.updatedAt !== appLockUpdatedAt) {
+          setAppLockUpdatedAt(status.updatedAt);
+          setAppLockState('locked');
+        }
+      } catch {
+        // Live data remains inaccessible when the network is unavailable.
+      }
+    };
+    const timer = window.setInterval(() => void checkRemoteLockVersion(), 60_000);
+    return () => window.clearInterval(timer);
+  }, [currentUserId, appLockState, appLockUpdatedAt]);
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && localStorage.getItem('app_lock_enabled') === 'true') {
@@ -406,6 +458,26 @@ const App: React.FC = () => {
     return <BiometricLock onUnlock={() => setIsLocked(false)} onLogout={handleLogout} />;
   }
 
+  if (user && appLockState === 'checking') return <SplashScreen />;
+
+  if (user && appLockState !== 'unlocked') {
+    const gateMode = appLockState === 'setup' ? 'setup' : appLockState === 'unavailable' ? 'unavailable' : 'unlock';
+    return (
+      <AppLockGate
+        mode={gateMode}
+        email={user.email}
+        onUnlock={(updatedAt) => {
+          setAppLockUpdatedAt(updatedAt);
+          setAppLockState('unlocked');
+        }}
+        onLogout={handleLogout}
+        onRetry={() => void refreshAppLockStatus()}
+      />
+    );
+  }
+
+  if (user && loading) return <SplashScreen />;
+
   return (
     <div className="app-shell flex h-[100dvh] min-h-[100svh] w-full max-w-full overflow-hidden">
       <Sidebar 
@@ -447,6 +519,7 @@ const App: React.FC = () => {
           <Settings 
             user={user}
             onUpdateProfile={handleUpdateProfile}
+            onAppLockUpdated={setAppLockUpdatedAt}
           />
         )}
         {['sales', 'expenses'].includes(activeTab) && (
