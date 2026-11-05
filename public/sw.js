@@ -1,5 +1,5 @@
 const CACHE_NAME = 'embrodery-v3';
-const STATIC_ASSET = /\\.(?:js|css|png|jpg|jpeg|svg|webp|woff2?)$/i;
+const STATIC_ASSET = /\.(?:js|css|png|jpg|jpeg|svg|webp|woff2?)$/i;
 
 self.addEventListener('install', event => {
   event.waitUntil(self.skipWaiting());
