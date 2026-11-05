@@ -15,7 +15,10 @@
     "desktop:build": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 build",
     "desktop:build:signed": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-windows-desktop-signed.ps1",
     "desktop:check": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 build --no-bundle",
-    "test:app-lock": "node scripts/app-lock-contract.test.mjs"
+    "test:app-lock": "node scripts/app-lock-contract.test.mjs",
+    "build:owner": "vite build --outDir dist-owner",
+    "desktop:owner:build": "npm run desktop:icons && EMBROIDERY_OWNER_BUILD=1 npx --yes @tauri-apps/cli@2 build --config src-tauri/tauri.owner.conf.json",
+    "android:customer:build": "npx --yes @tauri-apps/cli@2 android build --apk --aab --ci"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",
