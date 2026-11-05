@@ -543,7 +543,7 @@ const App: React.FC = () => {
           <SubscriptionBilling onAccessRefresh={refreshSubscriptionAccess} />
         ) : <>
         {activeTab === 'workers' && <WorkerAttendance userId={user.id} companyName={user.business_name} requestedAttendance={attendanceRequest} />}
-        {activeTab === 'billing' && <SubscriptionBilling user={{id:user.id,email:user.email,business_name:user.business_name}} onAccessRefresh={refreshSubscriptionAccess} />}
+        {activeTab === 'billing' && <SubscriptionBilling onAccessRefresh={refreshSubscriptionAccess} />}
         {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} />}
         {activeTab === 'parties' && <PartiesList parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
         {activeTab === 'ledger' && (
