@@ -14,6 +14,7 @@ import PartiesList from './components/PartiesList';
 import AppLockGate from './components/AppLockGate';
 import { BiometricLock } from './components/BiometricLock';
 import WorkerAttendance from './components/WorkerAttendance';
+import SubscriptionBilling from './components/SubscriptionBilling';
 import SplashScreen from './components/SplashScreen';
 
 const sendSMSAlert = async (phone: string, message: string) => {
@@ -48,12 +49,14 @@ const isMobileDevice = () => {
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const [hasPaidAccess, setHasPaidAccess] = useState<boolean | null>(null);
   const [attendanceRequest,setAttendanceRequest] = useState<{session:'morning'|'night';nonce:number}|null>(null);
 
   useEffect(() => {
     const onDesktopNavigate = (event:Event) => {
       const requested=(event as CustomEvent<{tab:'workers'|'settings';session?:'morning'|'night'}>).detail;
       if(!requested) return;
+      if(hasPaidAccess===false) { setActiveTab('billing'); return; }
       if(requested.tab==='workers') {
         setAttendanceRequest({session:requested.session||'morning',nonce:Date.now()});
         setActiveTab('workers');
@@ -63,9 +66,10 @@ const App: React.FC = () => {
     };
     window.addEventListener('embroidery:desktop-navigation',onDesktopNavigate);
     return ()=>window.removeEventListener('embroidery:desktop-navigation',onDesktopNavigate);
-  }, []);
+  }, [hasPaidAccess]);
 
   const selectSidebarTab=(tab:TabType)=>{
+    if(hasPaidAccess===false && tab!=='billing') { setActiveTab('billing'); return; }
     if(tab==='workers') setAttendanceRequest(null);
     setActiveTab(tab);
   };
@@ -82,6 +86,25 @@ const App: React.FC = () => {
   const [appLockState, setAppLockState] = useState<'checking' | 'setup' | 'locked' | 'unavailable' | 'unlocked'>('checking');
   const [appLockUpdatedAt, setAppLockUpdatedAt] = useState<string | null>(null);
   const currentUserId = user?.id;
+  const refreshSubscriptionAccess = useCallback(async () => {
+    if (!currentUserId) { setHasPaidAccess(null); return; }
+    try {
+      const allowed = await dbService.getMySubscriptionAccess();
+      setHasPaidAccess(allowed);
+    } catch (error) {
+      console.error('Could not verify subscription access:', error);
+      setHasPaidAccess(false);
+    }
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!currentUserId) { setHasPaidAccess(null); return; }
+    setHasPaidAccess(null);
+    void refreshSubscriptionAccess();
+    const timer = window.setInterval(() => void refreshSubscriptionAccess(), 60_000);
+    return () => window.clearInterval(timer);
+  }, [currentUserId, refreshSubscriptionAccess]);
+
   const [stats, setStats] = useState({
     totalCredit: 0,
     totalCollected: 0,
@@ -214,11 +237,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (user && !isMisconfigured && appLockState === 'unlocked' && !isLocked) {
+      if (hasPaidAccess !== true) return;
       refreshData();
       const channel = supabase
         .channel('db_changes')
         .on('postgres_changes', { event: '*', schema: 'public' }, () => {
           refreshData();
+          void refreshSubscriptionAccess();
           window.dispatchEvent(new CustomEvent('embroidery:remote-data-changed'));
         })
         .subscribe();
@@ -227,7 +252,7 @@ const App: React.FC = () => {
         supabase.removeChannel(channel);
       };
     }
-  }, [user, appLockState, isLocked, refreshData, isMisconfigured]);
+  }, [user, appLockState, isLocked, refreshData, isMisconfigured, hasPaidAccess, refreshSubscriptionAccess]);
 
   // Keep setup screens in sync when another device creates the first App Lock,
   // and require the new password after a remote password change.
@@ -476,13 +501,15 @@ const App: React.FC = () => {
     );
   }
 
-  if (user && loading) return <SplashScreen />;
+  if (user && loading && hasPaidAccess!==false) return <SplashScreen />;
+  if (user && hasPaidAccess===null) return <SplashScreen />;
 
   return (
     <div className="app-shell flex h-[100dvh] min-h-[100svh] w-full max-w-full overflow-hidden">
       <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={selectSidebarTab} 
+        activeTab={hasPaidAccess===false?'billing':activeTab} 
+        setActiveTab={selectSidebarTab}
+        subscriptionLocked={hasPaidAccess===false} 
         parties={parties}
         selectedParty={selectedParty}
         setSelectedParty={setSelectedParty}
@@ -497,7 +524,11 @@ const App: React.FC = () => {
       />
 
       <main className="app-main min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 no-print">
+        {hasPaidAccess===false ? (
+          <SubscriptionBilling user={{id:user.id,email:user.email,business_name:user.business_name}} onAccessRefresh={refreshSubscriptionAccess} />
+        ) : <>
         {activeTab === 'workers' && <WorkerAttendance userId={user.id} companyName={user.business_name} requestedAttendance={attendanceRequest} />}
+        {activeTab === 'billing' && <SubscriptionBilling user={{id:user.id,email:user.email,business_name:user.business_name}} onAccessRefresh={refreshSubscriptionAccess} />}
         {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} />}
         {activeTab === 'parties' && <PartiesList parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
         {activeTab === 'ledger' && (
@@ -528,6 +559,7 @@ const App: React.FC = () => {
              <h2 className="text-xl font-black uppercase tracking-widest text-slate-400">Coming Soon</h2>
           </div>
         )}
+        </>}
       </main>
 
       <div className="hidden print:block fixed inset-0 bg-white z-[100] p-0 overflow-visible">

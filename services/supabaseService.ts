@@ -209,6 +209,106 @@ export const dbService = {
   },
   
 
+  // Subscription billing: client access is read-only; checkout and paid-status updates are server/webhook controlled.
+  getSubscriptionPlans: async () => {
+    const { data, error } = await supabase.from('subscription_plans').select('*').eq('is_active', true).order('price_bdt');
+    if (error) throw handleDbError(error, 'loading subscription plans');
+    return data || [];
+  },
+  getMySubscription: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.from('subscriptions').select('*, subscription_plans(*)')
+      .eq('user_id', uid).in('status', ['trialing','active','past_due'])
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (error) throw handleDbError(error, 'loading subscription status');
+    return data;
+  },
+  getMySubscriptionAccess: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return false;
+    const [adminResult, subscriptionResult] = await Promise.all([
+      supabase.from('billing_admins').select('user_id').eq('user_id',uid).maybeSingle(),
+      supabase.from('subscriptions').select('status,current_period_end')
+        .eq('user_id',uid).in('status',['active','trialing'])
+        .order('current_period_end',{ascending:false}).limit(1).maybeSingle()
+    ]);
+    if (adminResult.error) throw handleDbError(adminResult.error,'checking billing admin access');
+    if (subscriptionResult.error) throw handleDbError(subscriptionResult.error,'checking subscription access');
+    if (adminResult.data?.user_id) return true;
+    return Boolean(subscriptionResult.data && new Date(subscriptionResult.data.current_period_end).getTime()>Date.now());
+  },
+  getMyBillingTransactions: async (limit = 100) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.from('billing_transactions').select('*, subscription_plans(name,billing_interval)')
+      .eq('user_id', uid).order('created_at', { ascending: false }).limit(Math.max(1, Math.min(limit, 200)));
+    if (error) throw handleDbError(error, 'loading transaction history');
+    return data || [];
+  },
+  getMyBillingInvoices: async (limit = 100) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.from('billing_invoices').select('*')
+      .eq('user_id', uid).order('issued_at', { ascending: false }).limit(Math.max(1, Math.min(limit, 200)));
+    if (error) throw handleDbError(error, 'loading invoice history');
+    return data || [];
+  },
+  getNagadPaymentSettings: async () => {
+    const { data, error } = await supabase.from('billing_payment_settings')
+      .select('provider,account_type,receiver_number,instructions,is_active').eq('id',1).maybeSingle();
+    if (error) throw handleDbError(error, 'loading Nagad payment settings');
+    return data;
+  },
+  isBillingAdmin: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return false;
+    const { data, error } = await supabase.from('billing_admins').select('user_id').eq('user_id',uid).maybeSingle();
+    if (error) throw handleDbError(error, 'checking billing permissions');
+    return Boolean(data?.user_id);
+  },
+  getMyNagadPaymentSubmissions: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.from('billing_payment_submissions')
+      .select('*, subscription_plans(name,billing_interval)')
+      .eq('user_id',uid).order('created_at',{ascending:false}).limit(100);
+    if (error) throw handleDbError(error, 'loading your Nagad payment submissions');
+    return data || [];
+  },
+  getPendingNagadPaymentSubmissions: async () => {
+    const { data, error } = await supabase.from('billing_payment_submissions')
+      .select('*, subscription_plans(name,billing_interval)')
+      .eq('status','pending').order('created_at',{ascending:true}).limit(100);
+    if (error) throw handleDbError(error, 'loading pending Nagad payment submissions');
+    return data || [];
+  },
+  submitNagadPersonalPayment: async (planId:string,senderNumber:string,transactionId:string) => {
+    const { data, error } = await supabase.rpc('submit_nagad_personal_payment',{
+      p_plan_id:planId,p_sender_number:senderNumber,p_transaction_id:transactionId
+    });
+    if (error) throw handleDbError(error, 'submitting Nagad payment');
+    return data as string;
+  },
+  setNagadPersonalReceiver: async (receiverNumber:string) => {
+    const { data, error } = await supabase.rpc('set_nagad_personal_receiver',{p_number:receiverNumber});
+    if (error) throw handleDbError(error, 'saving Nagad receiver number');
+    return data as string;
+  },
+  reviewNagadPersonalPayment: async (submissionId:string,approve:boolean,note:string='') => {
+    const { data, error } = await supabase.rpc('review_nagad_personal_payment',{
+      p_submission_id:submissionId,p_approve:approve,p_note:note
+    });
+    if (error) throw handleDbError(error, 'reviewing Nagad payment');
+    return data as string|null;
+  },
+
   // Worker Attendance & Payroll: all operations are scoped to the signed-in account.
   getWorkers: async () => {
     const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
@@ -216,7 +316,7 @@ export const dbService = {
     const {data,error}=await supabase.from('Workers').select('*').eq('user_id',uid).order('full_name');
     if(error) throw handleDbError(error,'loading workers'); return data||[];
   },
-  saveWorker: async (worker:{id?:string|null;worker_code:string;full_name:string;phone:string;designation:string;joining_date:string;monthly_salary:number;attendance_applicable:boolean;monthly_working_days:number;is_active:boolean}) => {
+  saveWorker: async (worker:{id?:string|null;worker_code:string;full_name:string;phone:string;designation:string;joining_date:string;monthly_salary:number;attendance_bonus:number;attendance_applicable:boolean;monthly_working_days:number;is_active:boolean}) => {
     const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
     if(!uid) throw new Error('Please sign in again.');
 
@@ -316,7 +416,7 @@ export const dbService = {
     const {data,error}=await supabase.from('WorkerPayroll').select('*').eq('user_id',uid).eq('month_key',month);
     if(error) throw handleDbError(error,'loading payroll'); return data||[];
   },
-  saveWorkerPayroll: async (p:{worker_id:string;month_key:string;basic_salary:number;overtime_hours:number;overtime_amount:number;bonus:number;deduction:number;advance_deduction:number;net_salary:number;status:'draft'|'paid';paid_at:string|null}) => {
+  saveWorkerPayroll: async (p:{worker_id:string;month_key:string;basic_salary:number;overtime_hours:number;overtime_amount:number;attendance_bonus:number;bonus:number;deduction:number;advance_deduction:number;net_salary:number;status:'draft'|'paid';paid_at:string|null}) => {
     const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
     if(!uid) throw new Error('Please sign in again.');
     const {data,error}=await supabase.from('WorkerPayroll').upsert({...p,user_id:uid,updated_at:new Date().toISOString()},{onConflict:'user_id,worker_id,month_key'}).select();
