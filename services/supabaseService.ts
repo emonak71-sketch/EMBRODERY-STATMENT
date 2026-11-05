@@ -243,6 +243,53 @@ export const dbService = {
     if (error) throw handleDbError(error, 'loading invoice history');
     return data || [];
   },
+  getNagadPaymentSettings: async () => {
+    const { data, error } = await supabase.from('billing_payment_settings')
+      .select('provider,account_type,receiver_number,instructions,is_active').eq('id',1).maybeSingle();
+    if (error) throw handleDbError(error, 'loading Nagad payment settings');
+    return data;
+  },
+  isBillingAdmin: async () => {
+    const { data, error } = await supabase.rpc('is_billing_admin');
+    if (error) throw handleDbError(error, 'checking billing permissions');
+    return data === true;
+  },
+  getMyNagadPaymentSubmissions: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.from('billing_payment_submissions')
+      .select('*, subscription_plans(name,billing_interval)')
+      .eq('user_id',uid).order('created_at',{ascending:false}).limit(100);
+    if (error) throw handleDbError(error, 'loading your Nagad payment submissions');
+    return data || [];
+  },
+  getPendingNagadPaymentSubmissions: async () => {
+    const { data, error } = await supabase.from('billing_payment_submissions')
+      .select('*, subscription_plans(name,billing_interval)')
+      .eq('status','pending').order('created_at',{ascending:true}).limit(100);
+    if (error) throw handleDbError(error, 'loading pending Nagad payment submissions');
+    return data || [];
+  },
+  submitNagadPersonalPayment: async (planId:string,senderNumber:string,transactionId:string) => {
+    const { data, error } = await supabase.rpc('submit_nagad_personal_payment',{
+      p_plan_id:planId,p_sender_number:senderNumber,p_transaction_id:transactionId
+    });
+    if (error) throw handleDbError(error, 'submitting Nagad payment');
+    return data as string;
+  },
+  setNagadPersonalReceiver: async (receiverNumber:string) => {
+    const { data, error } = await supabase.rpc('set_nagad_personal_receiver',{p_number:receiverNumber});
+    if (error) throw handleDbError(error, 'saving Nagad receiver number');
+    return data as string;
+  },
+  reviewNagadPersonalPayment: async (submissionId:string,approve:boolean,note:string='') => {
+    const { data, error } = await supabase.rpc('review_nagad_personal_payment',{
+      p_submission_id:submissionId,p_approve:approve,p_note:note
+    });
+    if (error) throw handleDbError(error, 'reviewing Nagad payment');
+    return data as string|null;
+  },
 
   // Worker Attendance & Payroll: all operations are scoped to the signed-in account.
   getWorkers: async () => {
