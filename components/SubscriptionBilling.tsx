@@ -63,6 +63,8 @@ const SubscriptionBilling:React.FC<{user:User;onAccessRefresh?:()=>void|Promise<
  const selectedPlan=plans.find(p=>p.id===selectedPlanId)||null;
  const seller=selected?.seller_snapshot||{};
  const buyer=selected?.buyer_snapshot||{};
+ const subscriptionExpired=Boolean(subscription&&new Date(subscription.current_period_end).getTime()<=Date.now());
+ const displayedSubscriptionStatus=subscriptionExpired?'expired':subscription?.status||'inactive';
 
  const submitPayment=async(e:React.FormEvent)=>{
   e.preventDefault();if(!selectedPlan||submitting)return;
@@ -139,7 +141,7 @@ const SubscriptionBilling:React.FC<{user:User;onAccessRefresh?:()=>void|Promise<
    <div className="grid gap-4 lg:grid-cols-2">
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
      <div className="flex items-center gap-2 text-sm font-black"><ShieldCheck size={17} className="text-emerald-600"/>Current Subscription</div>
-     {subscription?<div className="mt-4 space-y-2"><div className="text-xl font-black">{subscription.subscription_plans?.name||subscription.id}</div><div className="text-sm text-slate-500">Status: <span className="font-bold capitalize text-emerald-700">{subscription.status}</span></div><div className="text-xs text-slate-500">Current period: {dateLabel(subscription.current_period_start)} – {dateLabel(subscription.current_period_end)}</div><div className="text-xs text-slate-500">Renewal: Manual — no automatic charge.</div></div>:<p className="mt-4 text-sm text-slate-500">No active subscription is linked to this account yet.</p>}
+     {subscription?<div className="mt-4 space-y-2"><div className="text-xl font-black">{subscription.subscription_plans?.name||subscription.id}</div><div className="text-sm text-slate-500">Status: <span className={'font-bold capitalize '+(subscriptionExpired?'text-rose-600':'text-emerald-700')}>{displayedSubscriptionStatus}</span></div><div className="text-xs text-slate-500">Current period: {dateLabel(subscription.current_period_start)} – {dateLabel(subscription.current_period_end)}</div><div className="text-xs text-slate-500">Renewal: Manual — no automatic charge.</div>{subscriptionExpired&&<p className="text-xs font-bold text-rose-600">Your access is paused. Renew a plan below to restore access.</p>}</div>:<p className="mt-4 text-sm text-slate-500">No active subscription is linked to this account yet.</p>}
     </section>
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
      <div className="text-sm font-black">Available Plans</div>
