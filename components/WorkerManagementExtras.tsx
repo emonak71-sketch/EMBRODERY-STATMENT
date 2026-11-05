@@ -160,14 +160,16 @@ interface Props {
   userId: string;
   companyName: string;
   onWorkersChanged?: () => Promise<void> | void;
+  initialTab?: ExtraTab;
 }
 
-const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorkersChanged }) => {
+const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorkersChanged, initialTab = 'documents' }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
   const tr = (bn: string, en: string) => isBn ? bn : en;
 
-  const [tab, setTab] = useState<ExtraTab>('documents');
+  const [tab, setTab] = useState<ExtraTab>(initialTab);
+  useEffect(() => { setTab(initialTab); }, [initialTab]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [selectedWorkerId, setSelectedWorkerId] = useState('');
   const [loading, setLoading] = useState(false);
