@@ -12,6 +12,7 @@ export default defineConfig({
       input: {
         customer: resolve(root, 'index.html'),
         owner: resolve(root, 'owner.html'),
+        downloads: resolve(root, 'download.html'),
       },
     },
   },
