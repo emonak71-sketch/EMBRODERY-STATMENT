@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Download, RefreshCw, Smartphone, X, AlertTriangle } from 'lucide-react';
 import { APP_VERSION } from '../desktop/appVersion';
-import { isAndroidTauriApp } from '../desktop/tauriBridge';
+import { desktopOpenUrl, isAndroidTauriApp } from '../desktop/tauriBridge';
 
 type AndroidRelease = {
   version: string;
@@ -27,6 +27,7 @@ const AndroidUpdateBanner:React.FC = () => {
   const checkingRef=useRef(false);
   const [dismissed,setDismissed]=useState(false);
   const [error,setError]=useState('');
+  const [opening,setOpening]=useState(false);
 
   const check=useCallback(async()=>{
     if(!isAndroidTauriApp()||checkingRef.current)return;
@@ -61,6 +62,14 @@ const AndroidUpdateBanner:React.FC = () => {
     return()=>{window.clearInterval(timer);document.removeEventListener('visibilitychange',onVisible);};
   },[check]);
 
+  const downloadApk=async()=>{
+    if(!release||opening)return;
+    setOpening(true);
+    try{await desktopOpenUrl(release.apk_url);}
+    catch(e:any){setError(e?.message||'Could not open the APK download.');}
+    finally{setOpening(false);}
+  };
+
   if(!isAndroidTauriApp())return null;
   if(!release&&!error)return null;
   if(dismissed&&release)return null;
@@ -72,9 +81,10 @@ const AndroidUpdateBanner:React.FC = () => {
         <div className="min-w-0"><div className="text-xs font-black text-sky-900 dark:text-sky-100">Android update available · v{release.version}</div><p className="mt-1 text-[11px] leading-5 text-slate-600 dark:text-slate-300">{release.notes||'A newer version of Embroidery Statement is ready.'}</p><p className="mt-1 text-[10px] text-slate-500">After download, open the APK from Downloads and confirm installation. Your existing app data is retained when the same signing key is used.</p></div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <a href={release.apk_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-sky-700 px-4 py-2.5 text-[11px] font-black text-white hover:bg-sky-600"><Download size={14}/>Download APK</a>
+        <button type="button" onClick={()=>void downloadApk()} disabled={opening} className="inline-flex items-center gap-2 rounded-xl bg-sky-700 px-4 py-2.5 text-[11px] font-black text-white hover:bg-sky-600 disabled:opacity-60"><Download size={14}/>{opening?"Opening…":"Download APK"}</button>
         <button onClick={()=>setDismissed(true)} aria-label="Dismiss update notice" className="rounded-lg p-2 text-slate-400 hover:bg-sky-100 dark:hover:bg-slate-800"><X size={15}/></button>
       </div>
+      {error&&<p className="mt-3 text-[10px] text-rose-600">{error}</p>}
     </div>:<div className="flex items-center gap-2 text-[11px] text-amber-800 dark:text-amber-200"><AlertTriangle size={15}/><span>Android update check failed. It will retry automatically.</span><button onClick={()=>void check()} className="ml-auto inline-flex items-center gap-1 font-bold"><RefreshCw size={12}/>Retry</button></div>}
   </section>;
 };
