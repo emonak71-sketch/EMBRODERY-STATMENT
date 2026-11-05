@@ -8,4 +8,10 @@ export const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY 
 if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
   console.warn('Supabase URL is not configured. Please check your environment variables.');
 }
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Keep Owner and Customer web/PWA sessions separate even though they share one Supabase project.
+const isOwnerPortal = typeof window !== 'undefined' && /\\/owner\\.html$/.test(window.location.pathname);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storageKey: isOwnerPortal ? 'embroidery-statement-owner-auth' : 'embroidery-statement-customer-auth',
+  },
+});
