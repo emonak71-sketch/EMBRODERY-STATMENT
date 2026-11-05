@@ -43,8 +43,7 @@
       }
     },
     "android": {
-      "minSdkVersion": 24,
-      "autoIncrementVersionCode": true
+      "minSdkVersion": 24
     }
   },
   "plugins": {
