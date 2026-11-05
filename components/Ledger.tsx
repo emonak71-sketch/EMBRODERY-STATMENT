@@ -107,13 +107,21 @@ const Ledger: React.FC<LedgerProps> = ({
       node.style.transform = 'none';
       node.style.overflow = 'visible';
 
-      if (document.fonts?.ready) await document.fonts.ready;
+      if (document.fonts?.ready) {
+        await Promise.race([
+          document.fonts.ready.catch(() => undefined),
+          new Promise<void>(resolve => window.setTimeout(resolve, 2500)),
+        ]);
+      }
       await Promise.all(Array.from(node.querySelectorAll<HTMLImageElement>('img')).map(async image => {
         if (image.complete) return;
-        await new Promise<void>(resolve => {
-          image.addEventListener('load', () => resolve(), { once: true });
-          image.addEventListener('error', () => resolve(), { once: true });
-        });
+        await Promise.race([
+          new Promise<void>(resolve => {
+            image.addEventListener('load', () => resolve(), { once: true });
+            image.addEventListener('error', () => resolve(), { once: true });
+          }),
+          new Promise<void>(resolve => window.setTimeout(resolve, 2000)),
+        ]);
       }));
       await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
