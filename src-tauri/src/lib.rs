@@ -338,7 +338,7 @@ pub fn run() {
         builder = builder
             .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| { show_main(app); }))
             .plugin(tauri_plugin_autostart::Builder::new()
-                .app_name("Embroidery Statement")
+                .app_name(if option_env!("EMBROIDERY_OWNER_BUILD").is_some() { "Embroidery Statement Owner Control Center" } else { "Embroidery Statement" })
                 .args(["--autostart"]).build());
         if update_is_configured() {
             builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
