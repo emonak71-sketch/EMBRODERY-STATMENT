@@ -52,7 +52,7 @@ if (fs.existsSync(ownerTauriConfigPath)) {
   fs.writeFileSync(ownerTauriConfigPath, JSON.stringify(ownerConfig, null, 2) + '\n');
 }
 if (fs.existsSync(appVersionPath)) {
-  fs.writeFileSync(appVersionPath, `// Keep synchronized by scripts/bump-version.mjs.\\nexport const APP_VERSION = '${next}';\\n`);
+  fs.writeFileSync(appVersionPath, `// Keep synchronized by scripts/bump-version.mjs.\nexport const APP_VERSION = '${next}';\n`);
 }
 
 if (fs.existsSync(cargoLockPath)) {
