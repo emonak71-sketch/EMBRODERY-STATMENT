@@ -160,14 +160,16 @@ interface Props {
   userId: string;
   companyName: string;
   onWorkersChanged?: () => Promise<void> | void;
+  initialTab?: ExtraTab;
 }
 
-const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorkersChanged }) => {
+const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorkersChanged, initialTab = 'documents' }) => {
   const { language } = useLanguage();
   const isBn = language === 'bn';
   const tr = (bn: string, en: string) => isBn ? bn : en;
 
-  const [tab, setTab] = useState<ExtraTab>('documents');
+  const [tab, setTab] = useState<ExtraTab>(initialTab);
+  useEffect(() => { setTab(initialTab); }, [initialTab]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [selectedWorkerId, setSelectedWorkerId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -387,9 +389,10 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
         amount,
         request_date: advanceDate,
         deduct_from_month: deductMonth,
-        reason: advanceReason.trim() || 'Salary advance'
+        reason: advanceReason.trim()
       });
       await loadAdvances();
+      window.dispatchEvent(new CustomEvent('embroidery:remote-data-changed'));
       const advanceMessage = tr(
         selectedWorker.full_name + ', ' + companyName + ' থেকে আপনাকে ' + money(amount) + ' টাকা অগ্রিম দেওয়া হয়েছে। এটি ' + deductMonth + ' মাসের বেতন থেকে সমন্বয় হবে।',
         'Dear ' + selectedWorker.full_name + ', ' + money(amount) + ' advance has been issued by ' + companyName + '. It will be adjusted from your ' + deductMonth + ' salary.'
@@ -629,7 +632,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs text-slate-500">{tr('মোট অগ্রিম', 'Total advances')}</div><div className="mt-1 text-xl font-black">{money(advances.filter(a => a.worker_id === selectedWorker.id).reduce((s, a) => s + Number(a.amount), 0))}</div></div>
                 <div className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs text-slate-500">{tr('বকেয়া অগ্রিম', 'Outstanding advances')}</div><div className="mt-1 text-xl font-black text-amber-600">{money(advances.filter(a => a.worker_id === selectedWorker.id).reduce((s, a) => s + Number(a.outstanding_amount), 0))}</div></div>
-                <div className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs text-slate-500">{tr('পরিশোধিত অগ্রিম', 'Recovered advances')}</div><div className="mt-1 text-xl font-black text-emerald-600">{money(advances.filter(a => a.worker_id === selectedWorker.id && a.status === 'recovered').reduce((s, a) => s + Number(a.amount), 0))}</div></div>
+                <div className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs text-slate-500">{tr('পরিশোধিত অগ্রিম', 'Recovered advances')}</div><div className="mt-1 text-xl font-black text-emerald-600">{money(advances.filter(a => a.worker_id === selectedWorker.id).reduce((s, a) => s + Math.max(0, Number(a.amount) - Number(a.outstanding_amount)), 0))}</div></div>
               </div>
               <form onSubmit={submitAdvance} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                 <h3 className="mb-3 flex items-center gap-2 font-black"><Wallet size={18} className="text-blue-600" />{tr('নতুন অগ্রিম বেতন রেকর্ড', 'Record a Salary Advance')}</h3>
@@ -642,7 +645,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
                 <p className="mt-2 text-xs text-slate-500">{tr('এই কর্মীর বর্তমান Salary Cycle দেখানো হচ্ছে। নভেম্বরের বেতন ডিসেম্বরের যেদিনই Paid করবেন, তার আগে দেওয়া সব Advance নভেম্বর থেকেই কাটবে। বেতন Paid হলেই পরবর্তী মাসের Cycle স্বয়ংক্রিয়ভাবে চালু হবে।', 'This worker’s active salary cycle is shown here. Advances recorded before the November payroll is marked Paid remain assigned to November, even when payment happens in December. The next cycle starts automatically only after payroll is marked Paid.')}</p>
                 <div className="mt-3 flex justify-end"><button disabled={saving} className="rounded-xl bg-blue-700 px-5 py-3 text-xs font-black text-white disabled:opacity-50">{saving ? tr('সংরক্ষণ হচ্ছে...', 'Saving...') : tr('অগ্রিম সংরক্ষণ ও SMS প্রস্তুত', 'Save advance & prepare SMS')}</button></div>
               </form>
-              <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="p-4 font-black">{tr('অগ্রিমের খতিয়ান', 'Advance Ledger')}</div><table className="w-full min-w-[700px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500 dark:bg-slate-800"><tr>{['Date','Amount','Outstanding','Salary Month','Status','Reason'].map(x => <th key={x} className="p-3">{x}</th>)}</tr></thead><tbody>{advances.filter(a => a.worker_id === selectedWorker.id).map(a => <tr key={a.id} className="border-t dark:border-slate-800"><td className="p-3">{dateLabel(a.request_date)}</td><td className="p-3 font-bold">{money(a.amount)}</td><td className="p-3">{money(a.outstanding_amount)}</td><td className="p-3">{a.deduct_from_month}</td><td className="p-3">{a.status === 'recovered' ? tr('সমন্বয় হয়েছে', 'Recovered') : tr('বকেয়া', 'Outstanding')}</td><td className="p-3">{a.reason}</td></tr>)}</tbody></table>{advances.filter(a => a.worker_id === selectedWorker.id).length === 0 && <p className="p-5 text-sm text-slate-500">{tr('কোনো Advance নেই।', 'No advances recorded.')}</p>}</div>
+              <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="p-4 font-black">{tr('অগ্রিমের খতিয়ান', 'Advance Ledger')}</div><table className="w-full min-w-[700px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500 dark:bg-slate-800"><tr>{['Date','Given','Recovered','Outstanding','Salary Month','Status','Reason'].map(x => <th key={x} className="p-3">{x}</th>)}</tr></thead><tbody>{advances.filter(a => a.worker_id === selectedWorker.id).map(a => <tr key={a.id} className="border-t dark:border-slate-800"><td className="p-3">{dateLabel(a.request_date)}</td><td className="p-3 font-bold">{money(a.amount)}</td><td className="p-3 text-emerald-700">{money(Number(a.amount)-Number(a.outstanding_amount))}</td><td className="p-3">{money(a.outstanding_amount)}</td><td className="p-3">{a.deduct_from_month}</td><td className="p-3">{a.status === 'recovered' ? tr('সমন্বয় হয়েছে', 'Recovered') : tr('বকেয়া', 'Outstanding')}</td><td className="p-3">{a.reason||'—'}</td></tr>)}</tbody></table>{advances.filter(a => a.worker_id === selectedWorker.id).length === 0 && <p className="p-5 text-sm text-slate-500">{tr('কোনো Advance নেই।', 'No advances recorded.')}</p>}</div>
             </section>
           )}
 
