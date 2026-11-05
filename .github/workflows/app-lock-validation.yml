@@ -1,0 +1,47 @@
+name: Shared App Lock Validation
+
+on:
+  push:
+    branches:
+      - production/app-lock-1.0.2
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Type-check React application
+        run: npm run typecheck
+      - name: Build web application
+        run: npm run build
+      - name: Test attendance and reminder logic
+        run: npm run test:attendance
+      - name: Test App Lock security contract
+        run: npm run test:app-lock
+
+  edge-function:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check App Lock Edge Function
+        run: deno check --node-modules-dir=none supabase/functions/app-lock/index.ts
