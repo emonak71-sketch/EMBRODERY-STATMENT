@@ -4,7 +4,7 @@
   "short_name": "ES Owner",
   "description": "Owner-only customer, subscription and support management.",
   "start_url": "/owner.html",
-  "scope": "/",
+  "scope": "/owner.html",
   "display": "standalone",
   "background_color": "#071a35",
   "theme_color": "#071a35",
