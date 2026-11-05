@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Embroidery Statement | Owner Control Center</title>
+  <link rel="manifest" href="/owner-manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/embroidery-statement-logo.svg?v=2">
+  <meta name="theme-color" content="#071a35">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ES Owner">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{primary:{50:'#effaff',100:'#d9f5ff',200:'#a8eaff',300:'#58d5f5',400:'#16b8ed',500:'#0b8fe5',600:'#0648c8',700:'#0739a7',800:'#0a3284',900:'#08265f'}}}}}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+  <div id="root"></div>
+  <script type="module" src="/owner.tsx"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) { refreshing = true; window.location.reload(); }
+      });
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js?v=6').then(reg => {
+          reg.update();
+          window.setInterval(() => reg.update(), 30 * 60 * 1000);
+        }).catch(error => console.warn('Owner PWA update check failed', error));
+      });
+    }
+  </script>
+</body>
+</html>
