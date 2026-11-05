@@ -18,3 +18,9 @@
 ## Compatibility
 - Preserve the existing application identifier, Tauri updater signing key, data directory and existing Supabase business records.
 - Keep the v1.0.1 upgrade baseline in Windows CI to verify multi-version upgrade compatibility.
+## Owner Control Center and customer support
+- Add a separate Owner Control Center for Web/PWA and Windows, with owner-only authentication isolated from customer sessions.
+- Search registered customers by verified email, review trial/Pro status and payment history, and grant a manually verified Nagad subscription for a selected duration.
+- Add a customer support inbox with AI-assisted troubleshooting, human escalation, owner replies and synchronized in-app notifications.
+- Preserve one customer account and shared Supabase data across Customer Web/PWA, Windows and Android clients.
+- Publish separate signed Windows update channels for the Customer application and Owner Control Center.
