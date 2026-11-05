@@ -15,6 +15,8 @@ import AppLockGate from './components/AppLockGate';
 import { BiometricLock } from './components/BiometricLock';
 import WorkerAttendance from './components/WorkerAttendance';
 import SubscriptionBilling from './components/SubscriptionBilling';
+import SupportCenter from './components/SupportCenter';
+import NotificationCenter from './components/NotificationCenter';
 import SplashScreen from './components/SplashScreen';
 
 const sendSMSAlert = async (phone: string, message: string) => {
@@ -70,7 +72,7 @@ const App: React.FC = () => {
   }, [hasPaidAccess]);
 
   const selectSidebarTab=(tab:TabType)=>{
-    if(hasPaidAccess===false && tab!=='billing') { setActiveTab('billing'); return; }
+    if(hasPaidAccess===false && tab!=='billing' && tab!=='support') { setActiveTab('billing'); return; }
     if(tab==='workers') setAttendanceRequest(null);
     setActiveTab(tab);
   };
@@ -522,7 +524,7 @@ const App: React.FC = () => {
   return (
     <div className="app-shell flex h-[100dvh] min-h-[100svh] w-full max-w-full overflow-hidden">
       <Sidebar 
-        activeTab={hasPaidAccess===false?'billing':activeTab} 
+        activeTab={hasPaidAccess===false && activeTab!=='support'?'billing':activeTab} 
         setActiveTab={selectSidebarTab}
         subscriptionLocked={hasPaidAccess===false} 
         parties={parties}
@@ -539,12 +541,14 @@ const App: React.FC = () => {
       />
 
       <main className="app-main min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 no-print">
+        <div className="mb-4 flex justify-end"><NotificationCenter userId={user.id}/></div>
         {trialStatus?.is_trial_active && hasPaidAccess===true && <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sky-900 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100"><div><div className="text-xs font-black uppercase tracking-wider">15-Day Free Trial</div><div className="mt-1 text-sm font-semibold">{trialDaysRemaining} {trialDaysRemaining===1?"day":"days"} remaining. Your data stays saved when the trial ends.</div></div><button type="button" onClick={()=>selectSidebarTab('billing')} className="rounded-xl bg-sky-700 px-4 py-2 text-xs font-black text-white hover:bg-sky-800">View Subscription Plans</button></div>}
         {hasPaidAccess===false ? (
-          <SubscriptionBilling onAccessRefresh={refreshSubscriptionAccess} />
+          activeTab==='support' ? <SupportCenter userId={user.id} email={user.email}/> : <SubscriptionBilling onAccessRefresh={refreshSubscriptionAccess} />
         ) : <>
         {activeTab === 'workers' && <WorkerAttendance userId={user.id} companyName={user.business_name} requestedAttendance={attendanceRequest} />}
         {activeTab === 'billing' && <SubscriptionBilling onAccessRefresh={refreshSubscriptionAccess} />}
+        {activeTab === 'support' && <SupportCenter userId={user.id} email={user.email}/>}
         {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} />}
         {activeTab === 'parties' && <PartiesList parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
         {activeTab === 'ledger' && (
