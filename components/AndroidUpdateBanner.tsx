@@ -33,7 +33,7 @@ const AndroidUpdateBanner:React.FC = () => {
     checkingRef.current=true;
     setError('');
     try{
-      const response=await fetch('https://api.github.com/repos/emonak71-sketch/EMBRODERY-STATMENT/releases?per_page=20,{
+      const response=await fetch('https://api.github.com/repos/emonak71-sketch/EMBRODERY-STATMENT/releases?per_page=20',{
         cache:'no-store',
         headers:{Accept:'application/vnd.github+json'}
       });
