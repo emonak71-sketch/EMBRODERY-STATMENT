@@ -5,7 +5,7 @@
   "identifier": "com.embroidery.statement.owner",
   "build": {
     "beforeDevCommand": "npm run dev -- --host 127.0.0.1",
-    "devUrl": "http://127.0.0.1:5173",
+    "devUrl": "http://127.0.0.1:5173/owner.html",
     "beforeBuildCommand": "npm run build:owner",
     "frontendDist": "../dist-owner"
   },
