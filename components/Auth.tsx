@@ -241,6 +241,7 @@ const Auth: React.FC<AuthProps> = ({
 
           {errorMsg && <div role="alert" className="auth-message auth-message-error mb-4 flex items-start gap-3 rounded-2xl p-3 text-sm font-semibold"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0" /><span>{errorMsg}</span></div>}
           {infoMsg && <div role="status" className="auth-message auth-message-info mb-4 flex items-start gap-3 rounded-2xl p-3 text-sm font-semibold"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" /><span>{infoMsg}</span></div>}
+          {mode === 'signup' && <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50 p-3 text-xs font-semibold leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200"><b>15-day free trial.</b> Use all app features free for 15 days from account creation. After the trial, choose a subscription to continue.</div>}
 
           <form onSubmit={handleSubmit} className="auth-form-stage space-y-4">
             {mode === 'signup' && (
