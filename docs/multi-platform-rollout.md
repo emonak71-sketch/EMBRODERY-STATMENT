@@ -19,7 +19,7 @@ Support tickets and messages are shared across customer and owner clients. New r
 - Web/PWA: the service worker checks for updates at page load and every 30 minutes, activates the new worker and reloads the app shell. Sensitive customer data and API responses are not cached.
 - Windows Customer EXE: signed Tauri updates use `latest-customer.json`. `latest.json` is also published as a compatibility alias for previously installed releases.
 - Windows Owner EXE: signed Tauri updates use the independent `latest-owner.json` channel.
-- Android: distribute a signed APK directly from the product's GitHub release/download page. The app checks for a newer APK and offers a download; Android requires the customer to approve installation. All production APK versions must use the same persistent signing keystore.
+- Android: distribute a signed ARM64 APK directly from a separate GitHub release tagged `android-vX.Y.Z`. The app checks this Android-only release channel and offers a download; Android requires the customer to approve installation. All production APK versions must use the same persistent signing keystore. Windows releases remain on the independent `vX.Y.Z` tag.
 
 ## Credentials required to finish production automation
 
