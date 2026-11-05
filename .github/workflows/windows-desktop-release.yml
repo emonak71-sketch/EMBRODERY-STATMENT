@@ -269,6 +269,7 @@ jobs:
       ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
@@ -298,9 +299,9 @@ jobs:
         id: android_signing
         shell: bash
         run: |
-          if [[ -z "$ANDROID_KEY_BASE64" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" ]]; then
+          if [[ -z "$ANDROID_KEY_BASE64" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" || -z "$ANDROID_STORE_PASSWORD" ]]; then
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Android APK publication skipped. Persistent ANDROID_KEY_BASE64, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD GitHub Actions secrets are not configured. A new signing key will not be generated automatically."
+            echo "::warning::Android APK publication skipped. Persistent ANDROID_KEY_BASE64, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD and ANDROID_STORE_PASSWORD GitHub Actions secrets are not configured. A new signing key will not be generated automatically."
           else
             echo "available=true" >> "$GITHUB_OUTPUT"
           fi
