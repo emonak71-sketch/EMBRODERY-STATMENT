@@ -8,6 +8,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         customer: resolve(process.cwd(), 'index.html'),
+        downloads: resolve(process.cwd(), 'download.html'),
       },
     },
   },
