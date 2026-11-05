@@ -66,6 +66,9 @@ create table if not exists public.billing_invoices (
   created_at timestamptz not null default now()
 );
 create index if not exists billing_invoices_user_history_idx on public.billing_invoices(user_id,issued_at desc);
+create index if not exists subscriptions_plan_id_idx on public.subscriptions(plan_id);
+create index if not exists billing_transactions_plan_id_idx on public.billing_transactions(plan_id);
+create index if not exists billing_transactions_subscription_id_idx on public.billing_transactions(subscription_id);
 create table if not exists public.billing_webhook_events (
   id uuid primary key default gen_random_uuid(), provider text not null,
   provider_event_id text not null, transaction_id uuid references public.billing_transactions(id) on delete restrict,
