@@ -106,7 +106,8 @@ jobs:
           if (-not (Test-Path $signaturePath)) { throw "Customer updater signature is missing: $signaturePath" }
           $signature = [System.IO.File]::ReadAllText($signaturePath).Trim()
           if ([string]::IsNullOrWhiteSpace($signature)) { throw 'Customer updater signature is empty.' }
-          $encodedAssetName = [uri]::EscapeDataString($installer.Name)
+          $publishedAssetName = $installer.Name -replace '\s+', '.'
+          $encodedAssetName = [uri]::EscapeDataString($publishedAssetName)
           $downloadUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/$encodedAssetName"
           $manifest = [ordered]@{
             version = $version
@@ -154,7 +155,8 @@ jobs:
           if (-not (Test-Path $signaturePath)) { throw "Owner updater signature is missing: $signaturePath" }
           $signature = [System.IO.File]::ReadAllText($signaturePath).Trim()
           if ([string]::IsNullOrWhiteSpace($signature)) { throw 'Owner updater signature is empty.' }
-          $encodedAssetName = [uri]::EscapeDataString($installer.Name)
+          $publishedAssetName = $installer.Name -replace '\s+', '.'
+          $encodedAssetName = [uri]::EscapeDataString($publishedAssetName)
           $downloadUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/$encodedAssetName"
           $manifest = [ordered]@{
             version = $version
@@ -181,9 +183,27 @@ jobs:
             Where-Object { $_.Name -match 'Owner' -and $_.Name -notmatch 'uninstall' } |
             Select-Object -First 1
           if (-not $customerInstaller -or -not $ownerInstaller) { throw 'Both Customer and Owner installers must exist before publishing.' }
+
+          # GitHub release asset names use dots in place of whitespace. Normalize the
+          # local installer and detached signature filenames before upload so they
+          # exactly match the URLs written into both updater manifests.
+          function Normalize-ReleaseAssetName($installer) {
+            $canonicalName = $installer.Name -replace '\s+', '.'
+            if ($canonicalName -ne $installer.Name) {
+              $oldSignaturePath = $installer.FullName + '.sig'
+              if (-not (Test-Path $oldSignaturePath)) { throw "Updater signature is missing: $oldSignaturePath" }
+              Rename-Item -LiteralPath $installer.FullName -NewName $canonicalName
+              Rename-Item -LiteralPath $oldSignaturePath -NewName ($canonicalName + '.sig')
+              Write-Host "Normalized release asset name: $($installer.Name) -> $canonicalName"
+            }
+            return Get-Item -LiteralPath (Join-Path $installer.DirectoryName $canonicalName)
+          }
+
+          $customerInstaller = Normalize-ReleaseAssetName $customerInstaller
+          $ownerInstaller = Normalize-ReleaseAssetName $ownerInstaller
           $customerSignature = $customerInstaller.FullName + '.sig'
           $ownerSignature = $ownerInstaller.FullName + '.sig'
-          if (-not (Test-Path $customerSignature) -or -not (Test-Path $ownerSignature)) { throw 'One or both updater signatures are missing.' }
+          if (-not (Test-Path $customerSignature) -or -not (Test-Path $ownerSignature)) { throw 'One or both normalized updater signatures are missing.' }
           $assets = @($customerInstaller.FullName,$customerSignature,$ownerInstaller.FullName,$ownerSignature,'latest.json','latest-customer.json','latest-owner.json')
 
           gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY *> $null
