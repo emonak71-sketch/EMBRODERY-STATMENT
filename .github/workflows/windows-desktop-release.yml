@@ -231,14 +231,13 @@ jobs:
           function Assert-UpdaterAssetUrl([string]$manifestUrl, $asset, [string]$channel) {
             if ([string]::IsNullOrWhiteSpace($manifestUrl)) { throw "$channel updater URL is empty." }
             $uri = [Uri]$manifestUrl
-            $expectedPrefix = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/"
-            $expectedUri = [Uri]$expectedPrefix
+            $expectedPath = "/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/"
+            $decodedPath = [Uri]::UnescapeDataString($uri.AbsolutePath)
             $actualName = [Uri]::UnescapeDataString(($uri.AbsolutePath -split '/')[-1])
-            $expectedPath = [Uri]::UnescapeDataString($expectedUri.AbsolutePath)
-            if ($uri.Scheme -ne 'https' -or $uri.Host -ne 'github.com' -or
-                -not $uri.AbsolutePath.StartsWith($expectedUri.AbsolutePath, [StringComparison]::Ordinal) -or
-                $actualName -ne $asset.name) {
-              throw "$channel updater URL does not resolve to its uploaded installer asset: $manifestUrl"
+            if ($uri.Scheme -ine 'https' -or $uri.Host -ine 'github.com' -or
+                -not $decodedPath.StartsWith($expectedPath, [StringComparison]::OrdinalIgnoreCase) -or
+                $actualName -ine $asset.name) {
+              throw "$channel updater URL does not resolve to its uploaded installer asset. Expected path prefix '$expectedPath' and asset '$($asset.name)'; received '$manifestUrl'."
             }
             Write-Host "$channel updater URL matches uploaded asset: $($asset.name)"
           }
