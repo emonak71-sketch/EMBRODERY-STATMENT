@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag matching package.json, Cargo.toml and tauri.conf.json (example: v1.0.3)'
+        description: 'Release tag matching package.json, Cargo.toml and both Tauri configs (example: v1.0.3)'
         required: true
         type: string
         default: 'v1.0.3'
@@ -25,7 +25,7 @@ concurrency:
 jobs:
   publish-windows:
     runs-on: windows-2022
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
       EMBROIDERY_UPDATE_PUBLIC_KEY: ${{ vars.EMBROIDERY_UPDATE_PUBLIC_KEY }}
@@ -68,6 +68,7 @@ jobs:
 
       - name: Test attendance and Dhaka reminder logic
         run: npm run test:attendance
+
       - name: Test App Lock security contract
         run: npm run test:app-lock
 
@@ -81,88 +82,122 @@ jobs:
           $version = (Get-Content 'package.json' -Raw | ConvertFrom-Json).version
           "RELEASE_TAG=v$version" >> $env:GITHUB_ENV
 
-      - name: Validate release version and configure updater public key
+      - name: Validate release version and configure both updater public keys
         run: node scripts/prepare-signed-desktop-release.mjs
 
-      - name: Build signed Windows installer and updater artifacts
+      - name: Build signed Customer Windows installer
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           npx --yes @tauri-apps/cli@2 build --bundles nsis
-          if ($LASTEXITCODE -ne 0) { throw 'Signed Tauri NSIS build failed.' }
+          if ($LASTEXITCODE -ne 0) { throw 'Signed Customer NSIS build failed.' }
 
-      - name: Generate Tauri updater manifest
+      - name: Generate Customer updater manifests
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $version = (Get-Content 'package.json' -Raw | ConvertFrom-Json).version
           $bundleDirectory = 'src-tauri/target/release/bundle/nsis'
           $installer = Get-ChildItem $bundleDirectory -Filter '*.exe' |
-            Where-Object { $_.Name -notmatch 'uninstall' } |
+            Where-Object { $_.Name -notmatch 'uninstall' -and $_.Name -notmatch 'Owner' } |
             Select-Object -First 1
-          if (-not $installer) { throw 'Signed NSIS installer was not generated.' }
-
+          if (-not $installer) { throw 'Signed Customer NSIS installer was not generated.' }
           $signaturePath = $installer.FullName + '.sig'
-          if (-not (Test-Path $signaturePath)) {
-            throw "Tauri updater signature is missing: $signaturePath"
-          }
+          if (-not (Test-Path $signaturePath)) { throw "Customer updater signature is missing: $signaturePath" }
           $signature = [System.IO.File]::ReadAllText($signaturePath).Trim()
-          if ([string]::IsNullOrWhiteSpace($signature)) { throw 'Tauri updater signature is empty.' }
-
+          if ([string]::IsNullOrWhiteSpace($signature)) { throw 'Customer updater signature is empty.' }
           $encodedAssetName = [uri]::EscapeDataString($installer.Name)
           $downloadUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/$encodedAssetName"
           $manifest = [ordered]@{
             version = $version
-            notes = "Embroidery Statement $version — Windows x64 update."
+            notes = "Embroidery Statement $version — Customer Windows x64 update."
             pub_date = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
             platforms = [ordered]@{
-              'windows-x86_64' = [ordered]@{
-                signature = $signature
-                url = $downloadUrl
-              }
+              'windows-x86_64' = [ordered]@{ signature = $signature; url = $downloadUrl }
             }
           }
-          $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path 'latest.json' -Encoding utf8
-          Write-Host "Updater manifest prepared for $version."
+          $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path 'latest-customer.json' -Encoding utf8
+          Copy-Item 'latest-customer.json' 'latest.json' -Force
+          Write-Host "Customer updater manifest prepared for $version."
 
-      - name: Verify 1.0.1 to current-version in-place upgrade and user-data preservation
+      - name: Verify 1.0.1 to current Customer version in-place upgrade and user-data preservation
         shell: pwsh
         env:
           PREVIOUS_INSTALLER_URL: https://github.com/emonak71-sketch/EMBRODERY-STATMENT/releases/download/v1.0.1/Embroidery.Statement_1.0.1_x64-setup.exe
           PREVIOUS_INSTALLER_SHA256: 919ff2393c44b66f2c2d3561a9c2c69c02d1c3546e1cf873ce073a8757836289
         run: ./scripts/windows-upgrade-smoke.ps1
 
-      - name: Run Windows installer, tray and native notification smoke test
+      - name: Run Customer installer, tray and native notification smoke test
         shell: pwsh
         run: ./scripts/windows-installer-smoke.ps1
 
-      - name: Publish or update signed GitHub Release and updater manifest
+      - name: Build signed Owner Control Center Windows installer
+        shell: pwsh
+        env:
+          EMBROIDERY_OWNER_BUILD: '1'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npx --yes @tauri-apps/cli@2 build --bundles nsis --config src-tauri/tauri.owner.conf.json
+          if ($LASTEXITCODE -ne 0) { throw 'Signed Owner Control Center NSIS build failed.' }
+
+      - name: Generate Owner updater manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (Get-Content 'package.json' -Raw | ConvertFrom-Json).version
+          $bundleDirectory = 'src-tauri/target/release/bundle/nsis'
+          $installer = Get-ChildItem $bundleDirectory -Filter '*.exe' |
+            Where-Object { $_.Name -match 'Owner' -and $_.Name -notmatch 'uninstall' } |
+            Select-Object -First 1
+          if (-not $installer) { throw 'Signed Owner Control Center NSIS installer was not generated.' }
+          $signaturePath = $installer.FullName + '.sig'
+          if (-not (Test-Path $signaturePath)) { throw "Owner updater signature is missing: $signaturePath" }
+          $signature = [System.IO.File]::ReadAllText($signaturePath).Trim()
+          if ([string]::IsNullOrWhiteSpace($signature)) { throw 'Owner updater signature is empty.' }
+          $encodedAssetName = [uri]::EscapeDataString($installer.Name)
+          $downloadUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/$encodedAssetName"
+          $manifest = [ordered]@{
+            version = $version
+            notes = "Embroidery Statement Owner Control Center $version — Windows x64 update."
+            pub_date = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+            platforms = [ordered]@{
+              'windows-x86_64' = [ordered]@{ signature = $signature; url = $downloadUrl }
+            }
+          }
+          $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path 'latest-owner.json' -Encoding utf8
+          Write-Host "Owner updater manifest prepared for $version."
+
+      - name: Publish or update signed GitHub Release and both updater channels
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $installer = Get-ChildItem 'src-tauri/target/release/bundle/nsis' -Filter '*.exe' |
-            Where-Object { $_.Name -notmatch 'uninstall' } |
+          $bundleDirectory = 'src-tauri/target/release/bundle/nsis'
+          $customerInstaller = Get-ChildItem $bundleDirectory -Filter '*.exe' |
+            Where-Object { $_.Name -notmatch 'uninstall' -and $_.Name -notmatch 'Owner' } |
             Select-Object -First 1
-          if (-not $installer) { throw 'Installer asset is missing.' }
-          $signature = $installer.FullName + '.sig'
-          if (-not (Test-Path $signature)) { throw 'Updater signature asset is missing.' }
-          $assets = @($installer.FullName, $signature, 'latest.json')
+          $ownerInstaller = Get-ChildItem $bundleDirectory -Filter '*.exe' |
+            Where-Object { $_.Name -match 'Owner' -and $_.Name -notmatch 'uninstall' } |
+            Select-Object -First 1
+          if (-not $customerInstaller -or -not $ownerInstaller) { throw 'Both Customer and Owner installers must exist before publishing.' }
+          $customerSignature = $customerInstaller.FullName + '.sig'
+          $ownerSignature = $ownerInstaller.FullName + '.sig'
+          if (-not (Test-Path $customerSignature) -or -not (Test-Path $ownerSignature)) { throw 'One or both updater signatures are missing.' }
+          $assets = @($customerInstaller.FullName,$customerSignature,$ownerInstaller.FullName,$ownerSignature,'latest.json','latest-customer.json','latest-owner.json')
 
           gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -eq 0) {
-            Write-Host "Release $env:RELEASE_TAG already exists; replacing only its signed installer, signature and updater manifest."
             gh release upload $env:RELEASE_TAG @assets --repo $env:GITHUB_REPOSITORY --clobber
-            if ($LASTEXITCODE -ne 0) { throw 'Updating the existing GitHub Release assets failed.' }
+            if ($LASTEXITCODE -ne 0) { throw 'Updating the existing signed release assets failed.' }
             gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file "RELEASE_NOTES_$((Get-Content 'package.json' -Raw | ConvertFrom-Json).version).md" --latest --target $env:GITHUB_SHA
-            if ($LASTEXITCODE -ne 0) { throw 'Updating the GitHub Release metadata failed.' }
+            if ($LASTEXITCODE -ne 0) { throw 'Updating the existing release metadata failed.' }
           } else {
             gh release create $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file "RELEASE_NOTES_$((Get-Content 'package.json' -Raw | ConvertFrom-Json).version).md" --latest --target $env:GITHUB_SHA @assets
-            if ($LASTEXITCODE -ne 0) { throw 'GitHub Release creation failed.' }
+            if ($LASTEXITCODE -ne 0) { throw 'Creating the signed release failed.' }
           }
 
-      - name: Verify published updater manifest and download URLs
+      - name: Verify both published updater channels and download URLs
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -177,23 +212,37 @@ jobs:
           }
           $releaseApi = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases/tags/$env:RELEASE_TAG"
           $release = Invoke-RestMethod -Uri $releaseApi -Headers $headers -TimeoutSec 30
-          $installer = $release.assets | Where-Object { $_.name -like "*$version*x64-setup.exe" } | Select-Object -First 1
-          $manifestAsset = $release.assets | Where-Object { $_.name -eq 'latest.json' } | Select-Object -First 1
-          if (-not $installer -or -not $manifestAsset) { throw 'The release is missing the expected installer or latest.json asset.' }
-
-          $manifest = Invoke-RestMethod -Uri $manifestAsset.browser_download_url -Headers @{'Cache-Control'='no-cache'} -TimeoutSec 60
-          if ($manifest.version -ne $version) { throw "Published updater manifest version mismatch: expected $version, got $($manifest.version)." }
-          $platform = $manifest.platforms.'windows-x86_64'
-          if (-not $platform.signature) { throw 'Published updater manifest has no Windows signature.' }
-          if ($platform.url -ne $installer.browser_download_url) {
-            throw "Updater manifest URL does not match the uploaded installer asset. Manifest: $($platform.url); asset: $($installer.browser_download_url)"
+          $customerInstaller = $release.assets | Where-Object { $_.name -like "*$version*x64-setup.exe" -and $_.name -notmatch 'Owner' } | Select-Object -First 1
+          $ownerInstaller = $release.assets | Where-Object { $_.name -like "*$version*x64-setup.exe" -and $_.name -match 'Owner' } | Select-Object -First 1
+          $customerManifestAsset = $release.assets | Where-Object { $_.name -eq 'latest-customer.json' } | Select-Object -First 1
+          $ownerManifestAsset = $release.assets | Where-Object { $_.name -eq 'latest-owner.json' } | Select-Object -First 1
+          $legacyManifestAsset = $release.assets | Where-Object { $_.name -eq 'latest.json' } | Select-Object -First 1
+          if (-not $customerInstaller -or -not $ownerInstaller -or -not $customerManifestAsset -or -not $ownerManifestAsset -or -not $legacyManifestAsset) {
+            throw 'The release is missing one of the Customer/Owner installers or updater manifests.'
           }
 
-          $latestManifestUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/latest/download/latest.json"
-          $latestManifest = Invoke-RestMethod -Uri $latestManifestUrl -Headers @{'Cache-Control'='no-cache'} -TimeoutSec 60
-          if ($latestManifest.version -ne $version) { throw "The updater's /latest/ endpoint returned $($latestManifest.version), not $version." }
+          $customerManifest = Invoke-RestMethod -Uri $customerManifestAsset.browser_download_url -Headers @{'Cache-Control'='no-cache'} -TimeoutSec 60
+          $ownerManifest = Invoke-RestMethod -Uri $ownerManifestAsset.browser_download_url -Headers @{'Cache-Control'='no-cache'} -TimeoutSec 60
+          $legacyManifest = Invoke-RestMethod -Uri $legacyManifestAsset.browser_download_url -Headers @{'Cache-Control'='no-cache'} -TimeoutSec 60
+          foreach ($manifest in @($customerManifest,$ownerManifest,$legacyManifest)) {
+            if ($manifest.version -ne $version) { throw "Updater manifest version mismatch: expected $version, got $($manifest.version)." }
+            if (-not $manifest.platforms.'windows-x86_64'.signature) { throw 'An updater manifest has no Windows signature.' }
+          }
+          if ($customerManifest.platforms.'windows-x86_64'.url -ne $customerInstaller.browser_download_url) { throw 'Customer updater URL does not match its uploaded installer.' }
+          if ($ownerManifest.platforms.'windows-x86_64'.url -ne $ownerInstaller.browser_download_url) { throw 'Owner updater URL does not match its uploaded installer.' }
+          if ($legacyManifest.platforms.'windows-x86_64'.url -ne $customerInstaller.browser_download_url) { throw 'Legacy updater URL does not match the Customer installer.' }
 
-          $urls = @($manifestAsset.browser_download_url, $latestManifestUrl, $platform.url)
+          $latestUrls = @(
+            "https://github.com/$env:GITHUB_REPOSITORY/releases/latest/download/latest-customer.json",
+            "https://github.com/$env:GITHUB_REPOSITORY/releases/latest/download/latest-owner.json",
+            "https://github.com/$env:GITHUB_REPOSITORY/releases/latest/download/latest.json"
+          )
+          foreach ($url in $latestUrls) {
+            $manifest = Invoke-RestMethod -Uri $url -Headers @{'Cache-Control'='no-cache'} -TimeoutSec 60
+            if ($manifest.version -ne $version) { throw "Latest updater endpoint $url returned $($manifest.version), expected $version." }
+          }
+
+          $urls = @($customerManifestAsset.browser_download_url,$ownerManifestAsset.browser_download_url,$legacyManifestAsset.browser_download_url,$customerInstaller.browser_download_url,$ownerInstaller.browser_download_url) + $latestUrls
           foreach ($url in $urls) {
             $verified = $false
             for ($attempt = 1; $attempt -le 5; $attempt++) {
