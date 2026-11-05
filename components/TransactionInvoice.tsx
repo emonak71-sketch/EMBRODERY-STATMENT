@@ -82,7 +82,7 @@ const TransactionInvoice: React.FC<TransactionInvoiceProps> = ({
         printWindow.focus();
         printWindow.print();
       };
-      if (imageElement?.complete) runPrint();
+      if (imageElement?.complete && imageElement.naturalWidth > 0) runPrint();
       else imageElement?.addEventListener('load', runPrint, { once: true });
       if (imageElement) imageElement.addEventListener('error', () => printWindow.close(), { once: true });
     } catch (e: any) {
@@ -115,7 +115,7 @@ const TransactionInvoice: React.FC<TransactionInvoiceProps> = ({
         </div>
         {error&&<div role="alert" className="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{error}</div>}
         <div className="max-h-[75vh] overflow-auto rounded-xl bg-slate-100 p-3 dark:bg-slate-950">
-          <div ref={invoiceRef} className="mx-auto min-h-[680px] w-[760px] max-w-full bg-white p-8 text-slate-900 sm:p-10">
+          <div ref={invoiceRef} className="mx-auto min-h-[680px] w-[760px] min-w-[760px] bg-white p-8 text-slate-900 sm:p-10">
             <div className="flex items-start justify-between gap-5 border-b-2 border-slate-900 pb-6">
               <div>
                 <div className="text-2xl font-black tracking-tight">{businessName || 'Embroidery Business'}</div>
