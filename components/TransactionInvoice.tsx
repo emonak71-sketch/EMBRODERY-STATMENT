@@ -28,7 +28,7 @@ const TransactionInvoice: React.FC<TransactionInvoiceProps> = ({
   const [busy, setBusy] = useState<'save' | 'print' | null>(null);
   const [error, setError] = useState('');
 
-  const invoiceNumber = `ES-TX-${transaction.id.replace(/-/g, '').slice(0, 10).toUpperCase()}`;
+  const invoiceNumber = `ES-TX-${transaction.id.replace(/-/g, '').toUpperCase()}`;
   const credit = Number(transaction.credit) || 0;
   const payment = Number(transaction.payment) || 0;
   const previousBalance = runningBalance - credit + payment;
