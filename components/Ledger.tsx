@@ -96,7 +96,7 @@ const Ledger: React.FC<LedgerProps> = ({
 
       // Export a predictable landscape-width document even when the app is
       // opened on a narrow mobile viewport.
-      const exportWidth = Math.max(960, node.scrollWidth, node.clientWidth);
+      const exportWidth = 960;
       node.classList.add('statement-exporting');
       node.style.width = `${exportWidth}px`;
       node.style.minWidth = `${exportWidth}px`;
