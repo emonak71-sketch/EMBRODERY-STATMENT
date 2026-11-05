@@ -217,7 +217,7 @@ const SubscriptionBilling:React.FC<{onAccessRefresh?:()=>void|Promise<void>}>=({
      </div>
 
      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><div className="text-[10px] font-bold uppercase text-slate-400">Current Status</div><div className="mt-1 text-sm font-black capitalize">{customer.access_source.replace('_',' ')}</div></div>
+      <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><div className="text-[10px] font-bold uppercase text-slate-400">Current Status</div><div className="mt-1 text-sm font-black">{customer.access_source==='free_trial'?'Trial Version':customer.access_source==='owner_grant'||customer.access_source==='subscription'?'Pro Version':'Expired / No Access'}</div></div>
       <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><div className="text-[10px] font-bold uppercase text-slate-400">Access Until</div><div className="mt-1 text-sm font-black">{dateLabel(customer.access_until)}</div></div>
       <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><div className="text-[10px] font-bold uppercase text-slate-400">Trial Ends</div><div className="mt-1 text-sm font-black">{dateLabel(customer.trial_ends_at)}</div></div>
       <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><div className="text-[10px] font-bold uppercase text-slate-400">Owner Grant Ends</div><div className="mt-1 text-sm font-black">{dateLabel(customer.manual_access_until)}</div></div>
