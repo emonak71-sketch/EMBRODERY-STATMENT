@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, LockKeyhole, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
+import { dbService } from '../services/supabaseService';
 import OwnerControlCenter from './OwnerControlCenter';
 
 type OwnerUser = { id: string; email: string };
