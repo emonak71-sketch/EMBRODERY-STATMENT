@@ -106,7 +106,7 @@ const SplashScreen: React.FC = () => (
           </g>
 
           <g className="machine-logo-work">
-            <image href="/embroidery-statement-logo.svg?v=1" x="480" y="388" width="238" height="238" preserveAspectRatio="xMidYMid meet" clipPath="url(#logoStitchReveal)" />
+            <image href="/embroidery-statement-logo.svg?v=2" x="480" y="388" width="238" height="238" preserveAspectRatio="xMidYMid meet" clipPath="url(#logoStitchReveal)" />
             <rect x="472" y="380" width="254" height="254" rx="12" fill="none" stroke="#5adff4" strokeWidth="3" strokeDasharray="7 9" pathLength="1000" className="machine-logo-stitches" filter="url(#threadGlow)" />
             <path d="M470 374H730V640H470Z" fill="none" stroke="#a8d8ff" strokeOpacity=".35" strokeWidth="2" strokeDasharray="3 8" />
           </g>
