@@ -25,6 +25,7 @@ Keep the keystore outside Git and store its base64 content, alias and password a
 - `ANDROID_KEY_BASE64`
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
+- `ANDROID_STORE_PASSWORD`
 
 The in-app updater can check a version manifest and offer the new APK. Android will still require the user to approve installation of a sideloaded update. PWA updates are delivered by the service worker and do not require an APK reinstall.
 
