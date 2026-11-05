@@ -26,7 +26,7 @@ export function isWindowsDesktop(): boolean {
 }
 
 export async function desktopInvoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
-  if (!isWindowsDesktop()) throw new Error('Windows desktop feature is unavailable in the web application.');
+  if (!isTauriApp()) throw new Error('Native application feature is unavailable in the web application.');
   return window.__TAURI__!.core.invoke<T>(command, args);
 }
 
