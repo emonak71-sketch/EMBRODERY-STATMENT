@@ -63,7 +63,7 @@ Deno.serve(async (req: Request) => {
   if (messageError) return json({ error: "Your message could not be saved. Please try again." }, 500);
 
   const apiKey = Deno.env.get("GEMINI_API_KEY");
-  const model = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
+  const model = Deno.env.get("GEMINI_MODEL") || "gemini-3.5-flash-lite";
   let reply = "";
   let needsHuman = false;
   let modelUsed: string | null = null;
