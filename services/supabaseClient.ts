@@ -9,7 +9,7 @@ if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
   console.warn('Supabase URL is not configured. Please check your environment variables.');
 }
 // Keep Owner and Customer web/PWA sessions separate even though they share one Supabase project.
-const isOwnerPortal = typeof window !== 'undefined' && /\/owner\.html$/.test(window.location.pathname);
+const isOwnerPortal = typeof window !== 'undefined' && window.location.pathname.endsWith('/owner.html');
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storageKey: isOwnerPortal ? 'embroidery-statement-owner-auth' : 'embroidery-statement-customer-auth',
