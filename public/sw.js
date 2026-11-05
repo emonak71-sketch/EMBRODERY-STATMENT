@@ -22,8 +22,7 @@ self.addEventListener('fetch', event => {
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).then(response => {
       if (response.ok) {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+        await caches.open(CACHE_NAME).then(cache => cache.put(request, response.clone()));
       }
       return response;
     }).catch(async () => (await caches.match(request)) || (await caches.match('/index.html'))));
@@ -33,8 +32,7 @@ self.addEventListener('fetch', event => {
   if (STATIC_ASSET.test(url.pathname) || url.pathname === '/manifest.json' || url.pathname === '/owner-manifest.json') {
     event.respondWith(fetch(request).then(response => {
       if (response.ok) {
-        const copy = response.clone();
-        event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put(request, copy)));
+        await caches.open(CACHE_NAME).then(cache => cache.put(request, response.clone()));
       }
       return response;
     }).catch(async () => (await caches.match(request)) || Response.error()));
