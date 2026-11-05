@@ -1,0 +1,113 @@
+name: Publish Customer Android App to Google Play
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: Google Play release track
+        required: true
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+        default: internal
+      status:
+        description: Release status
+        required: true
+        type: choice
+        options:
+          - draft
+          - completed
+        default: draft
+
+permissions:
+  contents: read
+
+concurrency:
+  group: google-play-customer-release
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Validate Google Play and Android signing credentials
+        env:
+          ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          test -n "$ANDROID_KEY_BASE64" || { echo "ANDROID_KEY_BASE64 is required"; exit 1; }
+          test -n "$ANDROID_KEY_ALIAS" || { echo "ANDROID_KEY_ALIAS is required"; exit 1; }
+          test -n "$ANDROID_KEY_PASSWORD" || { echo "ANDROID_KEY_PASSWORD is required"; exit 1; }
+          test -n "$ANDROID_STORE_PASSWORD" || { echo "ANDROID_STORE_PASSWORD is required"; exit 1; }
+          test -n "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" || { echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is required"; exit 1; }
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install Android SDK and NDK components
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.0.12077973"
+
+      - name: Set up Rust Android target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Initialize Tauri Android project
+        run: npx --yes @tauri-apps/cli@2 android init --ci --skip-targets-install
+
+      - name: Configure signed Android upload key
+        env:
+          ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          cd src-tauri/gen/android
+          printf "keyAlias=%s\\nkeyPassword=%s\\nstorePassword=%s\\n" "$ANDROID_KEY_ALIAS" "$ANDROID_KEY_PASSWORD" "$ANDROID_STORE_PASSWORD" > keystore.properties
+          echo "storeFile=$RUNNER_TEMP/embroidery-upload-key.jks" >> keystore.properties
+          printf "%s" "$ANDROID_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/embroidery-upload-key.jks"
+          cd ../../..
+          node scripts/configure-android-signing.mjs
+
+      - name: Build signed Android App Bundle
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
+          npx --yes @tauri-apps/cli@2 android build --aab --ci --target aarch64
+
+      - name: Publish Android App Bundle to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.embroidery.statement
+          releaseFiles: src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab
+          track: ${{ inputs.track }}
+          status: ${{ inputs.status }}
+          releaseName: Embroidery Statement ${{ github.run_number }}
+          changesNotSentForReview: true
