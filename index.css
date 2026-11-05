@@ -999,3 +999,125 @@ body {
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Liquid-glass authentication surface — restrained refraction, readable controls. */
+.auth-panel.auth-liquid-glass {
+  background:
+    linear-gradient(138deg,rgba(255,255,255,.82) 0%,rgba(239,248,255,.68) 42%,rgba(215,235,255,.56) 100%) !important;
+  border:1px solid rgba(255,255,255,.82) !important;
+  box-shadow:
+    0 32px 90px rgba(1,18,48,.28),
+    0 8px 30px rgba(33,128,220,.12),
+    inset 0 1px 0 rgba(255,255,255,.96),
+    inset 0 -1px 0 rgba(98,158,214,.2) !important;
+  -webkit-backdrop-filter:blur(30px) saturate(185%);
+  backdrop-filter:blur(30px) saturate(185%);
+  animation:liquid-glass-arrive .72s cubic-bezier(.2,.8,.2,1) both !important;
+}
+.auth-panel.auth-liquid-glass::before {
+  background:
+    radial-gradient(ellipse at 8% 0%,rgba(255,255,255,.94),transparent 42%),
+    radial-gradient(ellipse at 100% 100%,rgba(65,190,244,.17),transparent 42%),
+    linear-gradient(128deg,rgba(255,255,255,.35),transparent 38%,rgba(72,155,232,.10) 76%,transparent) !important;
+  opacity:.95;
+  animation:liquid-glass-refraction 9s ease-in-out infinite alternate;
+}
+.auth-panel.auth-liquid-glass::after {
+  top:-18%;
+  left:-65%;
+  width:42%;
+  height:136%;
+  transform:skewX(-22deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.58),rgba(255,255,255,.14),transparent) !important;
+  box-shadow:none !important;
+  animation:liquid-glass-sheen 8.5s ease-in-out 1s infinite;
+}
+.auth-panel.auth-liquid-glass:hover {
+  transform:translateY(-2px);
+  border-color:rgba(255,255,255,.98) !important;
+  box-shadow:0 38px 100px rgba(1,18,48,.32),0 12px 38px rgba(33,128,220,.17),inset 0 1px 0 #fff !important;
+}
+.auth-panel.auth-liquid-glass h1,
+.auth-panel.auth-liquid-glass .text-slate-900 { color:#10234f !important; }
+.auth-panel.auth-liquid-glass .text-slate-500 { color:#435773 !important; }
+.auth-panel.auth-liquid-glass .text-slate-400 { color:#647a96 !important; }
+.auth-panel.auth-liquid-glass .text-blue-600 { color:#075dbd !important; }
+.auth-panel.auth-liquid-glass .auth-field > span { color:#1e2c47 !important; }
+.auth-panel.auth-liquid-glass .auth-field > span svg { color:#1769c5 !important; }
+.auth-panel.auth-liquid-glass .auth-input {
+  color:#152542 !important;
+  background:linear-gradient(145deg,rgba(255,255,255,.88),rgba(242,248,255,.66)) !important;
+  border:1px solid rgba(142,171,207,.48) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 5px 18px rgba(35,78,130,.07) !important;
+}
+.auth-panel.auth-liquid-glass .auth-input::placeholder { color:#71839b !important; }
+.auth-panel.auth-liquid-glass .auth-input:focus {
+  background:rgba(255,255,255,.96) !important;
+  border-color:rgba(38,133,222,.8) !important;
+  box-shadow:0 0 0 4px rgba(59,130,246,.13),0 8px 24px rgba(37,99,235,.1) !important;
+}
+.auth-panel.auth-liquid-glass .auth-password-toggle { color:#536987 !important; }
+.auth-panel.auth-liquid-glass .auth-mode-switch {
+  background:rgba(219,234,250,.7) !important;
+  border-color:rgba(151,177,211,.42) !important;
+}
+.auth-panel.auth-liquid-glass .auth-mode-switch button { color:#52627a !important; }
+.auth-panel.auth-liquid-glass .auth-mode-switch button.active {
+  color:#fff !important;
+  background:linear-gradient(110deg,#174fc4,#087bdc 58%,#08aeca) !important;
+}
+.auth-panel.auth-liquid-glass .auth-link { color:#155bd0 !important; }
+.auth-panel.auth-liquid-glass .auth-back-link { color:#53647f !important; }
+.auth-panel.auth-liquid-glass .auth-otp-input { color:#10234f !important; }
+.auth-panel.auth-liquid-glass .border-t { border-color:rgba(71,103,145,.18) !important; }
+.auth-panel.auth-liquid-glass .auth-language-switch {
+  background:rgba(255,255,255,.62) !important;
+  border-color:rgba(255,255,255,.9) !important;
+  box-shadow:0 7px 20px rgba(23,62,108,.09),inset 0 1px 0 #fff !important;
+}
+.auth-panel.auth-liquid-glass .auth-language-switch button { color:#52627a !important; }
+.auth-panel.auth-liquid-glass .auth-language-switch button.active { color:#fff !important; }
+.auth-mode-content { animation:liquid-content-arrive .42s cubic-bezier(.2,.8,.2,1) both !important; }
+.auth-mode-content.is-exiting.is-login,
+.auth-mode-content.is-exiting.is-signup { animation:liquid-content-leave .16s ease-in both !important; }
+.auth-mode-content.is-entering.is-login,
+.auth-mode-content.is-entering.is-signup { animation:liquid-content-arrive .38s cubic-bezier(.2,.8,.2,1) both !important; }
+@keyframes liquid-glass-arrive {
+  from { opacity:0;transform:translateY(18px) scale(.975);filter:blur(8px); }
+  to { opacity:1;transform:translateY(0) scale(1);filter:blur(0); }
+}
+@keyframes liquid-glass-refraction {
+  from { background-position:0% 0%,100% 100%,0% 0%; }
+  to { background-position:18% 8%,82% 90%,100% 100%; }
+}
+@keyframes liquid-glass-sheen {
+  0%,18% { left:-65%;opacity:0; }
+  30% { opacity:.7; }
+  58% { left:125%;opacity:0; }
+  100% { left:125%;opacity:0; }
+}
+@keyframes liquid-content-arrive {
+  from { opacity:0;transform:translateY(9px) scale(.995);filter:blur(2px); }
+  to { opacity:1;transform:translateY(0) scale(1);filter:blur(0); }
+}
+@keyframes liquid-content-leave {
+  to { opacity:0;transform:translateY(-5px) scale(.995);filter:blur(2px); }
+}
+@media (max-width:640px) {
+  .auth-panel.auth-liquid-glass {
+    background:linear-gradient(138deg,rgba(255,255,255,.88),rgba(230,243,255,.78)) !important;
+    box-shadow:0 24px 68px rgba(1,18,48,.25),inset 0 1px 0 #fff !important;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .auth-panel.auth-liquid-glass,
+  .auth-panel.auth-liquid-glass::before,
+  .auth-panel.auth-liquid-glass::after,
+  .auth-mode-content {
+    animation:none !important;
+    transition:none !important;
+    transform:none !important;
+    filter:none !important;
+  }
+}
