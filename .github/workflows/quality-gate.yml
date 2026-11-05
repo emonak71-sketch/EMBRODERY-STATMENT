@@ -19,8 +19,11 @@ jobs:
         run: npm ci
       - name: Dependency security audit
         run: npm audit --audit-level=high
-      - name: Production build
+      - name: Production customer and Owner Web/PWA build
         run: npm run build
+
+      - name: Verify separate Owner PWA output
+        run: npm run build:owner
 
   windows-desktop:
     runs-on: windows-2022
@@ -53,6 +56,8 @@ jobs:
         run: npm run typecheck
       - name: Test attendance and Dhaka reminder logic
         run: npm run test:attendance
+      - name: Test App Lock security contract
+        run: npm run test:app-lock
       - name: Generate Windows icons
         run: npm run desktop:icons
       - name: Build unsigned NSIS installer for CI only
