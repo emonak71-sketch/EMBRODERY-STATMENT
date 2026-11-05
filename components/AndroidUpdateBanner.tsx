@@ -39,9 +39,9 @@ const AndroidUpdateBanner:React.FC = () => {
       });
       if(!response.ok)throw new Error('Update server returned HTTP '+response.status);
       const releases=await response.json() as Array<{tag_name:string;body?:string;draft:boolean;prerelease:boolean;assets:Array<{name:string;browser_download_url:string}>}>;
-      const latest=releases.find(item=>!item.draft&&!item.prerelease&&/^v\d+\.\d+\.\d+$/.test(item.tag_name)&&item.assets.some(asset=>asset.name==='Embroidery-Statement-Android.apk'));
+      const latest=releases.find(item=>!item.draft&&!item.prerelease&&/^android-v\d+\.\d+\.\d+$/.test(item.tag_name)&&item.assets.some(asset=>asset.name==='Embroidery-Statement-Android.apk'));
       if(!latest){setRelease(null);return;}
-      const version=latest.tag_name.slice(1);
+      const version=latest.tag_name.slice('android-v'.length);
       const apk=latest.assets.find(asset=>asset.name==='Embroidery-Statement-Android.apk');
       if(!apk)throw new Error('The Android APK release asset is missing.');
       const data:AndroidRelease={version,apk_url:apk.browser_download_url,notes:(latest.body||'').slice(0,500),package_id:'com.embroidery.statement'};
