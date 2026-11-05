@@ -208,13 +208,13 @@ const Auth: React.FC<AuthProps> = ({
       <div className="auth-layout relative z-10 w-full max-w-[480px]">
         <header className="auth-brand-enter mb-5 text-center">
           <div className="auth-logo-halo mx-auto mb-3">
-            <img src="/embroidery-statement-logo.svg?v=1" alt="Embroidery Statement" className="auth-logo" fetchPriority="high" />
+            <img src="/embroidery-statement-logo.svg?v=1" alt="Embroidery Statement" className="auth-logo" style={{objectFit: "contain"}} fetchPriority="high" />
           </div>
           <div className="auth-wordmark">EMBROIDERY <span>STATEMENT</span></div>
           <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.28em] text-slate-400 sm:text-xs">BUSINESS MANAGEMENT WORKSPACE</p>
         </header>
 
-        <section className="auth-panel auth-panel-enter relative rounded-[2rem] p-6 sm:p-8">
+        <section className="auth-panel auth-liquid-glass auth-panel-enter relative rounded-[2rem] p-6 sm:p-8">
           <div className="auth-language-switch" role="group" aria-label="Choose language">
             <Languages className="h-4 w-4 text-blue-600" />
             <button type="button" onClick={() => setLanguage('en')} className={bn ? '' : 'active'} aria-pressed={!bn}>EN</button>
