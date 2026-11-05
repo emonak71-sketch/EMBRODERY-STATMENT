@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - release
-      - release/1.0.2
+      - 'release/*'
     tags:
       - 'v*'
   workflow_dispatch:
@@ -125,7 +125,7 @@ jobs:
           $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path 'latest.json' -Encoding utf8
           Write-Host "Updater manifest prepared for $version."
 
-      - name: Verify 1.0.1 to 1.0.2 in-place upgrade and user-data preservation
+      - name: Verify 1.0.1 to current-version in-place upgrade and user-data preservation
         shell: pwsh
         env:
           PREVIOUS_INSTALLER_URL: https://github.com/emonak71-sketch/EMBRODERY-STATMENT/releases/download/v1.0.1/Embroidery.Statement_1.0.1_x64-setup.exe
@@ -155,7 +155,7 @@ jobs:
             Write-Host "Release $env:RELEASE_TAG already exists; replacing only its signed installer, signature and updater manifest."
             gh release upload $env:RELEASE_TAG @assets --repo $env:GITHUB_REPOSITORY --clobber
             if ($LASTEXITCODE -ne 0) { throw 'Updating the existing GitHub Release assets failed.' }
-            gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file 'RELEASE_NOTES_1.0.2.md' --latest --target $env:GITHUB_SHA
+            gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file "RELEASE_NOTES_$((Get-Content 'package.json' -Raw | ConvertFrom-Json).version).md" --latest --target $env:GITHUB_SHA
             if ($LASTEXITCODE -ne 0) { throw 'Updating the GitHub Release metadata failed.' }
           } else {
             gh release create $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file 'RELEASE_NOTES_1.0.2.md' --latest --target $env:GITHUB_SHA @assets
