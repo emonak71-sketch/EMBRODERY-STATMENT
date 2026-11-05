@@ -209,6 +209,41 @@ export const dbService = {
   },
   
 
+  // Subscription billing: client access is read-only; checkout and paid-status updates are server/webhook controlled.
+  getSubscriptionPlans: async () => {
+    const { data, error } = await supabase.from('subscription_plans').select('*').eq('is_active', true).order('price_bdt');
+    if (error) throw handleDbError(error, 'loading subscription plans');
+    return data || [];
+  },
+  getMySubscription: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.from('subscriptions').select('*, subscription_plans(*)')
+      .eq('user_id', uid).in('status', ['trialing','active','past_due'])
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (error) throw handleDbError(error, 'loading subscription status');
+    return data;
+  },
+  getMyBillingTransactions: async (limit = 100) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.from('billing_transactions').select('*, subscription_plans(name,billing_interval)')
+      .eq('user_id', uid).order('created_at', { ascending: false }).limit(Math.max(1, Math.min(limit, 200)));
+    if (error) throw handleDbError(error, 'loading transaction history');
+    return data || [];
+  },
+  getMyBillingInvoices: async (limit = 100) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.from('billing_invoices').select('*')
+      .eq('user_id', uid).order('issued_at', { ascending: false }).limit(Math.max(1, Math.min(limit, 200)));
+    if (error) throw handleDbError(error, 'loading invoice history');
+    return data || [];
+  },
+
   // Worker Attendance & Payroll: all operations are scoped to the signed-in account.
   getWorkers: async () => {
     const {data:{session}}=await supabase.auth.getSession(); const uid=session?.user?.id;
