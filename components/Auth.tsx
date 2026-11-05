@@ -208,7 +208,7 @@ const Auth: React.FC<AuthProps> = ({
       <div className="auth-layout relative z-10 w-full max-w-[480px]">
         <header className="auth-brand-enter mb-5 text-center">
           <div className="auth-logo-halo mx-auto mb-3">
-            <img src="/embroidery-statement-logo.svg?v=1" alt="Embroidery Statement" className="auth-logo" style={{objectFit: "contain"}} fetchPriority="high" />
+            <img src="/embroidery-statement-logo.svg?v=2" alt="Embroidery Statement" className="auth-logo" style={{objectFit: "contain"}} fetchPriority="high" />
           </div>
           <div className="auth-wordmark">EMBROIDERY <span>STATEMENT</span></div>
           <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.28em] text-slate-400 sm:text-xs">BUSINESS MANAGEMENT WORKSPACE</p>
