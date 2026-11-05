@@ -29,7 +29,7 @@ type Advance = {
 };
 type Payroll = {
   id: string; worker_id: string; month_key: string; basic_salary: number;
-  overtime_hours: number; overtime_amount: number; bonus: number; deduction: number;
+  overtime_hours: number; overtime_amount: number; attendance_bonus?: number; bonus: number; deduction: number;
   advance_deduction?: number; net_salary: number; status: 'draft' | 'paid';
   paid_at?: string | null; payment_method?: string | null; payment_reference?: string | null;
 };
@@ -414,7 +414,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
     const monthKey = year + '-' + String(index + 1).padStart(2, '0');
     const payrollRows = annualPayrolls.filter(p => monthInDhaka(p.paid_at) === monthKey);
     const advanceRows = annualAdvances.filter(a => String(a.request_date || '').slice(0, 7) === monthKey);
-    const gross = payrollRows.reduce((sum, p) => sum + Number(p.basic_salary || 0) + Number(p.overtime_amount || 0) + Number(p.bonus || 0), 0);
+    const gross = payrollRows.reduce((sum, p) => sum + Number(p.basic_salary || 0) + Number(p.overtime_amount || 0) + Number(p.attendance_bonus || 0) + Number(p.bonus || 0), 0);
     const netPaid = payrollRows.reduce((sum, p) => sum + Number(p.net_salary || 0), 0);
     const advancesGiven = advanceRows.reduce((sum, a) => sum + Number(a.amount || 0), 0);
     const advanceRecovered = payrollRows.reduce((sum, p) => sum + Number(p.advance_deduction || 0), 0);
@@ -713,7 +713,8 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
                     <table className="mt-6 w-full text-sm"><tbody>
                       <tr className="border-b"><td className="py-3">Basic salary</td><td className="py-3 text-right font-bold">{money(selectedSlip.basic_salary)}</td></tr>
                       <tr className="border-b"><td className="py-3">Overtime ({selectedSlip.overtime_hours} hours)</td><td className="py-3 text-right font-bold">{money(selectedSlip.overtime_amount)}</td></tr>
-                      <tr className="border-b"><td className="py-3">Bonus</td><td className="py-3 text-right font-bold">{money(selectedSlip.bonus)}</td></tr>
+                      <tr className="border-b"><td className="py-3">Attendance bonus</td><td className="py-3 text-right font-bold">{money(selectedSlip.attendance_bonus || 0)}</td></tr>
+                      <tr className="border-b"><td className="py-3">Other bonus</td><td className="py-3 text-right font-bold">{money(selectedSlip.bonus)}</td></tr>
                       <tr className="border-b"><td className="py-3">Other deductions</td><td className="py-3 text-right font-bold">−{money(selectedSlip.deduction)}</td></tr>
                       <tr className="border-b"><td className="py-3">Advance recovery</td><td className="py-3 text-right font-bold">−{money(selectedSlip.advance_deduction || 0)}</td></tr>
                       <tr><td className="py-4 text-base font-black">{selectedSlip.status === 'paid' ? 'Net paid' : 'Net salary due'}</td><td className="py-4 text-right text-xl font-black text-emerald-700">{money(selectedSlip.net_salary)}</td></tr>
