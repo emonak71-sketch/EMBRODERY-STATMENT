@@ -41,13 +41,17 @@
         "displayLanguageSelector": false,
         "installerHooks": "windows/installer-hooks.nsh"
       }
+    },
+    "android": {
+      "minSdkVersion": 24,
+      "autoIncrementVersionCode": true
     }
   },
   "plugins": {
     "updater": {
       "pubkey": "",
       "endpoints": [
-        "https://github.com/emonak71-sketch/EMBRODERY-STATMENT/releases/latest/download/latest.json"
+        "https://github.com/emonak71-sketch/EMBRODERY-STATMENT/releases/latest/download/latest-customer.json"
       ],
       "windows": {
         "installMode": "passive"
