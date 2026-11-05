@@ -348,7 +348,7 @@ jobs:
           {
             printf 'keyAlias=%s\n' "$ANDROID_KEY_ALIAS"
             printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
-            printf 'storePassword=%s\n' "$ANDROID_KEY_PASSWORD"
+            printf 'storePassword=%s\n' "$ANDROID_STORE_PASSWORD"
             printf 'storeFile=%s\n' "$KEYSTORE_PATH"
           } > src-tauri/gen/android/keystore.properties
           node scripts/configure-android-signing.mjs
