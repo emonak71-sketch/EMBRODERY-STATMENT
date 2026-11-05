@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Settings as SettingsIcon, Save, Mail, Building, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { User } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import AppLockSettings from './AppLockSettings';
 import { setupBiometrics } from './BiometricLock';
 import { Fingerprint } from 'lucide-react';
 import DesktopSettings from './DesktopSettings';
@@ -11,6 +12,7 @@ interface SettingsProps {
   setActiveTab?: (tab: string) => void;
   user: User | null;
   onUpdateProfile: (email: string, biz: string) => Promise<void>;
+  onAppLockUpdated: (updatedAt: string) => void;
 }
 
 
@@ -19,7 +21,7 @@ const isMobileDevice = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
-const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, setActiveTab }) => {
+const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, onAppLockUpdated, setActiveTab }) => {
   const { t } = useLanguage();
   const [email, setEmail] = useState(user?.email || '');
   const [biz, setBiz] = useState(user?.business_name || '');
@@ -123,6 +125,8 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, setActiveTab
             )}
           </button>
         </form>
+
+        <AppLockSettings email={user?.email || ''} onUpdated={onAppLockUpdated} />
 
         {isMobileDevice() && (
         <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 md:p-10 shadow-2xl shadow-slate-200/50 dark:shadow-black/20 border border-slate-100 dark:border-slate-800 mt-8">
