@@ -1,4 +1,4 @@
-name: Customer Android Build
+name: Customer Android APK Build
 
 on:
   push:
@@ -69,17 +69,16 @@ jobs:
           cd ../../..
           node scripts/configure-android-signing.mjs
 
-      - name: Build customer APK and Android App Bundle
+      - name: Build customer Android APK for CI verification
         run: |
-          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
-          npx --yes @tauri-apps/cli@2 android build --apk --aab --ci --target aarch64
+          export NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
+          npx --yes @tauri-apps/cli@2 android build --apk --ci --target aarch64
 
       - name: Upload Android build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Embroidery-Statement-Android-${{ github.run_number }}
+          name: Embroidery-Statement-Android-APK-QA-${{ github.run_number }}
           path: |
             src-tauri/gen/android/app/build/outputs/apk/**/*.apk
-            src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
           if-no-files-found: error
           retention-days: 14
