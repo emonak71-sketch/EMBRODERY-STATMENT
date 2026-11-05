@@ -1,4 +1,4 @@
-const CACHE_NAME = 'embrodery-v3';
+const CACHE_NAME = 'embrodery-v4';
 const STATIC_ASSET = /\.(?:js|css|png|jpg|jpeg|svg|webp|woff2?)$/i;
 
 self.addEventListener('install', event => {
@@ -20,12 +20,13 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
+    const offlinePage = url.pathname === '/owner.html' ? '/owner.html' : url.pathname === '/download.html' ? '/download.html' : '/index.html';
     event.respondWith(fetch(request).then(async response => {
       if (response.ok) {
         await caches.open(CACHE_NAME).then(cache => cache.put(request, response.clone()));
       }
       return response;
-    }).catch(async () => (await caches.match(request)) || (await caches.match('/index.html'))));
+    }).catch(async () => (await caches.match(request)) || (await caches.match(offlinePage)) || Response.error()));
     return;
   }
 
