@@ -15,7 +15,7 @@ const dateLabel=(value?:string|null)=>value?new Intl.DateTimeFormat('en-GB',{dat
 const safeText=(value:unknown,fallback='—')=>typeof value==='string'&&value.trim()?value:fallback;
 const normaliseBdNumber=(value:string)=>value.replace(/[^0-9]/g,'').replace(/^880/,'0');
 
-const SubscriptionBilling:React.FC<{user:User}>=({user})=>{
+const SubscriptionBilling:React.FC<{user:User;onAccessRefresh?:()=>void|Promise<void>}>=({user,onAccessRefresh})=>{
  const [plans,setPlans]=useState<Plan[]>([]);
  const [subscription,setSubscription]=useState<Subscription|null>(null);
  const [transactions,setTransactions]=useState<BillingTransaction[]>([]);
@@ -52,6 +52,7 @@ const SubscriptionBilling:React.FC<{user:User}>=({user})=>{
    if(admin){const pending=await dbService.getPendingNagadPaymentSubmissions();setPendingSubmissions(pending as PaymentSubmission[]);}
    else setPendingSubmissions([]);
    setSelectedPlanId(current=>current||(p as Plan[])[0]?.id||'');
+   await onAccessRefresh?.();
   }catch(e:any){setError(e.message||'Could not load subscription and billing history.');}
   finally{setLoading(false);}
  },[]);
