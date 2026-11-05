@@ -37,7 +37,8 @@ export async function desktopOpenUrl(url: string): Promise<void> {
   if (
     parsed.protocol !== 'https:' ||
     parsed.hostname !== 'github.com' ||
-    !parsed.pathname.startsWith('/emonak71-sketch/EMBRODERY-STATMENT/releases/download/')
+    !parsed.pathname.startsWith('/emonak71-sketch/EMBRODERY-STATMENT/releases/download/') ||
+    !parsed.pathname.endsWith('/Embroidery-Statement-Android.apk')
   ) {
     throw new Error('Only official Embroidery Statement release URLs can be opened.');
   }
