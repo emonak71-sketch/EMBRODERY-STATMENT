@@ -4,16 +4,16 @@ on:
   push:
     branches:
       - release
-      - release/1.0.2
+      - 'release/*'
     tags:
       - 'v*'
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag matching package.json, Cargo.toml and tauri.conf.json (example: v1.0.2)'
+        description: 'Release tag matching package.json, Cargo.toml and tauri.conf.json (example: v1.0.3)'
         required: true
         type: string
-        default: 'v1.0.2'
+        default: 'v1.0.3'
 
 permissions:
   contents: write
@@ -125,7 +125,7 @@ jobs:
           $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path 'latest.json' -Encoding utf8
           Write-Host "Updater manifest prepared for $version."
 
-      - name: Verify 1.0.1 to 1.0.2 in-place upgrade and user-data preservation
+      - name: Verify 1.0.1 to current-version in-place upgrade and user-data preservation
         shell: pwsh
         env:
           PREVIOUS_INSTALLER_URL: https://github.com/emonak71-sketch/EMBRODERY-STATMENT/releases/download/v1.0.1/Embroidery.Statement_1.0.1_x64-setup.exe
@@ -155,10 +155,57 @@ jobs:
             Write-Host "Release $env:RELEASE_TAG already exists; replacing only its signed installer, signature and updater manifest."
             gh release upload $env:RELEASE_TAG @assets --repo $env:GITHUB_REPOSITORY --clobber
             if ($LASTEXITCODE -ne 0) { throw 'Updating the existing GitHub Release assets failed.' }
-            gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file 'RELEASE_NOTES_1.0.2.md' --latest --target $env:GITHUB_SHA
+            gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file "RELEASE_NOTES_$((Get-Content 'package.json' -Raw | ConvertFrom-Json).version).md" --latest --target $env:GITHUB_SHA
             if ($LASTEXITCODE -ne 0) { throw 'Updating the GitHub Release metadata failed.' }
           } else {
-            gh release create $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file 'RELEASE_NOTES_1.0.2.md' --latest --target $env:GITHUB_SHA @assets
+            gh release create $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file "RELEASE_NOTES_$((Get-Content 'package.json' -Raw | ConvertFrom-Json).version).md" --latest --target $env:GITHUB_SHA @assets
             if ($LASTEXITCODE -ne 0) { throw 'GitHub Release creation failed.' }
+          }
+
+      - name: Verify published updater manifest and download URLs
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (Get-Content 'package.json' -Raw | ConvertFrom-Json).version
+          $headers = @{
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+            Authorization = "Bearer $env:GH_TOKEN"
+            'Cache-Control' = 'no-cache'
+          }
+          $releaseApi = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases/tags/$env:RELEASE_TAG"
+          $release = Invoke-RestMethod -Uri $releaseApi -Headers $headers -TimeoutSec 30
+          $installer = $release.assets | Where-Object { $_.name -like "*$version*x64-setup.exe" } | Select-Object -First 1
+          $manifestAsset = $release.assets | Where-Object { $_.name -eq 'latest.json' } | Select-Object -First 1
+          if (-not $installer -or -not $manifestAsset) { throw 'The release is missing the expected installer or latest.json asset.' }
+
+          $manifest = Invoke-RestMethod -Uri $manifestAsset.browser_download_url -Headers @{'Cache-Control'='no-cache'} -TimeoutSec 60
+          if ($manifest.version -ne $version) { throw "Published updater manifest version mismatch: expected $version, got $($manifest.version)." }
+          $platform = $manifest.platforms.'windows-x86_64'
+          if (-not $platform.signature) { throw 'Published updater manifest has no Windows signature.' }
+          if ($platform.url -ne $installer.browser_download_url) {
+            throw "Updater manifest URL does not match the uploaded installer asset. Manifest: $($platform.url); asset: $($installer.browser_download_url)"
+          }
+
+          $latestManifestUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/latest/download/latest.json"
+          $latestManifest = Invoke-RestMethod -Uri $latestManifestUrl -Headers @{'Cache-Control'='no-cache'} -TimeoutSec 60
+          if ($latestManifest.version -ne $version) { throw "The updater's /latest/ endpoint returned $($latestManifest.version), not $version." }
+
+          $urls = @($manifestAsset.browser_download_url, $latestManifestUrl, $platform.url)
+          foreach ($url in $urls) {
+            $verified = $false
+            for ($attempt = 1; $attempt -le 5; $attempt++) {
+              try {
+                $response = Invoke-WebRequest -Uri $url -Method Head -MaximumRedirection 10 -TimeoutSec 60
+                if ($response.StatusCode -eq 200) { $verified = $true; break }
+              } catch {
+                if ($attempt -eq 5) { throw "Published updater URL returned an error after 5 attempts: $url — $($_.Exception.Message)" }
+                Start-Sleep -Seconds 4
+              }
+            }
+            if (-not $verified) { throw "Published updater URL did not return HTTP 200: $url" }
+            Write-Host "Verified HTTP 200: $url"
           }
 # Signing credentials are provisioned by the one-time local updater setup.

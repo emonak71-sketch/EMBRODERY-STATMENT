@@ -84,11 +84,11 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-6 h-full flex flex-col overflow-hidden">
           <div className="flex items-center justify-between mb-8">
             <div className="flex min-w-0 items-center gap-3 font-black text-lg text-slate-900 dark:text-white uppercase tracking-tighter">
-              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white shadow-md shadow-sky-500/10 ring-1 ring-sky-100 dark:ring-sky-900/40">
+              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-slate-950 shadow-md shadow-sky-500/20 ring-1 ring-sky-400/30">
                 <img
-                  src="/embroidery-statement-logo.jpg"
+                  src="/embroidery-statement-mark.svg"
                   alt="Embroidery Statement"
-                  className="h-full w-full scale-[1.55] origin-top object-cover object-top"
+                  className="h-full w-full object-contain p-1"
                 />
               </div>
               <span className="leading-none">EMBROIDERY<br/><span className="text-[9px] font-bold text-slate-400">STATEMENT</span></span>

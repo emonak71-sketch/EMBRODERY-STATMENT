@@ -85,43 +85,101 @@ const Ledger: React.FC<LedgerProps> = ({
   };
 
   const handleDownloadHD = async () => {
-    if (!ledgerRef.current || isDownloading) return;
-    
+    const node = ledgerRef.current;
+    if (!node || isDownloading) return;
+
     setIsDownloading(true);
+    const originalClassName = node.className;
+    const originalStyle = node.getAttribute('style');
     try {
-      // Clear any selections
       window.getSelection()?.removeAllRanges();
-      
-      const node = ledgerRef.current;
-      
-      // Ensure the content is visible and layout is stable
-      await new Promise(r => setTimeout(r, 200));
 
-      const dataUrl = await htmlToImage.toJpeg(node, {
-        quality: 0.95,
-        pixelRatio: 2, 
-        backgroundColor: '#ffffff',
-        style: {
-          transform: 'scale(1)',
-          transformOrigin: 'top left',
-          margin: '0',
-          padding: '40px'
-        }
+      // Export a predictable landscape-width document even when the app is
+      // opened on a narrow mobile viewport.
+      const exportWidth = 960;
+      node.classList.add('statement-exporting');
+      node.style.width = `${exportWidth}px`;
+      node.style.minWidth = `${exportWidth}px`;
+      node.style.maxWidth = 'none';
+      node.style.boxSizing = 'border-box';
+      node.style.padding = '40px';
+      node.style.margin = '0';
+      node.style.transform = 'none';
+      node.style.overflow = 'visible';
+
+      if (document.fonts?.ready) {
+        await Promise.race([
+          document.fonts.ready.catch(() => undefined),
+          new Promise<void>(resolve => window.setTimeout(resolve, 2500)),
+        ]);
+      }
+      const imageNodes = node.querySelectorAll('img') as NodeListOf<HTMLImageElement>;
+      const imageWaits: Promise<void>[] = [];
+      imageNodes.forEach(image => {
+        if (image.complete) return;
+        imageWaits.push(Promise.race([
+          new Promise<void>(resolve => {
+            image.addEventListener('load', () => resolve(), { once: true });
+            image.addEventListener('error', () => resolve(), { once: true });
+          }),
+          new Promise<void>(resolve => window.setTimeout(resolve, 2000)),
+        ]));
       });
+      await Promise.all(imageWaits);
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
+      const options = {
+        quality: 0.95,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        cacheBust: true,
+        skipFonts: true,
+        style: {
+          transform: 'none',
+          transformOrigin: 'top left',
+          width: `${exportWidth}px`,
+          minWidth: `${exportWidth}px`,
+          maxWidth: 'none',
+          margin: '0',
+          padding: '40px',
+          boxSizing: 'border-box',
+          overflow: 'visible',
+        },
+      };
+
+      let dataUrl: string;
+      let fileExtension = 'jpg';
+      try {
+        dataUrl = await htmlToImage.toJpeg(node, options);
+      } catch (jpegError) {
+        console.warn('JPEG statement export failed; trying PNG fallback.', jpegError);
+        dataUrl = await htmlToImage.toPng(node, {
+          ...options,
+          quality: undefined,
+        });
+        fileExtension = 'png';
+      }
+
+      const safePartyName = (selectedParty?.name || 'Customer')
+        .replace(/[\\/:*?"<>|]+/g, '-')
+        .trim() || 'Customer';
       const link = document.createElement('a');
-      link.download = `${selectedParty?.name}_Statement_${date}.jpg`;
+      link.download = `${safePartyName}_Statement_${date}.${fileExtension}`;
       link.href = dataUrl;
+      link.rel = 'noopener';
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
-      
+      link.remove();
+
       setShowDownloadSuccess(true);
-      setTimeout(() => setShowDownloadSuccess(false), 3000);
+      window.setTimeout(() => setShowDownloadSuccess(false), 3000);
     } catch (err) {
-      console.error('Download error:', err);
-      alert('Download error. Please ensure you are not in a private/incognito window if on mobile.');
+      console.error('Statement image export failed:', err);
+      alert('Could not save the statement image. Please try again, or use CSV export as a backup.');
     } finally {
+      node.className = originalClassName;
+      if (originalStyle === null) node.removeAttribute('style');
+      else node.setAttribute('style', originalStyle);
       setIsDownloading(false);
     }
   };
@@ -394,7 +452,7 @@ const Ledger: React.FC<LedgerProps> = ({
       {showDownloadSuccess && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-6">
           <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Statement Saved to Gallery</span>
+          <span className="text-[10px] font-black uppercase tracking-widest">Statement Downloaded Successfully</span>
         </div>
       )}
 
