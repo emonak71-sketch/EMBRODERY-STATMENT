@@ -279,7 +279,7 @@ async fn desktop_install_update(app: AppHandle) -> Result<(), String> {
 
 #[cfg(desktop)]
 fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
-    let owner_build = option_env!("EMBROIDERY_OWNER_BUILD").is_some();
+    let owner_build = app.package_info().name.to_lowercase().contains("owner");
     let app_label = if owner_build { "Open Owner Control Center" } else { "Open Embroidery Statement" };
     let open = MenuItem::with_id(app, "open", app_label, true, None::<&str>)?;
     let attendance = MenuItem::with_id(app, "attendance", "Open Attendance", !owner_build, None::<&str>)?;
@@ -338,7 +338,7 @@ pub fn run() {
         builder = builder
             .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| { show_main(app); }))
             .plugin(tauri_plugin_autostart::Builder::new()
-                .app_name(if option_env!("EMBROIDERY_OWNER_BUILD").is_some() { "Embroidery Statement Owner Control Center" } else { "Embroidery Statement" })
+                .app_name("Embroidery Statement")
                 .args(["--autostart"]).build());
         if update_is_configured() {
             builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
