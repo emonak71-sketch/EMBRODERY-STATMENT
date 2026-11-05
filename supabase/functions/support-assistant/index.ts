@@ -20,7 +20,10 @@ Deno.serve(async (req: Request) => {
   if (!authorization.startsWith("Bearer ")) return json({ error: "Sign in is required." }, 401);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || (() => {
+    try { return JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}").default as string | undefined; }
+    catch { return undefined; }
+  })();
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !anonKey || !serviceKey) return json({ error: "Support service is not configured." }, 503);
 
@@ -28,7 +31,8 @@ Deno.serve(async (req: Request) => {
     global: { headers: { Authorization: authorization } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data: { user }, error: authError } = await userClient.auth.getUser();
+  const token = authorization.slice("Bearer ".length);
+  const { data: { user }, error: authError } = await userClient.auth.getUser(token);
   if (authError || !user) return json({ error: "Your session is invalid. Please sign in again." }, 401);
 
   let input: { ticket_id?: string; message?: string };
@@ -118,15 +122,19 @@ Deno.serve(async (req: Request) => {
 
   if (needsHuman) {
     await admin.from("support_tickets").update({ status: "in_progress", priority: "high" }).eq("id", ticketId);
-    const { data: owners } = await admin.from("billing_admins").select("user_id");
-    if (owners?.length) {
-      await admin.from("app_notifications").insert(owners.map((owner: {user_id:string}) => ({
-        user_id: owner.user_id,
-        notification_type: "support_ticket",
-        title: "Customer issue needs your team",
-        body: (user.email || "A customer") + " needs human support: " + ticket.subject,
-        payload: { ticket_id: ticketId, customer_id: user.id },
-      })));
+    // A brand-new ticket already notifies the Owner through its database trigger.
+    // Re-notify the Owner when a customer reopens or continues a previously triaged ticket.
+    if (ticket.status !== "open") {
+      const { data: owners } = await admin.from("billing_admins").select("user_id");
+      if (owners?.length) {
+        await admin.from("app_notifications").insert(owners.map((owner: {user_id:string}) => ({
+          user_id: owner.user_id,
+          notification_type: "support_ticket",
+          title: "Customer replied and needs support",
+          body: (user.email || "A customer") + " needs human support: " + ticket.subject,
+          payload: { ticket_id: ticketId, customer_id: user.id },
+        })));
+      }
     }
   }
 
