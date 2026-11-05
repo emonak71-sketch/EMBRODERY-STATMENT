@@ -495,6 +495,7 @@ export const dbService = {
       .from('WorkerAdvances')
       .insert([{
         ...advance,
+        reason: advance.reason?.trim() || 'Salary advance',
         user_id: uid,
         outstanding_amount: advance.amount,
         status: 'outstanding',
