@@ -78,7 +78,7 @@ jobs:
           EMBROIDERY_OWNER_BUILD: '1'
         run: |
           $ErrorActionPreference = 'Stop'
-          npx --yes @tauri-apps/cli@2 build --bundles nsis --config src-tauri/tauri.unsigned.conf.json --config src-tauri/tauri.owner.conf.json
+          npx --yes @tauri-apps/cli@2 build --bundles nsis --config src-tauri/tauri.owner.conf.json --config src-tauri/tauri.unsigned.conf.json
           if ($LASTEXITCODE -ne 0) { throw 'Owner Control Center NSIS build failed.' }
 
       - name: Upload Owner Control Center Windows installer
