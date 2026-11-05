@@ -500,7 +500,7 @@ const App: React.FC = () => {
     );
   }
 
-  if (user && loading) return <SplashScreen />;
+  if (user && loading && hasPaidAccess!==false) return <SplashScreen />;
   if (user && hasPaidAccess===null) return <SplashScreen />;
 
   return (
@@ -524,10 +524,10 @@ const App: React.FC = () => {
 
       <main className="app-main min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 no-print">
         {hasPaidAccess===false ? (
-          <SubscriptionBilling user={{id:user.id,email:user.email,business_name:user.business_name}} />
+          <SubscriptionBilling user={{id:user.id,email:user.email,business_name:user.business_name}} onAccessRefresh={refreshSubscriptionAccess} />
         ) : <>
         {activeTab === 'workers' && <WorkerAttendance userId={user.id} companyName={user.business_name} requestedAttendance={attendanceRequest} />}
-        {activeTab === 'billing' && <SubscriptionBilling user={{id:user.id,email:user.email,business_name:user.business_name}} />}
+        {activeTab === 'billing' && <SubscriptionBilling user={{id:user.id,email:user.email,business_name:user.business_name}} onAccessRefresh={refreshSubscriptionAccess} />}
         {activeTab === 'dashboard' && <Dashboard stats={stats} user={user} parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} />}
         {activeTab === 'parties' && <PartiesList parties={parties} transactions={transactions} setActiveTab={setActiveTab} setSelectedParty={setSelectedParty} onAddParty={handleAddParty} />}
         {activeTab === 'ledger' && (
