@@ -17,6 +17,7 @@ import WorkerAttendance from './components/WorkerAttendance';
 import SubscriptionBilling from './components/SubscriptionBilling';
 import SupportCenter from './components/SupportCenter';
 import NotificationCenter from './components/NotificationCenter';
+import AndroidUpdateBanner from './components/AndroidUpdateBanner';
 import SplashScreen from './components/SplashScreen';
 
 const sendSMSAlert = async (phone: string, message: string) => {
@@ -523,6 +524,7 @@ const App: React.FC = () => {
 
   return (
     <div className="app-shell flex h-[100dvh] min-h-[100svh] w-full max-w-full overflow-hidden">
+      <AndroidUpdateBanner />
       <Sidebar 
         activeTab={hasPaidAccess===false && activeTab!=='support'?'billing':activeTab} 
         setActiveTab={selectSidebarTab}
