@@ -91,8 +91,8 @@ const WorkerAttendance:React.FC<{userId:string;companyName:string;requestedAtten
       <td className="px-5 py-4 font-bold text-slate-900 dark:text-white">{w.full_name}<div className="mt-1 text-xs font-normal text-slate-500">{w.phone||'No phone number'}</div></td>
       <td className="px-5 py-4 font-semibold text-slate-600 dark:text-slate-300">{w.worker_code}</td>
       <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{w.designation||'—'}</td>
-      <td className="px-5 py-4 text-xs text-slate-600 dark:text-slate-300">{w.attendance_applicable===false?'Not applicable':(w.monthly_working_days||26)+' days/month'}</td>
       <td className="px-5 py-4 font-bold tabular-nums text-slate-900 dark:text-white">{money(w.monthly_salary)}</td>
+      <td className="px-5 py-4 text-xs text-slate-600 dark:text-slate-300">{w.attendance_applicable===false?'Not applicable':(w.monthly_working_days||26)+' days/month'}</td>
       <td className="px-5 py-4"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black ${w.is_active?'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300':'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}><span className={`h-1.5 w-1.5 rounded-full ${w.is_active?'bg-emerald-500':'bg-slate-400'}`}/>{w.is_active?'Active':'Inactive'}</span></td>
       <td className="px-5 py-4"><div className="flex items-center gap-2">
        <button type="button" onClick={()=>openEdit(w)} aria-label={`Edit ${w.full_name}`} title="Edit worker" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-sky-200 bg-sky-50 text-sky-700 transition-all hover:-translate-y-0.5 hover:bg-sky-100 hover:shadow-md dark:border-sky-900/60 dark:bg-sky-950/50 dark:text-sky-300 dark:hover:bg-sky-900/60"><Pencil size={15}/></button>
