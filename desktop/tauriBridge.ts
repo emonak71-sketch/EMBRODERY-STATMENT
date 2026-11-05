@@ -8,6 +8,9 @@ type NativeApi = {
   event: {
     listen: <T>(event: string, handler: (event: NativeEvent<T>) => void) => Promise<() => void>;
   };
+  opener: {
+    openUrl: (url: string, openWith?: string) => Promise<void>;
+  };
 };
 
 declare global {
@@ -27,6 +30,22 @@ export function isAndroidTauriApp(): boolean {
 export function isWindowsDesktop(): boolean {
   if (!isTauriApp()) return false;
   return !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+export async function desktopOpenUrl(url: string): Promise<void> {
+  const parsed = new URL(url);
+  if (
+    parsed.protocol !== 'https:' ||
+    parsed.hostname !== 'github.com' ||
+    !parsed.pathname.startsWith('/emonak71-sketch/EMBRODERY-STATMENT/releases/download/')
+  ) {
+    throw new Error('Only official Embroidery Statement release URLs can be opened.');
+  }
+  if (!isTauriApp()) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  await window.__TAURI__!.opener.openUrl(url);
 }
 
 export async function desktopInvoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
