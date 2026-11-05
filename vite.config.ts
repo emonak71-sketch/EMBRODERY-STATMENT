@@ -1,14 +1,17 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
   build: {
     rollupOptions: {
       input: {
-        customer: resolve(process.cwd(), 'index.html'),
-        owner: resolve(process.cwd(), 'owner.html'),
+        customer: resolve(root, 'index.html'),
+        owner: resolve(root, 'owner.html'),
       },
     },
   },
