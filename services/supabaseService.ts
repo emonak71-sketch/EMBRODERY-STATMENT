@@ -226,47 +226,51 @@ export const dbService = {
     return data;
   },
   getMySubscriptionAccess: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const uid = session?.user?.id;
-    if (!uid) return false;
-    const [adminResult, subscriptionResult, trialResult] = await Promise.all([
-      supabase.from('billing_admins').select('user_id').eq('user_id',uid).maybeSingle(),
-      supabase.from('subscriptions').select('status,current_period_end')
-        .eq('user_id',uid).in('status',['active','trialing'])
-        .order('current_period_end',{ascending:false}).limit(1).maybeSingle(),
-      supabase.from('account_trials').select('trial_ends_at').eq('user_id',uid).maybeSingle()
-    ]);
-    if (adminResult.error) throw handleDbError(adminResult.error,'checking billing admin access');
-    if (subscriptionResult.error) throw handleDbError(subscriptionResult.error,'checking subscription access');
-    if (trialResult.error) throw handleDbError(trialResult.error,'checking free trial access');
-    if (adminResult.data?.user_id) return true;
-    const paid = Boolean(subscriptionResult.data && new Date(subscriptionResult.data.current_period_end).getTime()>Date.now());
-    const trial = Boolean(trialResult.data && new Date(trialResult.data.trial_ends_at).getTime()>Date.now());
-    return paid || trial;
+    const { data, error } = await supabase.rpc('get_my_access_status');
+    if (error) throw handleDbError(error, 'checking subscription and owner-granted access');
+    const status = Array.isArray(data) ? data[0] : data;
+    return Boolean(status?.has_access);
   },
   getMyTrialStatus: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const uid = session?.user?.id;
-    if (!uid) return null;
-    const [adminResult, subscriptionResult, trialResult] = await Promise.all([
-      supabase.from('billing_admins').select('user_id').eq('user_id',uid).maybeSingle(),
-      supabase.from('subscriptions').select('status,current_period_end')
-        .eq('user_id',uid).in('status',['active','trialing'])
-        .order('current_period_end',{ascending:false}).limit(1).maybeSingle(),
-      supabase.from('account_trials').select('trial_started_at,trial_ends_at').eq('user_id',uid).maybeSingle()
-    ]);
-    if (adminResult.error) throw handleDbError(adminResult.error,'checking billing admin trial status');
-    if (subscriptionResult.error) throw handleDbError(subscriptionResult.error,'checking paid subscription trial status');
-    if (trialResult.error) throw handleDbError(trialResult.error,'loading free trial status');
-    if (!trialResult.data) return null;
-    const hasPaid = Boolean(adminResult.data?.user_id || (subscriptionResult.data && new Date(subscriptionResult.data.current_period_end).getTime()>Date.now()));
-    const isTrialActive = !hasPaid && new Date(trialResult.data.trial_ends_at).getTime()>Date.now();
+    const { data, error } = await supabase.rpc('get_my_access_status');
+    if (error) throw handleDbError(error, 'loading trial and subscription access status');
+    const status = Array.isArray(data) ? data[0] : data;
+    if (!status) return null;
     return {
-      trial_started_at: trialResult.data.trial_started_at,
-      trial_ends_at: trialResult.data.trial_ends_at,
-      is_trial_active: isTrialActive,
-      is_trial_expired: !hasPaid && !isTrialActive
+      trial_started_at: status.trial_started_at,
+      trial_ends_at: status.trial_ends_at,
+      is_trial_active: status.access_source === 'free_trial',
+      is_trial_expired: !status.has_access && status.access_source === 'expired',
+      has_access: Boolean(status.has_access),
+      access_source: status.access_source,
+      access_until: status.access_until,
+      manual_access_starts_at: status.manual_access_starts_at,
+      manual_access_until: status.manual_access_until,
+      subscription_access_until: status.subscription_access_until
     };
+  },
+  ownerSearchCustomerByEmail: async (email: string) => {
+    const { data, error } = await supabase.rpc('owner_search_customer_by_email', {
+      p_email: email.trim().toLowerCase()
+    });
+    if (error) throw handleDbError(error, 'searching customer by registered email');
+    return Array.isArray(data) ? data[0] || null : data || null;
+  },
+  ownerGrantCustomerAccess: async (email: string, days: number, note = '') => {
+    const { data, error } = await supabase.rpc('owner_grant_customer_access', {
+      p_email: email.trim().toLowerCase(),
+      p_days: days,
+      p_note: note.trim() || null
+    });
+    if (error) throw handleDbError(error, 'granting customer subscription access');
+    return Array.isArray(data) ? data[0] || null : data || null;
+  },
+  ownerGetCustomerAccessHistory: async (userId: string) => {
+    const { data, error } = await supabase.rpc('owner_get_customer_access_history', {
+      p_user_id: userId
+    });
+    if (error) throw handleDbError(error, 'loading customer access history');
+    return data || [];
   },
   getMyBillingTransactions: async (limit = 100) => {
     const { data: { session } } = await supabase.auth.getSession();
