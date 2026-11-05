@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - release
+      - release/1.0.2
     tags:
       - 'v*'
   workflow_dispatch:
@@ -154,7 +155,7 @@ jobs:
             Write-Host "Release $env:RELEASE_TAG already exists; replacing only its signed installer, signature and updater manifest."
             gh release upload $env:RELEASE_TAG @assets --repo $env:GITHUB_REPOSITORY --clobber
             if ($LASTEXITCODE -ne 0) { throw 'Updating the existing GitHub Release assets failed.' }
-            gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file 'RELEASE_NOTES_1.0.2.md' --latest
+            gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file 'RELEASE_NOTES_1.0.2.md' --latest --target $env:GITHUB_SHA
             if ($LASTEXITCODE -ne 0) { throw 'Updating the GitHub Release metadata failed.' }
           } else {
             gh release create $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --title "Embroidery Statement $env:RELEASE_TAG" --notes-file 'RELEASE_NOTES_1.0.2.md' --latest --target $env:GITHUB_SHA @assets
