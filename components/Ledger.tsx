@@ -4,6 +4,7 @@ import { Plus, ReceiptText, Trash2, Download, Loader2, CheckCircle2, Landmark, P
 import { Party, Transaction, User as UserType } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import * as htmlToImage from 'html-to-image';
+import TransactionInvoice from './TransactionInvoice';
 
 interface LedgerProps {
   setActiveTab?: (tab: string) => void;
@@ -36,6 +37,7 @@ const Ledger: React.FC<LedgerProps> = ({
   const [editValue, setEditValue] = useState<string>('');
   const [editBillNo, setEditBillNo] = useState<string>('');
   const [showQuickEntry, setShowQuickEntry] = useState(false);
+  const [invoiceTransaction, setInvoiceTransaction] = useState<Transaction | null>(null);
 
   const ledgerRef = useRef<HTMLDivElement>(null);
 
@@ -278,8 +280,9 @@ const Ledger: React.FC<LedgerProps> = ({
                         </>
                      ) : (
                         <>
-                          <button onClick={() => handleStartEdit(e)} className="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => onDeleteTransaction(e.id)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => setInvoiceTransaction(e)} title="View transaction invoice" aria-label="View transaction invoice" className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-white rounded-lg transition-all"><ReceiptText className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => handleStartEdit(e)} title="Edit transaction" className="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => onDeleteTransaction(e.id)} title="Delete transaction" className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                         </>
                      )}
                    </div>
@@ -503,6 +506,15 @@ const Ledger: React.FC<LedgerProps> = ({
             </form>
           </div>
         </div>
+      )}
+      {invoiceTransaction && selectedParty && (
+        <TransactionInvoice
+          transaction={invoiceTransaction}
+          party={selectedParty}
+          businessName={user?.business_name || 'Embroidery Business'}
+          runningBalance={entries.find(entry => entry.id === invoiceTransaction.id)?.running_balance ?? 0}
+          onClose={() => setInvoiceTransaction(null)}
+        />
       )}
     </div>
   );
