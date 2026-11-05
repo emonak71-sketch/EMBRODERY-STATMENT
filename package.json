@@ -16,7 +16,7 @@
     "desktop:build:signed": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-windows-desktop-signed.ps1",
     "desktop:check": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 build --no-bundle",
     "test:app-lock": "node scripts/app-lock-contract.test.mjs",
-    "build:owner": "vite build --outDir dist-owner",
+    "build:owner": "vite build --config vite.owner.config.ts --outDir dist-owner",
     "desktop:owner:build": "npm run desktop:icons && node scripts/build-owner-desktop.mjs",
     "android:customer:build": "npx --yes @tauri-apps/cli@2 android build --apk --ci --target aarch64"
   },
