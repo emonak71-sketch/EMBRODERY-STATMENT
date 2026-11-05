@@ -236,7 +236,8 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (user && hasPaidAccess===true && !isMisconfigured && appLockState === 'unlocked' && !isLocked) {
+    if (user && !isMisconfigured && appLockState === 'unlocked' && !isLocked) {
+      if (hasPaidAccess !== true) return;
       refreshData();
       const channel = supabase
         .channel('db_changes')
