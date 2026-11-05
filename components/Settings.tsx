@@ -161,6 +161,21 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, onAppLockUpd
           Your workspace data is end-to-end encrypted and managed via secure Supabase authentication. Any changes to your primary email address will trigger a confirmation link to be sent to both your old and new email for security verification.
         </p>
       </div>
+
+      <section aria-label="About Embroidery Statement" className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center gap-4">
+          <img src="/embroidery-statement-mark.svg" alt="Embroidery Statement logo" className="h-16 w-16 rounded-2xl object-contain" />
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">About Embroidery Statement</h3>
+            <p className="mt-1 text-xs text-slate-500">Brand identity &amp; application information</p>
+          </div>
+        </div>
+        <div className="mt-5 border-t border-slate-100 pt-4 text-xs leading-relaxed text-slate-600 dark:border-slate-800 dark:text-slate-300">
+          <p><strong>Logo concept and visual design:</strong> Created with OpenAI ChatGPT (AI-assisted design), commissioned by the Embroidery Statement project owner.</p>
+          <p className="mt-2"><strong>Brand ownership:</strong> Embroidery Statement project owner.</p>
+          <p className="mt-2 text-slate-400">Design provenance record · 5 November 2026</p>
+        </div>
+      </section>
     </div>
   );
 };
