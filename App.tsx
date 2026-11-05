@@ -50,6 +50,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [hasPaidAccess, setHasPaidAccess] = useState<boolean | null>(null);
+  const [trialStatus, setTrialStatus] = useState<{trial_started_at:string;trial_ends_at:string;is_trial_active:boolean;is_trial_expired:boolean}|null>(null);
   const [attendanceRequest,setAttendanceRequest] = useState<{session:'morning'|'night';nonce:number}|null>(null);
 
   useEffect(() => {
@@ -73,6 +74,9 @@ const App: React.FC = () => {
     if(tab==='workers') setAttendanceRequest(null);
     setActiveTab(tab);
   };
+  const trialDaysRemaining = trialStatus?.is_trial_active
+    ? Math.max(0, Math.ceil((new Date(trialStatus.trial_ends_at).getTime()-Date.now())/86_400_000))
+    : 0;
   const [parties, setParties] = useState<Party[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
@@ -87,13 +91,21 @@ const App: React.FC = () => {
   const [appLockUpdatedAt, setAppLockUpdatedAt] = useState<string | null>(null);
   const currentUserId = user?.id;
   const refreshSubscriptionAccess = useCallback(async () => {
-    if (!currentUserId) { setHasPaidAccess(null); return; }
+    if (!currentUserId) { setHasPaidAccess(null); setTrialStatus(null); return; }
     try {
       const allowed = await dbService.getMySubscriptionAccess();
       setHasPaidAccess(allowed);
+      try {
+        const trial = await dbService.getMyTrialStatus();
+        setTrialStatus(trial);
+      } catch (trialError) {
+        console.error('Could not load free trial status:', trialError);
+        setTrialStatus(null);
+      }
     } catch (error) {
       console.error('Could not verify subscription access:', error);
       setHasPaidAccess(false);
+      setTrialStatus(null);
     }
   }, [currentUserId]);
 
@@ -218,6 +230,8 @@ const App: React.FC = () => {
         });
       } else {
         setUser(null);
+        setTrialStatus(null);
+        setHasPaidAccess(null);
         setAppLockState('checking');
         setAppLockUpdatedAt(null);
         setParties([]);
@@ -524,8 +538,9 @@ const App: React.FC = () => {
       />
 
       <main className="app-main min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 no-print">
+        {trialStatus?.is_trial_active && hasPaidAccess===true && <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sky-900 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100"><div><div className="text-xs font-black uppercase tracking-wider">15-Day Free Trial</div><div className="mt-1 text-sm font-semibold">{trialDaysRemaining} {trialDaysRemaining===1?"day":"days"} remaining. Your data stays saved when the trial ends.</div></div><button type="button" onClick={()=>selectSidebarTab('billing')} className="rounded-xl bg-sky-700 px-4 py-2 text-xs font-black text-white hover:bg-sky-800">View Subscription Plans</button></div>}
         {hasPaidAccess===false ? (
-          <SubscriptionBilling user={{id:user.id,email:user.email,business_name:user.business_name}} onAccessRefresh={refreshSubscriptionAccess} />
+          <SubscriptionBilling onAccessRefresh={refreshSubscriptionAccess} />
         ) : <>
         {activeTab === 'workers' && <WorkerAttendance userId={user.id} companyName={user.business_name} requestedAttendance={attendanceRequest} />}
         {activeTab === 'billing' && <SubscriptionBilling user={{id:user.id,email:user.email,business_name:user.business_name}} onAccessRefresh={refreshSubscriptionAccess} />}
