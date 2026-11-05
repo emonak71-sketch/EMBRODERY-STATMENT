@@ -1,5 +1,5 @@
 import React, {useEffect,useRef} from 'react';
-import {desktopInvoke,isWindowsDesktop} from './tauriBridge';
+import {desktopInvoke,desktopListen,isWindowsDesktop} from './tauriBridge';
 
 type UpdateInfo={available_version:string|null;portable:boolean;configured:boolean};
 const OwnerDesktopHost:React.FC<{children:React.ReactNode}>=({children})=>{
@@ -20,8 +20,10 @@ const OwnerDesktopHost:React.FC<{children:React.ReactNode}>=({children})=>{
    }finally{checking.current=false;}
   };
   void check();
+  let unlisten:(()=>void)|undefined;
+  void desktopListen('desktop:check-updates',()=>void check()).then(fn=>{unlisten=fn;});
   const timer=window.setInterval(()=>void check(),6*60*60*1000);
-  return()=>{mounted=false;window.clearInterval(timer);};
+  return()=>{mounted=false;window.clearInterval(timer);unlisten?.();};
  },[]);
  return <>{children}</>;
 };
