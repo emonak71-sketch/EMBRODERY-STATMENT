@@ -41,16 +41,10 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
         const checkedAt=Date.now();
         localStorage.setItem('desktop_last_update_check_at',String(checkedAt));
         localStorage.setItem('desktop_last_update_check',new Date(checkedAt).toLocaleString());
-        if(info.available_version && !info.portable) {
-          const remindAfter=Number(localStorage.getItem('desktop_update_remind_after')||'0')||0;
-          const notifiedVersion=localStorage.getItem('desktop_update_notified_version')||'';
-          const lastNotifiedAt=Number(localStorage.getItem('desktop_update_last_notified_at')||'0')||0;
-          if(checkedAt>=remindAfter && (notifiedVersion!==info.available_version || checkedAt-lastNotifiedAt>=24*60*60*1000)) {
-            await desktopInvoke('desktop_notify_update',{version:info.available_version});
-            localStorage.setItem('desktop_update_notified_version',info.available_version);
-            localStorage.setItem('desktop_update_last_notified_at',String(checkedAt));
-          }
-          window.dispatchEvent(new CustomEvent('embroidery:update-available',{detail:info}));
+        if(info.available_version && !info.portable && info.configured) {
+          window.dispatchEvent(new CustomEvent('embroidery:update-installing',{detail:info}));
+          await desktopInvoke('desktop_install_update');
+          return;
         }
       } catch(error) {
         console.warn('Background update check failed; it will retry at the next scheduled check.',error);
