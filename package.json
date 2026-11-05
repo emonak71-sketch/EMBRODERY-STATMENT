@@ -18,7 +18,7 @@
     "test:app-lock": "node scripts/app-lock-contract.test.mjs",
     "build:owner": "vite build --outDir dist-owner",
     "desktop:owner:build": "npm run desktop:icons && node scripts/build-owner-desktop.mjs",
-    "android:customer:build": "npx --yes @tauri-apps/cli@2 android build --apk --ci"
+    "android:customer:build": "npx --yes @tauri-apps/cli@2 android build --apk --ci --target aarch64"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",
