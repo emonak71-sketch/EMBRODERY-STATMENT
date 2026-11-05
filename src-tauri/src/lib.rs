@@ -1,6 +1,9 @@
+#[cfg(desktop)]
 use std::{sync::Mutex, time::Duration};
 
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::AppHandle;
+#[cfg(desktop)]
+use tauri::{Emitter, Manager};
 use tauri_plugin_notification::NotificationExt;
 
 #[cfg(desktop)]
@@ -401,12 +404,15 @@ pub fn run() {
             }
         }
 
-        let background = app.handle().clone();
-        tauri::async_runtime::spawn(async move {
-            let mut ticker = tokio::time::interval(Duration::from_secs(20));
-            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-            loop { ticker.tick().await; let _ = background.emit("desktop:scheduler-tick", ()); }
-        });
+        #[cfg(desktop)]
+        {
+            let background = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let mut ticker = tokio::time::interval(Duration::from_secs(20));
+                ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+                loop { ticker.tick().await; let _ = background.emit("desktop:scheduler-tick", ()); }
+            });
+        }
         Ok(())
     });
 
