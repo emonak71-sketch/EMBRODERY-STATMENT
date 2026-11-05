@@ -7,7 +7,7 @@ if (!apkPath || !releaseTag || !repository) {
 }
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const version = packageJson.version;
-if (releaseTag !== 'v' + version) {
+if (releaseTag !== 'android-v' + version) {
   throw new Error('Android release tag ' + releaseTag + ' does not match package version v' + version + '.');
 }
 if (!fs.existsSync(apkPath)) throw new Error('Signed APK not found: ' + apkPath);
