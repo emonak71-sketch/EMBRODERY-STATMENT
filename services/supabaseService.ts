@@ -225,6 +225,16 @@ export const dbService = {
     if (error) throw handleDbError(error, 'loading subscription status');
     return data;
   },
+  getMySubscriptionAccess: async () => {
+    const [admin, subscription] = await Promise.all([
+      dbService.isBillingAdmin(),
+      dbService.getMySubscription()
+    ]);
+    if (admin) return true;
+    if (!subscription) return false;
+    const validStatus = subscription.status === 'active' || subscription.status === 'trialing';
+    return validStatus && new Date(subscription.current_period_end).getTime() > Date.now();
+  },
   getMyBillingTransactions: async (limit = 100) => {
     const { data: { session } } = await supabase.auth.getSession();
     const uid = session?.user?.id;
