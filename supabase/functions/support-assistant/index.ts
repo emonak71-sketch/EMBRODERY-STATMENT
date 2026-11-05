@@ -108,7 +108,9 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!reply) {
-    reply = "আপনার সমস্যাটি বুঝেছি। এই মুহূর্তে আমি নিশ্চিত সমাধান দিতে পারছি না। আপনার রিপোর্টটি আমাদের Support Team-এর কাছে পাঠানো হয়েছে। Team বিষয়টি পর্যালোচনা করে আপনার সঙ্গে যোগাযোগ করবে।";
+    reply = /[\\u0980-\\u09FF]/.test(message)
+      ? "আপনার সমস্যাটি বুঝেছি। এই মুহূর্তে আমি নিশ্চিত সমাধান দিতে পারছি না। আপনার রিপোর্টটি আমাদের Support Team-এর কাছে পাঠানো হয়েছে। Team বিষয়টি পর্যালোচনা করে আপনার সঙ্গে যোগাযোগ করবে।"
+      : "I understand the issue, but I cannot confirm a safe solution right now. Your report has been sent to our Support Team. The team will review it and contact you.";
   }
 
   const { error: assistantError } = await admin.from("support_messages").insert({
