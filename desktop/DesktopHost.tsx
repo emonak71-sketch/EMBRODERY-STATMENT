@@ -18,14 +18,53 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
   const languageRef = useRef(language);
   const checkingRef = useRef(false);
   const lastCheckRef = useRef(0);
+  const updateCheckRef = useRef(false);
+  const lastUpdateCheckRef = useRef(0);
+  const updateCheckInterval = 6 * 60 * 60 * 1000;
   useEffect(()=>{languageRef.current=language;},[language]);
 
   useEffect(()=>{
     if (!isWindowsDesktop()) return;
     let mounted=true;
     const cleanups:Array<() => void>=[];
+    const checkUpdatesIfDue = async(force=false) => {
+      if (!mounted || updateCheckRef.current) return;
+      const now = Date.now();
+      const savedAt = Number(localStorage.getItem('desktop_last_update_check_at') || '0') || 0;
+      const lastChecked = Math.max(lastUpdateCheckRef.current, savedAt);
+      if (!force && now-lastChecked<updateCheckInterval) return;
+
+      updateCheckRef.current=true;
+      lastUpdateCheckRef.current=now;
+      try {
+        const info=await desktopInvoke<DesktopUpdateInfo>('desktop_check_update');
+        const checkedAt=Date.now();
+        localStorage.setItem('desktop_last_update_check_at',String(checkedAt));
+        localStorage.setItem('desktop_last_update_check',new Date(checkedAt).toLocaleString());
+        if(info.available_version && !info.portable) {
+          const remindAfter=Number(localStorage.getItem('desktop_update_remind_after')||'0')||0;
+          const notifiedVersion=localStorage.getItem('desktop_update_notified_version')||'';
+          const lastNotifiedAt=Number(localStorage.getItem('desktop_update_last_notified_at')||'0')||0;
+          if(checkedAt>=remindAfter && (notifiedVersion!==info.available_version || checkedAt-lastNotifiedAt>=24*60*60*1000)) {
+            await desktopInvoke('desktop_notify_update',{version:info.available_version});
+            localStorage.setItem('desktop_update_notified_version',info.available_version);
+            localStorage.setItem('desktop_update_last_notified_at',String(checkedAt));
+          }
+          window.dispatchEvent(new CustomEvent('embroidery:update-available',{detail:info}));
+        }
+      } catch(error) {
+        console.warn('Background update check failed; it will retry at the next scheduled check.',error);
+      } finally {
+        updateCheckRef.current=false;
+      }
+    };
+
     const fire = async(force=false) => {
-      if (!mounted || checkingRef.current) return;
+      if (!mounted) return;
+      // The native tray scheduler keeps this WebView alive while the window is
+      // hidden. Check releases independently of attendance reminder preferences.
+      void checkUpdatesIfDue();
+      if (checkingRef.current) return;
       const now = Date.now();
       if (!force && now-lastCheckRef.current<45000) return;
       lastCheckRef.current=now;
@@ -98,19 +137,9 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
       }
     };
 
-    const checkStartupUpdates=async()=>{
-      try {
-        const info=await desktopInvoke<DesktopUpdateInfo>('desktop_check_update');
-        localStorage.setItem('desktop_last_update_check',new Date().toLocaleString());
-        const remindAfter=Number(localStorage.getItem('desktop_update_remind_after')||'0')||0;
-        if(info.available_version && !info.portable && Date.now()>=remindAfter){
-          await desktopInvoke('desktop_notify_update',{version:info.available_version});
-          window.dispatchEvent(new CustomEvent('embroidery:update-available',{detail:info}));
-        }
-      } catch {
-        // Unconfigured updater or no release yet: settings offers manual diagnostics.
-      }
-    };
+    // Run immediately at startup, then at most once every six hours. Native
+    // 20-second ticks continue while the main window is hidden in the system tray.
+    const checkStartupUpdates=()=>{ void checkUpdatesIfDue(true); };
 
     void desktopListen<DesktopNavigation>('desktop:navigate', target=>navigateDesktop(target))
       .then(unlisten=>cleanups.push(unlisten));
