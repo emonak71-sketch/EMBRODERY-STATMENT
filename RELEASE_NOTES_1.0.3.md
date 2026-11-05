@@ -7,6 +7,7 @@
 ## Sign-in experience
 - Replace the previous login panel motion with a restrained liquid-glass design.
 - Improve glass refraction, highlights, control contrast and reduced-motion handling.
+- Stabilize HD statement image exports with a consistent 960px layout, font-safe capture and automatic PNG fallback.
 
 ## Windows desktop reliability
 - Check signed app updates in the background while the app remains running in the system tray.
