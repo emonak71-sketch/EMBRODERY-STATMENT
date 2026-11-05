@@ -14,7 +14,7 @@ Embroidery Statement's Android customer app is distributed directly as an APK. G
 npx @tauri-apps/cli@2 android build --apk --target aarch64
 ```
 
-The universal APK can be shared through the product website or a direct download link. Do not distribute an unsigned APK as a customer release.
+The ARM64 APK can be shared through the product website or a direct download link. A separate build is required if older 32-bit devices must be supported. Do not distribute an unsigned APK as a customer release.
 
 ## Android signing and update compatibility
 
