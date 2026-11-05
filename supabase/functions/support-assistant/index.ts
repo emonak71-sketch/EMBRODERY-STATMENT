@@ -138,20 +138,7 @@ Deno.serve(async (req: Request) => {
 
   if (needsHuman) {
     await admin.from("support_tickets").update({ status: "in_progress", priority: "high" }).eq("id", ticketId);
-    // A brand-new ticket already notifies the Owner through its database trigger.
-    // Re-notify the Owner when a customer reopens or continues a previously triaged ticket.
-    if (ticket.status !== "open") {
-      const { data: owners } = await admin.from("billing_admins").select("user_id");
-      if (owners?.length) {
-        await admin.from("app_notifications").insert(owners.map((owner: {user_id:string}) => ({
-          user_id: owner.user_id,
-          notification_type: "support_ticket",
-          title: "Customer replied and needs support",
-          body: (user.email || "A customer") + " needs human support: " + ticket.subject,
-          payload: { ticket_id: ticketId, customer_id: user.id },
-        })));
-      }
-    }
+    // Database trigger sends Owner notifications for customer replies on existing tickets.
   }
 
   return json({ ok: true, reply, escalated: needsHuman, model: modelUsed });
