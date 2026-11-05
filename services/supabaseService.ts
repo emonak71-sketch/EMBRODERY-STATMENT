@@ -250,9 +250,12 @@ export const dbService = {
     return data;
   },
   isBillingAdmin: async () => {
-    const { data, error } = await supabase.rpc('is_billing_admin');
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return false;
+    const { data, error } = await supabase.from('billing_admins').select('user_id').eq('user_id',uid).maybeSingle();
     if (error) throw handleDbError(error, 'checking billing permissions');
-    return data === true;
+    return Boolean(data?.user_id);
   },
   getMyNagadPaymentSubmissions: async () => {
     const { data: { session } } = await supabase.auth.getSession();
