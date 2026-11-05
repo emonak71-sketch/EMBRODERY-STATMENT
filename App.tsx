@@ -110,8 +110,9 @@ const App: React.FC = () => {
   }, [currentUserId]);
 
   useEffect(() => {
-    if (!currentUserId) { setHasPaidAccess(null); return; }
+    if (!currentUserId) { setHasPaidAccess(null); setTrialStatus(null); return; }
     setHasPaidAccess(null);
+    setTrialStatus(null);
     void refreshSubscriptionAccess();
     const timer = window.setInterval(() => void refreshSubscriptionAccess(), 60_000);
     return () => window.clearInterval(timer);
