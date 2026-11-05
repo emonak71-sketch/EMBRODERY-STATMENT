@@ -23,7 +23,6 @@ const compareVersions = (left:string,right:string) => {
 
 const AndroidUpdateBanner:React.FC = () => {
   const [release,setRelease]=useState<AndroidRelease|null>(null);
-  const [checking,setChecking]=useState(false);
   const checkingRef=useRef(false);
   const [dismissed,setDismissed]=useState(false);
   const [error,setError]=useState('');
@@ -32,9 +31,9 @@ const AndroidUpdateBanner:React.FC = () => {
   const check=useCallback(async()=>{
     if(!isAndroidTauriApp()||checkingRef.current)return;
     checkingRef.current=true;
-    setChecking(true);setError('');
+    setError('');
     try{
-      const response=await fetch('https://api.github.com/repos/emonak71-sketch/EMBRODERY-STATMENT/releases?per_page=20&check='+Date.now(),{
+      const response=await fetch('https://api.github.com/repos/emonak71-sketch/EMBRODERY-STATMENT/releases?per_page=20,{
         cache:'no-store',
         headers:{Accept:'application/vnd.github+json'}
       });
@@ -50,7 +49,7 @@ const AndroidUpdateBanner:React.FC = () => {
       else setRelease(null);
     }catch(e:any){
       setError(e?.message||'Could not check Android updates.');
-    }finally{checkingRef.current=false;setChecking(false);}
+    }finally{checkingRef.current=false;}
   },[]);
 
   useEffect(()=>{
