@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Download, RefreshCw, Smartphone, X, AlertTriangle } from 'lucide-react';
 import { APP_VERSION } from '../desktop/appVersion';
 import { isAndroidTauriApp } from '../desktop/tauriBridge';
@@ -24,11 +24,13 @@ const compareVersions = (left:string,right:string) => {
 const AndroidUpdateBanner:React.FC = () => {
   const [release,setRelease]=useState<AndroidRelease|null>(null);
   const [checking,setChecking]=useState(false);
+  const checkingRef=useRef(false);
   const [dismissed,setDismissed]=useState(false);
   const [error,setError]=useState('');
 
   const check=useCallback(async()=>{
-    if(!isAndroidTauriApp()||checking)return;
+    if(!isAndroidTauriApp()||checkingRef.current)return;
+    checkingRef.current=true;
     setChecking(true);setError('');
     try{
       const response=await fetch('https://github.com/emonak71-sketch/EMBRODERY-STATMENT/releases/latest/download/latest-android.json?check='+Date.now(),{
@@ -43,8 +45,8 @@ const AndroidUpdateBanner:React.FC = () => {
       else setRelease(null);
     }catch(e:any){
       setError(e?.message||'Could not check Android updates.');
-    }finally{setChecking(false);}
-  },[checking]);
+    }finally{checkingRef.current=false;setChecking(false);}
+  },[]);
 
   useEffect(()=>{
     if(!isAndroidTauriApp())return;
