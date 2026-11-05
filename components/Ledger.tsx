@@ -113,16 +113,19 @@ const Ledger: React.FC<LedgerProps> = ({
           new Promise<void>(resolve => window.setTimeout(resolve, 2500)),
         ]);
       }
-      await Promise.all(Array.from(node.querySelectorAll<HTMLImageElement>('img')).map(async image => {
+      const imageNodes = node.querySelectorAll('img') as NodeListOf<HTMLImageElement>;
+      const imageWaits: Promise<void>[] = [];
+      imageNodes.forEach(image => {
         if (image.complete) return;
-        await Promise.race([
+        imageWaits.push(Promise.race([
           new Promise<void>(resolve => {
             image.addEventListener('load', () => resolve(), { once: true });
             image.addEventListener('error', () => resolve(), { once: true });
           }),
           new Promise<void>(resolve => window.setTimeout(resolve, 2000)),
-        ]);
-      }));
+        ]));
+      });
+      await Promise.all(imageWaits);
       await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
       const options = {
