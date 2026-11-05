@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CreditCard, Download, FileText, Printer, RefreshCw, ShieldCheck, Smartphone, Copy, CheckCircle2, Clock3, XCircle, Wallet, LockKeyhole } from 'lucide-react';
+import { CreditCard, Download, FileText, Printer, RefreshCw, ShieldCheck, Copy, CheckCircle2, Clock3, XCircle, Wallet, LockKeyhole } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { dbService } from '../services/supabaseService';
 import { User } from '../types';
