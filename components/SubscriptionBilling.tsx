@@ -1,13 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CreditCard, Download, FileText, Printer, RefreshCw, ShieldCheck, Copy, CheckCircle2, Clock3, XCircle, Wallet, LockKeyhole } from 'lucide-react';
-import { toPng } from 'html-to-image';
+import React, { useCallback, useEffect, useState } from 'react';
+import { CreditCard, RefreshCw, ShieldCheck, Copy, CheckCircle2, Clock3, XCircle, Wallet, LockKeyhole } from 'lucide-react';
 import { dbService } from '../services/supabaseService';
-import { User } from '../types';
 
 type Plan = { id:string; name:string; billing_interval:'month'|'year'; duration_days:number; price_bdt:number; max_workers:number|null; description:string; features:unknown };
 type Subscription = { id:string; status:string; current_period_start:string; current_period_end:string; cancel_at_period_end:boolean; subscription_plans?:Plan };
 type BillingTransaction = { id:string; transaction_no:string; plan_id:string; amount:number; currency:string; status:string; provider:string; payment_method?:string|null; created_at:string; paid_at?:string|null; subscription_plans?:{name:string;billing_interval:string}|null };
-type BillingInvoice = { id:string; transaction_id:string; invoice_number:string; seller_snapshot:Record<string,unknown>; buyer_snapshot:Record<string,unknown>; line_items:Array<Record<string,unknown>>; subtotal:number; discount:number; tax:number; total:number; currency:string; issued_at:string };
+type TrialStatus = {trial_started_at:string;trial_ends_at:string;is_trial_active:boolean;is_trial_expired:boolean}|null;
 type PaymentSettings = { provider:string; account_type:string; receiver_number:string|null; instructions:string; is_active:boolean }|null;
 type PaymentSubmission = { id:string; plan_id:string; amount:number; sender_number:string; receiver_number:string; nagad_transaction_id:string; status:'pending'|'approved'|'rejected'; reviewer_note?:string|null; created_at:string; reviewed_at?:string|null; subscription_plans?:{name:string;billing_interval:string}|null };
 const money=(n:number)=>new Intl.NumberFormat('en-BD',{style:'currency',currency:'BDT',maximumFractionDigits:2}).format(Number(n)||0);
@@ -15,16 +13,15 @@ const dateLabel=(value?:string|null)=>value?new Intl.DateTimeFormat('en-GB',{dat
 const safeText=(value:unknown,fallback='—')=>typeof value==='string'&&value.trim()?value:fallback;
 const normaliseBdNumber=(value:string)=>value.replace(/[^0-9]/g,'').replace(/^880/,'0');
 
-const SubscriptionBilling:React.FC<{user:User;onAccessRefresh?:()=>void|Promise<void>}>=({user,onAccessRefresh})=>{
+const SubscriptionBilling:React.FC<{onAccessRefresh?:()=>void|Promise<void>}>=({onAccessRefresh})=>{
  const [plans,setPlans]=useState<Plan[]>([]);
  const [subscription,setSubscription]=useState<Subscription|null>(null);
  const [transactions,setTransactions]=useState<BillingTransaction[]>([]);
- const [invoices,setInvoices]=useState<BillingInvoice[]>([]);
+ const [trialStatus,setTrialStatus]=useState<TrialStatus>(null);
  const [submissions,setSubmissions]=useState<PaymentSubmission[]>([]);
  const [pendingSubmissions,setPendingSubmissions]=useState<PaymentSubmission[]>([]);
  const [paymentSettings,setPaymentSettings]=useState<PaymentSettings>(null);
  const [isAdmin,setIsAdmin]=useState(false);
- const [selected,setSelected]=useState<BillingInvoice|null>(null);
  const [selectedPlanId,setSelectedPlanId]=useState('');
  const [senderNumber,setSenderNumber]=useState('');
  const [nagadTransactionId,setNagadTransactionId]=useState('');
@@ -35,18 +32,17 @@ const SubscriptionBilling:React.FC<{user:User;onAccessRefresh?:()=>void|Promise<
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
- const invoiceRef=useRef<HTMLDivElement>(null);
 
  const load=useCallback(async()=>{
   setLoading(true);setError('');
   try{
-   const [p,s,t,i,settings,mine,admin]=await Promise.all([
+   const [p,s,t,settings,mine,admin,trial]=await Promise.all([
     dbService.getSubscriptionPlans(),dbService.getMySubscription(),dbService.getMyBillingTransactions(),
-    dbService.getMyBillingInvoices(),dbService.getNagadPaymentSettings(),
-    dbService.getMyNagadPaymentSubmissions(),dbService.isBillingAdmin()
+    dbService.getNagadPaymentSettings(),dbService.getMyNagadPaymentSubmissions(),
+    dbService.isBillingAdmin(),dbService.getMyTrialStatus()
    ]);
    setPlans(p as Plan[]);setSubscription(s as Subscription|null);setTransactions(t as BillingTransaction[]);
-   setInvoices(i as BillingInvoice[]);setPaymentSettings(settings as PaymentSettings);
+   setTrialStatus(trial as TrialStatus);setPaymentSettings(settings as PaymentSettings);
    setSubmissions(mine as PaymentSubmission[]);setIsAdmin(Boolean(admin));
    setReceiverDraft((settings as PaymentSettings)?.receiver_number||'');
    if(admin){const pending=await dbService.getPendingNagadPaymentSubmissions();setPendingSubmissions(pending as PaymentSubmission[]);}
@@ -58,13 +54,10 @@ const SubscriptionBilling:React.FC<{user:User;onAccessRefresh?:()=>void|Promise<
  },[onAccessRefresh]);
  useEffect(()=>{void load();},[load]);
 
- const invoiceByTransaction=useMemo(()=>new Map(invoices.map(i=>[i.transaction_id,i])),[invoices]);
- const selectedTransaction=transactions.find(t=>t.id===selected?.transaction_id);
  const selectedPlan=plans.find(p=>p.id===selectedPlanId)||null;
- const seller=selected?.seller_snapshot||{};
- const buyer=selected?.buyer_snapshot||{};
  const subscriptionExpired=Boolean(subscription&&new Date(subscription.current_period_end).getTime()<=Date.now());
  const displayedSubscriptionStatus=subscriptionExpired?'expired':subscription?.status||'inactive';
+ const trialDaysRemaining=trialStatus?.is_trial_active?Math.max(0,Math.ceil((new Date(trialStatus.trial_ends_at).getTime()-Date.now())/86_400_000)):0;
 
  const submitPayment=async(e:React.FormEvent)=>{
   e.preventDefault();if(!selectedPlan||submitting)return;
@@ -101,7 +94,7 @@ const SubscriptionBilling:React.FC<{user:User;onAccessRefresh?:()=>void|Promise<
   setReviewingId(id);setError('');setNotice('');
   try{
    await dbService.reviewNagadPersonalPayment(id,approve,approve?'Verified in Nagad transaction history':'Payment could not be verified');
-   setNotice(approve?'Payment verified. Subscription activated and invoice generated.':'Payment submission rejected.');
+   setNotice(approve?'Payment verified. Subscription activated.':'Payment submission rejected.');
    await load();
   }catch(e:any){setError(e.message||'Payment review failed.');}
   finally{setReviewingId('');}
@@ -113,26 +106,9 @@ const SubscriptionBilling:React.FC<{user:User;onAccessRefresh?:()=>void|Promise<
   catch{setNotice('Nagad number: '+paymentSettings.receiver_number);}
  };
 
- const exportImage=async()=>{
-  if(!invoiceRef.current||!selected)return;
-  try{const image=await toPng(invoiceRef.current,{pixelRatio:3,cacheBust:true,backgroundColor:'#ffffff'});const link=document.createElement('a');link.href=image;link.download=selected.invoice_number+'.png';link.click();}
-  catch(e:any){setError(e.message||'Invoice image could not be generated.');}
- };
- const printInvoice=async()=>{
-  if(!invoiceRef.current||!selected)return;
-  const printWindow=window.open('','_blank');
-  if(!printWindow){setError('Allow pop-ups to print this invoice.');return;}
-  try{
-   const image=await toPng(invoiceRef.current,{pixelRatio:2,cacheBust:true,backgroundColor:'#ffffff'});
-   printWindow.document.open();
-   printWindow.document.write('<!doctype html><html><head><title>'+selected.invoice_number+'</title><style>body{margin:0;padding:18px;background:#fff;display:flex;justify-content:center}img{width:100%;max-width:820px;height:auto}@media print{body{padding:0}img{max-width:100%;max-height:98vh;object-fit:contain}}</style></head><body><img src="'+image+'"></body></html>');
-   printWindow.document.close();printWindow.onload=()=>{printWindow.focus();printWindow.print();};
-  }catch(e:any){printWindow.close();setError(e.message||'Invoice could not be prepared for printing.');}
- };
-
  return <div className="mx-auto max-w-7xl space-y-6 pb-10">
   <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-   <div><div className="mb-2 inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[10px] font-black uppercase tracking-[.2em] text-sky-700"><CreditCard size={13}/> Account Billing</div><h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl">Subscription & Billing</h1><p className="mt-1 text-sm text-slate-500">Choose a plan, pay manually through Nagad and keep every invoice.</p></div>
+   <div><div className="mb-2 inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[10px] font-black uppercase tracking-[.2em] text-sky-700"><CreditCard size={13}/> Account Billing</div><h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl">Subscription & Billing</h1><p className="mt-1 text-sm text-slate-500">Choose a plan, pay manually through Nagad and review your verified payment history.</p></div>
    <button onClick={()=>void load()} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"><RefreshCw size={14} className={loading?'animate-spin':''}/>Refresh</button>
   </div>
   {error&&<div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>}
@@ -141,7 +117,7 @@ const SubscriptionBilling:React.FC<{user:User;onAccessRefresh?:()=>void|Promise<
    <div className="grid gap-4 lg:grid-cols-2">
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
      <div className="flex items-center gap-2 text-sm font-black"><ShieldCheck size={17} className="text-emerald-600"/>Current Subscription</div>
-     {subscription?<div className="mt-4 space-y-2"><div className="text-xl font-black">{subscription.subscription_plans?.name||subscription.id}</div><div className="text-sm text-slate-500">Status: <span className={'font-bold capitalize '+(subscriptionExpired?'text-rose-600':'text-emerald-700')}>{displayedSubscriptionStatus}</span></div><div className="text-xs text-slate-500">Current period: {dateLabel(subscription.current_period_start)} – {dateLabel(subscription.current_period_end)}</div><div className="text-xs text-slate-500">Renewal: Manual — no automatic charge.</div>{subscriptionExpired&&<p className="text-xs font-bold text-rose-600">Your access is paused. Renew a plan below to restore access.</p>}</div>:<p className="mt-4 text-sm text-slate-500">No active subscription is linked to this account yet.</p>}
+     {subscription ? <div className="mt-4 space-y-2"><div className="text-xl font-black">{subscription.subscription_plans?.name||subscription.id}</div><div className="text-sm text-slate-500">Status: <span className={'font-bold capitalize '+(subscriptionExpired?'text-rose-600':'text-emerald-700')}>{displayedSubscriptionStatus}</span></div><div className="text-xs text-slate-500">Current period: {dateLabel(subscription.current_period_start)} – {dateLabel(subscription.current_period_end)}</div><div className="text-xs text-slate-500">Renewal: Manual — no automatic charge.</div>{subscriptionExpired&&<p className="text-xs font-bold text-rose-600">Your access is paused. Renew a plan below to restore access.</p>}</div> : trialStatus?.is_trial_active ? <div className="mt-4 space-y-2"><div className="text-xl font-black text-emerald-700">15-Day Free Trial</div><div className="text-sm font-bold text-emerald-700">Trial active · {trialDaysRemaining} {trialDaysRemaining===1?'day':'days'} remaining</div><div className="text-xs text-slate-500">Started: {dateLabel(trialStatus.trial_started_at)}</div><div className="text-xs text-slate-500">Trial ends: {dateLabel(trialStatus.trial_ends_at)}</div><p className="text-xs text-slate-500">Subscribe before the trial ends to keep using all features without interruption.</p></div> : trialStatus?.is_trial_expired ? <div className="mt-4 space-y-2"><div className="text-xl font-black text-rose-600">Free Trial Expired</div><div className="text-sm text-slate-500">Your 15-day trial ended on {dateLabel(trialStatus.trial_ends_at)}.</div><p className="text-xs font-bold text-rose-600">Choose a subscription plan below to restore full access. Your existing business data remains saved.</p></div> : <p className="mt-4 text-sm text-slate-500">No active subscription or free trial is linked to this account.</p>}
     </section>
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
      <div className="text-sm font-black">Available Plans</div>
@@ -203,20 +179,11 @@ const SubscriptionBilling:React.FC<{user:User;onAccessRefresh?:()=>void|Promise<
 
    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
     <div className="mb-4 flex items-center gap-2 text-sm font-black"><CreditCard size={17}/>Verified Transaction History</div>
-    <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-[10px] uppercase text-slate-500 dark:bg-slate-800"><tr>{['Transaction','Plan','Date','Method','Amount','Status','Invoice'].map(x=><th key={x} className="p-3">{x}</th>)}</tr></thead><tbody>{transactions.map(tx=>{const inv=invoiceByTransaction.get(tx.id);return <tr key={tx.id} className="border-t border-slate-100 dark:border-slate-800"><td className="p-3 font-bold">{tx.transaction_no}</td><td className="p-3">{tx.subscription_plans?.name||tx.plan_id}</td><td className="p-3">{dateLabel(tx.paid_at||tx.created_at)}</td><td className="p-3">{safeText(tx.payment_method,tx.provider)}</td><td className="p-3 font-bold">{money(tx.amount)}</td><td className="p-3 capitalize">{tx.status}</td><td className="p-3">{inv?<button onClick={()=>setSelected(inv)} className="rounded-lg bg-sky-50 px-3 py-2 text-xs font-bold text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">View {inv.invoice_number}</button>:'—'}</td></tr>})}</tbody></table></div>
+    <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-sm"><thead className="bg-slate-50 text-[10px] uppercase text-slate-500 dark:bg-slate-800"><tr>{['Transaction','Plan','Date','Method','Amount','Status'].map(x=><th key={x} className="p-3">{x}</th>)}</tr></thead><tbody>{transactions.map(tx=><tr key={tx.id} className="border-t border-slate-100 dark:border-slate-800"><td className="p-3 font-bold">{tx.transaction_no}</td><td className="p-3">{tx.subscription_plans?.name||tx.plan_id}</td><td className="p-3">{dateLabel(tx.paid_at||tx.created_at)}</td><td className="p-3">{safeText(tx.payment_method,tx.provider)}</td><td className="p-3 font-bold">{money(tx.amount)}</td><td className="p-3 capitalize">{tx.status}</td></tr>)}</tbody></table></div>
     {!transactions.length&&<p className="py-8 text-center text-sm text-slate-500">No verified subscription transactions yet.</p>}
    </section>
   </>}
-  {selected&&<div className="fixed inset-0 z-[300] flex items-center justify-center overflow-y-auto bg-slate-950/70 p-4 backdrop-blur-sm"><div className="my-6 w-full max-w-3xl rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900"><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-lg font-black">Invoice {selected.invoice_number}</h2><p className="text-xs text-slate-500">{dateLabel(selected.issued_at)}</p></div><div className="flex flex-wrap gap-2"><button onClick={()=>void exportImage()} className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white"><Download size={13} className="mr-1 inline"/>Save PNG</button><button onClick={()=>void printInvoice()} className="rounded-lg border px-3 py-2 text-xs font-bold dark:border-slate-700"><Printer size={13} className="mr-1 inline"/>Print</button><button onClick={()=>setSelected(null)} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold dark:bg-slate-800">Close</button></div></div>
-   <div className="max-h-[75vh] overflow-auto rounded-xl bg-slate-100 p-3 dark:bg-slate-950"><div ref={invoiceRef} className="mx-auto w-[720px] max-w-full bg-white p-8 text-slate-900">
-    <div className="flex items-start justify-between border-b-2 border-slate-900 pb-5"><div><div className="text-2xl font-black">EMBROIDERY STATEMENT</div><div className="mt-1 text-xs uppercase tracking-[.2em] text-slate-500">Subscription Tax Invoice</div></div><FileText size={32}/></div>
-    <div className="mt-6 grid grid-cols-2 gap-5 text-sm"><div><div className="mb-1 text-xs uppercase text-slate-500">Billed By</div><div className="font-black">{safeText(seller.name,'Embroidery Statement')}</div><div>{safeText(seller.email,'')}</div><div>{safeText(seller.address,'')}</div></div><div><div className="mb-1 text-xs uppercase text-slate-500">Billed To</div><div className="font-black">{safeText(buyer.business_name,user.business_name)}</div><div>{safeText(buyer.email,user.email)}</div></div></div>
-    <div className="mt-6 flex justify-between border-y py-3 text-sm"><span>Invoice Number: <b>{selected.invoice_number}</b></span><span>Transaction: <b>{selectedTransaction?.transaction_no||'—'}</b></span></div>
-    <table className="mt-5 w-full text-sm"><thead><tr className="border-b text-left text-xs uppercase text-slate-500"><th className="py-3">Description</th><th className="py-3 text-right">Amount</th></tr></thead><tbody>{(selected.line_items||[]).map((item,i)=><tr key={i} className="border-b"><td className="py-3">{safeText(item.description||item.name,'Subscription')}</td><td className="py-3 text-right font-bold">{money(Number(item.amount)||0)}</td></tr>)}</tbody></table>
-    <div className="ml-auto mt-5 max-w-xs space-y-2 text-sm"><div className="flex justify-between"><span>Subtotal</span><b>{money(selected.subtotal)}</b></div><div className="flex justify-between"><span>Discount</span><b>−{money(selected.discount)}</b></div><div className="flex justify-between"><span>Tax</span><b>{money(selected.tax)}</b></div><div className="flex justify-between border-t pt-3 text-lg font-black"><span>Total Paid</span><span>{money(selected.total)}</span></div></div>
-    <div className="mt-10 border-t pt-4 text-center text-xs text-slate-500">Thank you for choosing Embroidery Statement. This invoice records the completed subscription payment.</div>
-   </div></div>
-  </div></div>}
+
  </div>;
 };
 export default SubscriptionBilling;
