@@ -1,4 +1,8 @@
 name: Existing app quality gate
+concurrency:
+  group: embroidery-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
@@ -53,6 +57,20 @@ jobs:
           workspaces: src-tauri -> target
       - name: Install locked dependencies
         run: npm ci
+      - name: Check Windows updater signing configuration (presence only)
+        shell: pwsh
+        env:
+          UPDATE_PUBLIC_KEY: ${{ vars.EMBROIDERY_UPDATE_PUBLIC_KEY }}
+          SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $missing = @()
+          if ([string]::IsNullOrWhiteSpace($env:UPDATE_PUBLIC_KEY)) { $missing += 'EMBROIDERY_UPDATE_PUBLIC_KEY repository variable' }
+          if ([string]::IsNullOrWhiteSpace($env:SIGNING_PRIVATE_KEY)) { $missing += 'TAURI_SIGNING_PRIVATE_KEY repository secret' }
+          if ([string]::IsNullOrWhiteSpace($env:SIGNING_PRIVATE_KEY_PASSWORD)) { $missing += 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD repository secret' }
+          if ($missing.Count -eq 0) { Write-Host 'Windows updater signing credentials: configured (values not displayed).' }
+          else { Write-Warning ('Signed Windows release is blocked; missing: ' + ($missing -join ', ')) }
+
       - name: Install Windows Rollup native binary
         run: npm install --no-save --no-package-lock @rollup/rollup-win32-x64-msvc@4.62.3
       - name: Type-check application
@@ -139,6 +157,24 @@ jobs:
           targets: aarch64-linux-android
       - name: Install locked dependencies
         run: npm ci
+      - name: Check Android release signing configuration (presence only)
+        shell: bash
+        env:
+          ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          missing=()
+          [[ -n "$ANDROID_KEY_BASE64" ]] || missing+=("ANDROID_KEY_BASE64")
+          [[ -n "$ANDROID_KEY_ALIAS" ]] || missing+=("ANDROID_KEY_ALIAS")
+          [[ -n "$ANDROID_KEY_PASSWORD" ]] || missing+=("ANDROID_KEY_PASSWORD")
+          [[ -n "$ANDROID_STORE_PASSWORD" ]] || missing+=("ANDROID_STORE_PASSWORD")
+          if (( ${#missing[@]} == 0 )); then
+            echo "Android release signing credentials: configured (values not displayed)."
+          else
+            echo "::warning::Signed Android release is blocked; missing: ${missing[*]}"
+          fi
       - name: Generate Android launcher icons
         run: npm run desktop:icons
       - name: Set up Python for Android icon normalization
