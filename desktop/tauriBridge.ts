@@ -11,6 +11,10 @@ type NativeApi = {
   opener: {
     openUrl: (url: string, openWith?: string) => Promise<void>;
   };
+  notification?: {
+    isPermissionGranted: () => Promise<boolean>;
+    requestPermission: () => Promise<string>;
+  };
 };
 
 declare global {
