@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   Apple, ArrowDownToLine, ArrowRight, BadgeCheck, CheckCircle2, Clock3,
-  Cloud, Download, ExternalLink, FileCheck2, Globe, HardDrive, Laptop,
+  Cloud, Download, ExternalLink, FileCheck2, Globe, HardDrive,
   LoaderCircle, Monitor, RefreshCw, ShieldCheck, Smartphone, Sparkles,
-  Tablet, Wifi, Zap
+  Wifi, Zap
 } from 'lucide-react';
 
 type InstallPrompt = Event & {
@@ -59,7 +59,6 @@ type DownloadItem = {
 
 const API = 'https://api.github.com/repos/emonak71-sketch/EMBRODERY-STATMENT/releases?per_page=30';
 const RELEASES_URL = 'https://github.com/emonak71-sketch/EMBRODERY-STATMENT/releases';
-const SUPPORT_EMAIL = 'support@embroderystatement.com';
 
 const formatSize = (bytes: number) => {
   if (!bytes) return 'Size unavailable';
@@ -199,11 +198,6 @@ const DownloadPortal: React.FC = () => {
 
   const recommended = (kind: Device['recommended']) => device.recommended === kind;
   const appVersion = windows?.version || android?.version || 'Latest';
-  const currentPlatformLabel = device.recommended === 'windows'
-    ? 'Windows desktop app'
-    : device.recommended === 'android'
-      ? 'Android app'
-      : 'Web App';
   const webInstallGuide = device.apple === 'ios'
     ? 'On iPhone or iPad: open this page in Safari, tap Share, choose Add to Home Screen, then tap Add.'
     : device.apple === 'mac'
@@ -607,7 +601,7 @@ const DownloadPortal: React.FC = () => {
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-[10px] font-bold text-slate-500">
             <a href="/" className="hover:text-blue-700">Web App</a>
             <a href={RELEASES_URL} target="_blank" rel="noreferrer" className="hover:text-blue-700">Release archive</a>
-            <a href="mailto:support@embroderystatement.com" className="hover:text-blue-700">Support</a>
+            <a href="#faq" className="hover:text-blue-700">Installation help</a>
           </div>
           <div className="text-[9px] text-slate-400">© {new Date().getFullYear()} Embroidery Statement. All rights reserved.</div>
         </div>
