@@ -106,6 +106,15 @@ jobs:
             Where-Object { $_.Name -notmatch 'uninstall' -and $_.Name -notmatch 'Owner' } |
             Select-Object -First 1
           if (-not $installer) { throw 'Signed Customer NSIS installer was not generated.' }
+          # GitHub normalizes spaces in release asset names to dots. Use the final
+          # filename before generating a signed updater URL (bytes stay unchanged).
+          $assetName = $installer.Name.Replace(' ', '.')
+          if ($assetName -ne $installer.Name) {
+            $oldPath = $installer.FullName
+            Rename-Item -LiteralPath $oldPath -NewName $assetName
+            Rename-Item -LiteralPath ($oldPath + '.sig') -NewName ($assetName + '.sig')
+            $installer = Get-Item (Join-Path $bundleDirectory $assetName)
+          }
           $signaturePath = $installer.FullName + '.sig'
           if (-not (Test-Path $signaturePath)) { throw "Customer updater signature is missing: $signaturePath" }
           $signature = [System.IO.File]::ReadAllText($signaturePath).Trim()
@@ -154,6 +163,13 @@ jobs:
             Where-Object { $_.Name -match 'Owner' -and $_.Name -notmatch 'uninstall' } |
             Select-Object -First 1
           if (-not $installer) { throw 'Signed Owner Control Center NSIS installer was not generated.' }
+          $assetName = $installer.Name.Replace(' ', '.')
+          if ($assetName -ne $installer.Name) {
+            $oldPath = $installer.FullName
+            Rename-Item -LiteralPath $oldPath -NewName $assetName
+            Rename-Item -LiteralPath ($oldPath + '.sig') -NewName ($assetName + '.sig')
+            $installer = Get-Item (Join-Path $bundleDirectory $assetName)
+          }
           $signaturePath = $installer.FullName + '.sig'
           if (-not (Test-Path $signaturePath)) { throw "Owner updater signature is missing: $signaturePath" }
           $signature = [System.IO.File]::ReadAllText($signaturePath).Trim()
