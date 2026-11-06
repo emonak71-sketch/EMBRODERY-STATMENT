@@ -256,6 +256,21 @@ export const dbService = {
     if (error) throw handleDbError(error, 'searching customer by registered email');
     return Array.isArray(data) ? data[0] || null : data || null;
   },
+  ownerSearchCustomer: async (identifier: string) => {
+    const { data, error } = await supabase.rpc('owner_search_customer', {
+      p_identifier: identifier.trim()
+    });
+    if (error) throw handleDbError(error, 'searching customer by Gmail or mobile number');
+    return Array.isArray(data) ? data[0] || null : data || null;
+  },
+  ownerSaveCustomerPhone: async (email: string, phone: string) => {
+    const { data, error } = await supabase.rpc('owner_save_customer_phone', {
+      p_email: email.trim().toLowerCase(),
+      p_phone: phone.trim()
+    });
+    if (error) throw handleDbError(error, 'saving customer mobile number');
+    return Array.isArray(data) ? data[0] || null : data || null;
+  },
   ownerGrantCustomerAccess: async (email: string, days: number, payment: {
     note?: string; paymentDate: string; amount: number; method: string; reference?: string;
   }) => {
