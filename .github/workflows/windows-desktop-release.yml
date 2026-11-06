@@ -232,9 +232,21 @@ jobs:
             if ($manifest.version -ne $version) { throw "Updater manifest version mismatch: expected $version, got $($manifest.version)." }
             if (-not $manifest.platforms.'windows-x86_64'.signature) { throw 'An updater manifest has no Windows signature.' }
           }
-          if ($customerManifest.platforms.'windows-x86_64'.url -ne $customerInstaller.browser_download_url) { throw 'Customer updater URL does not match its uploaded installer.' }
-          if ($ownerManifest.platforms.'windows-x86_64'.url -ne $ownerInstaller.browser_download_url) { throw 'Owner updater URL does not match its uploaded installer.' }
-          if ($legacyManifest.platforms.'windows-x86_64'.url -ne $customerInstaller.browser_download_url) { throw 'Legacy updater URL does not match the Customer installer.' }
+          function Assert-ManifestAssetUrl($manifestUrl, $asset, $label) {
+            $uri = [System.Uri]$manifestUrl
+            $expectedPrefix = "/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/"
+            if ($uri.Scheme -ne 'https' -or $uri.Host -ne 'github.com' -or -not $uri.AbsolutePath.StartsWith($expectedPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+              throw "$label updater URL is not on the expected GitHub release path: $manifestUrl"
+            }
+            $manifestAssetName = [System.Uri]::UnescapeDataString(($uri.AbsolutePath.TrimEnd('/') -split '/')[-1])
+            if ($manifestAssetName -ne $asset.name) {
+              throw "$label updater URL targets '$manifestAssetName', but the uploaded asset is '$($asset.name)'."
+            }
+            Write-Host "Verified $label updater manifest targets $manifestAssetName."
+          }
+          Assert-ManifestAssetUrl $customerManifest.platforms.'windows-x86_64'.url $customerInstaller 'Customer'
+          Assert-ManifestAssetUrl $ownerManifest.platforms.'windows-x86_64'.url $ownerInstaller 'Owner'
+          Assert-ManifestAssetUrl $legacyManifest.platforms.'windows-x86_64'.url $customerInstaller 'Legacy'
 
           $latestUrls = @(
             "https://github.com/$env:GITHUB_REPOSITORY/releases/latest/download/latest-customer.json",
@@ -246,7 +258,7 @@ jobs:
             if ($manifest.version -ne $version) { throw "Latest updater endpoint $url returned $($manifest.version), expected $version." }
           }
 
-          $urls = @($customerManifestAsset.browser_download_url,$ownerManifestAsset.browser_download_url,$legacyManifestAsset.browser_download_url,$customerInstaller.browser_download_url,$ownerInstaller.browser_download_url) + $latestUrls
+          $urls = @($customerManifestAsset.browser_download_url,$ownerManifestAsset.browser_download_url,$legacyManifestAsset.browser_download_url,$customerManifest.platforms.'windows-x86_64'.url,$ownerManifest.platforms.'windows-x86_64'.url,$legacyManifest.platforms.'windows-x86_64'.url,$customerInstaller.browser_download_url,$ownerInstaller.browser_download_url) + $latestUrls
           foreach ($url in $urls) {
             $verified = $false
             for ($attempt = 1; $attempt -le 5; $attempt++) {
