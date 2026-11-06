@@ -8,6 +8,8 @@ const biometric = read('../components/BiometricLock.tsx');
 const owner = read('../components/OwnerApp.tsx');
 const ownerControl = read('../components/OwnerControlCenter.tsx');
 const splash = read('../components/SplashScreen.tsx');
+const customerHtml = read('../index.html');
+const ownerHtml = read('../owner.html');
 const pkg = JSON.parse(read('../package.json'));
 const lock = JSON.parse(read('../package-lock.json'));
 const tauri = JSON.parse(read('../src-tauri/tauri.conf.json'));
@@ -30,6 +32,8 @@ assert.ok(biometric.includes('biometric-lock-screen') && biometric.includes('bio
 assert.ok(owner.includes('owner-auth-screen') && owner.includes('owner-auth-panel'), 'Owner sign-in must use the shared motion');
 assert.ok(ownerControl.includes('owner-control-shell') && ownerControl.includes('owner-main'), 'Owner dashboard must use the shared motion');
 assert.ok(splash.includes('splash-machine-scene'), 'Existing embroidery-machine brand intro must be preserved');
+assert.ok(customerHtml.includes('/index.css?v=1.0.5'), 'Customer PWA must request the refreshed motion stylesheet');
+assert.ok(ownerHtml.includes('/index.css?v=1.0.5'), 'Owner PWA must request the refreshed motion stylesheet');
 assert.equal(pkg.version, '1.0.5');
 assert.equal(lock.version, pkg.version);
 assert.equal(lock.packages[''].version, pkg.version);
