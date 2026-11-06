@@ -37,7 +37,7 @@ assert.ok(migration.includes('on delete cascade'), 'Phone mapping must be remove
 assert.ok(indexMigration.includes('owner_customer_contacts_updated_by_idx'), 'Updater foreign key must be indexed');
 assert.ok(indexMigration.includes('drop index if exists private.owner_customer_contacts_updated_at_idx'), 'Unused timestamp index should not be retained');
 
-assert.equal(pkg.version, '1.0.10');
+assert.equal(pkg.version, '1.0.11');
 assert.equal(lock.version, pkg.version);
 assert.equal(lock.packages[''].version, pkg.version);
 assert.equal(customerConfig.version, pkg.version);
