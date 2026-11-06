@@ -31,10 +31,10 @@ assert.ok(gate.includes('app-lock-screen') && gate.includes('app-lock-panel'), '
 assert.ok(biometric.includes('biometric-lock-screen') && biometric.includes('biometric-lock-card'), 'Biometric Lock must use the shared secure-access motion');
 assert.ok(owner.includes('owner-auth-screen') && owner.includes('owner-auth-panel'), 'Owner sign-in must use the shared motion');
 assert.ok(ownerControl.includes('owner-control-shell') && ownerControl.includes('owner-main'), 'Owner dashboard must use the shared motion');
-assert.ok(splash.includes('splash-machine-scene'), 'Existing embroidery-machine brand intro must be preserved');
-assert.ok(customerHtml.includes('/index.css?v=1.0.10'), 'Customer PWA must request the refreshed motion stylesheet');
-assert.ok(ownerHtml.includes('/index.css?v=1.0.10'), 'Owner PWA must request the refreshed motion stylesheet');
-assert.equal(pkg.version, '1.0.10');
+assert.ok(splash.includes('customer-brand-intro') && splash.includes('brand-intro-thread'), 'Customer startup must use the new threaded logo reveal');
+assert.ok(customerHtml.includes('/index.css?v=1.0.11'), 'Customer PWA must request the refreshed motion stylesheet');
+assert.ok(ownerHtml.includes('/index.css?v=1.0.11'), 'Owner PWA must request the refreshed motion stylesheet');
+assert.equal(pkg.version, '1.0.11');
 assert.equal(lock.version, pkg.version);
 assert.equal(lock.packages[''].version, pkg.version);
 assert.equal(tauri.version, pkg.version);

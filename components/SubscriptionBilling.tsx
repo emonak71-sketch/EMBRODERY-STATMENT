@@ -188,8 +188,6 @@ const SubscriptionBilling:React.FC<{ownerMode?:boolean;onAccessRefresh?:()=>void
   finally{setGranting(false);}
  };
 
- const trialDaysRemaining=accessStatus?.is_trial_active&&accessStatus.trial_ends_at
-  ?Math.max(0,Math.ceil((new Date(accessStatus.trial_ends_at).getTime()-Date.now())/86_400_000)):0;
  const plan=accountPlan(accessStatus);
  const activeGrant=accessStatus?.access_source==='owner_grant'||plan?.scheduled;
  const activeSubscription=accessStatus?.access_source==='subscription';
@@ -216,9 +214,8 @@ const SubscriptionBilling:React.FC<{ownerMode?:boolean;onAccessRefresh?:()=>void
     <div className="flex items-center gap-2 text-sm font-black"><ShieldCheck size={17} className="text-emerald-600"/>{isAdmin?'Owner Account':'Your Current Access'}</div>
     {isAdmin?<div className="mt-3 flex flex-wrap items-center justify-between gap-3"><div><div className="text-xl font-black text-emerald-700">Unlimited Owner Access</div><p className="mt-1 text-xs text-slate-500">This account is registered as the billing owner. It does not need a customer subscription.</p></div><span className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-black text-emerald-800">OWNER VERIFIED</span></div>
     :accessStatus?.access_source==='owner_admin'?<div className="mt-3 space-y-2"><div className="text-xl font-black text-emerald-700">Account Access Active</div><p className="text-sm text-slate-600 dark:text-slate-300">Your account is active. Customer sign-in and account data remain separate from Owner Control Center permissions.</p></div>
-    :activeGrant?<div className="mt-3 space-y-2"><div className="text-xl font-black text-emerald-700">{plan?.scheduled?'Pro Version · Scheduled':'Pro Version'} · {plan?.days} days remaining</div><div className="text-sm text-slate-600 dark:text-slate-300">Expires: <b>{dateLabel(plan?.expires)}</b>. {plan?.scheduled&&<>Pro starts: <b>{dateLabel(plan.starts)}</b>.</>}</div></div>
-    :activeSubscription?<div className="mt-3 space-y-2"><div className="text-xl font-black text-emerald-700">Pro Version · {plan?.days} days remaining</div><div className="text-sm text-slate-600 dark:text-slate-300">Access until <b>{dateLabel(accessStatus?.subscription_access_until||accessStatus?.access_until)}</b>.</div></div>
-    :accessStatus?.is_trial_active?<div className="mt-3 space-y-2"><div className="text-xl font-black text-emerald-700">15-Day Free Trial</div><div className="text-sm font-bold text-emerald-700">{trialDaysRemaining} {trialDaysRemaining===1?'day':'days'} remaining</div><div className="text-xs text-slate-500">Trial ends: {dateLabel(accessStatus.trial_ends_at)}</div>{accessStatus.manual_access_starts_at&&accessStatus.manual_access_until&&<p className="text-xs text-sky-700">A paid access period is scheduled to start on {dateLabel(accessStatus.manual_access_starts_at)}.</p>}</div>
+    :activeGrant||activeSubscription?<div className="mt-3 space-y-2"><div className="text-xl font-black text-emerald-700">Pro Version</div><p className="text-sm text-slate-600 dark:text-slate-300">View your remaining days and expiry in Settings.</p></div>
+    :accessStatus?.is_trial_active?<div className="mt-3 space-y-2"><div className="text-xl font-black text-emerald-700">Trial Version</div><p className="text-sm text-slate-600 dark:text-slate-300">View your remaining days and expiry in Settings.</p></div>
     :<div className="mt-3 space-y-2"><div className="text-xl font-black text-rose-600">Access Expired</div><p className="text-sm text-slate-600 dark:text-slate-300">Your trial or subscription has ended. Contact the app owner and provide the exact Gmail address used for registration. After payment is verified, the owner will activate your account.</p></div>}
    </section>
 
