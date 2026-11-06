@@ -30,3 +30,17 @@
 ## Separate follow-up — NOT PART OF THE PUBLIC DOWNLOAD PORTAL
 - An Owner-only release uploader/private-storage workflow remains a separate unfinished feature. It is not required for customers to download the currently published Customer EXE or Android APK.
 - Preserve existing Windows signing keys and updater endpoints when implementing that separate feature.
+
+
+## Premium public Download Center — 2026-11-06
+- PR #42 merged to `main` as `9c08ada6aed7febf4a7b2ded4afded9dc8e8bd2e`.
+- Rebuilt the public `/download` page as a responsive, branded software download center with hero section, platform cards, device recommendation, feature overview, installation steps, FAQ and release history.
+- Shows current customer EXE/APK version, file size, publication date, and SHA-256 digest when GitHub supplies one.
+- Adds canonical URL, SEO description, Open Graph and Apple touch icon metadata.
+- Adds `npm run test:downloads` and wires it into the repository quality gate. Device detection and both download routes pass.
+- Adds `docs/DOWNLOAD_RELEASE_WORKFLOW.md` with the required stable release tag and customer asset naming contract.
+- Customer-only EXE and Android APK are the only public binary downloads; Owner Control Center remains separate and private.
+- Vercel Production deployment `dpl_HAkAfFAs65AMu78wq2DtLSZgUNLt` is `READY` for the merged main commit. `https://embroidery-statement.vercel.app/download` returned HTTP 200 and the built HTML references the new download bundle.
+- Production build completed, dependency audit found 0 vulnerabilities, download portal tests passed, and customer/Owner web bundle checks passed.
+- The full repository Windows installer smoke-test and Android debug APK compile jobs were still running at the last status check; they are QA checks, not newly published customer releases.
+- For routine software releases, publish the correct stable GitHub release and expected asset filename; the portal detects it on next page load/Refresh without a portal code change or Vercel redeployment.
