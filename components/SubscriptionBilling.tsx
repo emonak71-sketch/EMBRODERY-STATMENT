@@ -4,6 +4,7 @@ import {
   RefreshCw, Search, ShieldCheck, UserRound, CalendarClock, Phone, Save
 } from 'lucide-react';
 import { dbService } from '../services/supabaseService';
+import OwnerCustomerDirectory from './OwnerCustomerDirectory';
 
 type Subscription = {
   id:string;
@@ -94,6 +95,7 @@ const SubscriptionBilling:React.FC<{ownerMode?:boolean;onAccessRefresh?:()=>void
  const [paymentReference,setPaymentReference]=useState('');
  const [searching,setSearching]=useState(false);
  const [granting,setGranting]=useState(false);
+ const [directoryRevision,setDirectoryRevision]=useState(0);
 
  const load=useCallback(async()=>{
   setLoading(true);setError('');
@@ -115,9 +117,10 @@ const SubscriptionBilling:React.FC<{ownerMode?:boolean;onAccessRefresh?:()=>void
  },[ownerMode,onAccessRefresh]);
  useEffect(()=>{void load();},[load]);
 
- const searchCustomer=async(e?:React.FormEvent)=>{
+ const searchCustomer=async(e?:React.FormEvent, selectedEmail?:string)=>{
   e?.preventDefault();
-  const identifier=customerLookupInput.trim();
+  if(searching||savingPhone||granting)return;
+  const identifier=(selectedEmail??customerLookupInput).trim();
   if(!identifier){setError('Enter the customer Gmail or saved mobile number.');return;}
   setSearching(true);setError('');setNotice('');setCustomer(null);setCustomerPhone('');setGrantHistory([]);
   try{
@@ -147,6 +150,7 @@ const SubscriptionBilling:React.FC<{ownerMode?:boolean;onAccessRefresh?:()=>void
    if(!saved)throw new Error('The customer mobile number was not saved.');
    setCustomer(current=>current?{...current,customer_phone:saved.customer_phone}:current);
    setCustomerPhone(saved.customer_phone);
+   setDirectoryRevision(value=>value+1);
    setNotice(`Mobile number saved: ${saved.customer_phone}. You can now search this number to retrieve ${saved.customer_email}. The customer will continue signing in with Gmail.`);
   }catch(e:any){setError(e.message||'Could not save the customer mobile number.');}
   finally{setSavingPhone(false);}
@@ -221,11 +225,12 @@ const SubscriptionBilling:React.FC<{ownerMode?:boolean;onAccessRefresh?:()=>void
      <div className="flex items-center gap-2 text-base font-black"><UserRound size={18} className="text-amber-600"/>Customer Access Manager</div>
      <p className="mt-1 text-sm text-slate-500">Customers register and sign in with Gmail. Search by their registered Gmail or a saved Bangladesh mobile number; verify payment, then assign access.</p>
     </div>
+    <OwnerCustomerDirectory refreshKey={directoryRevision} disabled={searching||savingPhone||granting} onSelect={email=>{setCustomerLookupInput(email);void searchCustomer(undefined,email);}}/>
     <form onSubmit={searchCustomer} className="flex flex-col gap-3 sm:flex-row">
      <label className="min-w-0 flex-1 text-xs font-bold text-slate-600 dark:text-slate-300">Customer Gmail or saved mobile number
       <input type="text" required inputMode={customerLookupInput.includes('@')?'email':'tel'} autoComplete="off" value={customerLookupInput} onChange={e=>setCustomerLookupInput(e.target.value)} placeholder="customer@gmail.com or 017XXXXXXXX" className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-800"/>
      </label>
-     <button type="submit" disabled={searching} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-black text-white disabled:opacity-50 dark:bg-sky-700">
+     <button type="submit" disabled={searching||savingPhone||granting} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-black text-white disabled:opacity-50 dark:bg-sky-700">
       <Search size={15}/>{searching?'Searching…':'Find Customer'}
      </button>
     </form>
