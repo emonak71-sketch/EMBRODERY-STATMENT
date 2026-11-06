@@ -111,16 +111,16 @@ const AppLockGate: React.FC<AppLockGateProps> = ({ mode, email, onUnlock, onLogo
           : tr('একই App Lock সব Device-এ যাচাই করতে ইন্টারনেট প্রয়োজন।', 'Connect to the internet to verify the shared App Lock.');
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[#07111f] px-4 py-8 text-white">
+    <main className="app-lock-screen min-h-screen flex items-center justify-center bg-[#07111f] px-4 py-8 text-white">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
         <div className="absolute -bottom-32 -right-20 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
         <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.35) 1px, transparent 1px)', backgroundSize: '42px 42px' }} />
       </div>
 
-      <section className="relative z-10 w-full max-w-md rounded-[2rem] border border-white/10 bg-slate-900/90 p-7 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-9">
-        <div className="mb-7 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 shadow-lg shadow-blue-950/40">
+      <section className="app-lock-panel relative z-10 w-full max-w-md rounded-[2rem] border border-white/10 bg-slate-900/90 p-7 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-9">
+        <div className="app-lock-heading mb-7 text-center">
+          <div className="app-lock-emblem mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 shadow-lg shadow-blue-950/40">
             {view === 'reset' || view === 'forgot' ? <Mail className="h-8 w-8 text-cyan-300" /> : <ShieldCheck className="h-8 w-8 text-cyan-300" />}
           </div>
           <p className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300">Embroidery Statement · Secure Access</p>
@@ -147,7 +147,7 @@ const AppLockGate: React.FC<AppLockGateProps> = ({ mode, email, onUnlock, onLogo
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="app-lock-form space-y-4">
             {(view === 'setup' || view === 'unlock') && (
               <label className="block space-y-2">
                 <span className="flex items-center gap-2 text-xs font-bold text-slate-300"><LockKeyhole className="h-4 w-4 text-cyan-300" />{tr('App Lock Password', 'App Lock password')}</span>
