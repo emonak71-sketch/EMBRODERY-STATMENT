@@ -25,6 +25,8 @@ jobs:
         run: npm audit --audit-level=high
       - name: Production customer and Owner Web/PWA build
         run: npm run build
+      - name: Test download portal device detection and routes
+        run: npm run test:downloads
 
       - name: Verify customer-only desktop and Android bundle
         run: npm run build:customer
