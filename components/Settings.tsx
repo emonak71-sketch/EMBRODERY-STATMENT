@@ -7,12 +7,16 @@ import AppLockSettings from './AppLockSettings';
 import { setupBiometrics } from './BiometricLock';
 import { Fingerprint } from 'lucide-react';
 import DesktopSettings from './DesktopSettings';
+import AccountPlanStatus from './AccountPlanStatus';
+import type { AccountAccess } from '../desktop/subscriptionStatus';
 
 interface SettingsProps {
   setActiveTab?: (tab: string) => void;
   user: User | null;
   onUpdateProfile: (email: string, biz: string) => Promise<void>;
   onAppLockUpdated: (updatedAt: string) => void;
+  accountAccess?: AccountAccess | null;
+  onViewPlans?: () => void;
 }
 
 
@@ -21,7 +25,7 @@ const isMobileDevice = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
-const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, onAppLockUpdated, setActiveTab }) => {
+const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, onAppLockUpdated, setActiveTab, accountAccess=null, onViewPlans }) => {
   const { t } = useLanguage();
   const [email, setEmail] = useState(user?.email || '');
   const [biz, setBiz] = useState(user?.business_name || '');
@@ -78,6 +82,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, onAppLockUpd
         </div>
       </div>
 
+      <AccountPlanStatus access={accountAccess} onViewPlans={onViewPlans}/>
       <div className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="space-y-6">
@@ -97,7 +102,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdateProfile, onAppLockUpd
 
             <div className="space-y-3">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1 flex items-center gap-2">
-                <Mail className="w-3 h-3" /> Admin Email Address
+                <Mail className="w-3 h-3" /> Account Email Address
               </label>
               <input
                 type="email"

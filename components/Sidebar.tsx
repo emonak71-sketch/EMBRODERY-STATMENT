@@ -108,7 +108,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               { id: 'billing', label: 'Subscription & Billing', icon: <CreditCard className="w-5 h-5" /> },
               { id: 'support', label: 'Help & Support', icon: <Headset className="w-5 h-5" /> },
               { id: 'settings', label: t('settings'), icon: <Settings className="w-5 h-5" /> },
-            ].filter((item) => !subscriptionLocked || item.id === 'billing' || item.id === 'support').map((item) => (
+            ].filter((item) => !subscriptionLocked || item.id === 'billing' || item.id === 'support' || item.id === 'settings').map((item) => (
               <button
                 key={item.id}
                 onClick={() => { setActiveTab(item.id as TabType); setIsOpen(false); }}

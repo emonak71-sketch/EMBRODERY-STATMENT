@@ -273,7 +273,7 @@ export const dbService = {
       p_email: email.trim().toLowerCase(),
       p_phone: phone.trim()
     });
-    if (error) throw handleDbError(error, 'saving customer mobile number');
+    if (error) throw new Error(error.message || 'Could not save the customer mobile number.');
     return Array.isArray(data) ? data[0] || null : data || null;
   },
   ownerGrantCustomerAccess: async (email: string, days: number, payment: {

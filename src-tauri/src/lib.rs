@@ -1,5 +1,7 @@
 #[cfg(desktop)]
 use std::{sync::Mutex, time::Duration};
+#[cfg(desktop)]
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::AppHandle;
 #[cfg(desktop)]
@@ -23,10 +25,17 @@ use tauri_plugin_updater::UpdaterExt;
 #[cfg(desktop)]
 #[tauri::command]
 fn desktop_startup_ready(app: AppHandle) {
+    if let Some(state) = app.try_state::<DesktopStartupState>() {
+        state.0.store(true, Ordering::SeqCst);
+    }
     if std::env::args().any(|arg| arg == "--startup-smoke") {
         app.exit(0);
     }
 }
+
+#[cfg(desktop)]
+#[derive(Default)]
+struct DesktopStartupState(AtomicBool);
 
 #[cfg(desktop)]
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -355,7 +364,7 @@ pub fn run() {
         if update_is_configured() {
             builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
         }
-        builder = builder.manage(NavigationState::default()).invoke_handler(tauri::generate_handler![
+        builder = builder.manage(DesktopStartupState::default()).manage(NavigationState::default()).invoke_handler(tauri::generate_handler![
             desktop_startup_ready, desktop_take_navigation, desktop_info, desktop_get_autostart, desktop_set_autostart,
             desktop_get_start_minimized, desktop_set_start_minimized, desktop_notify_message,
             desktop_notify_attendance, desktop_notify_update, desktop_test_notification,
@@ -375,6 +384,19 @@ pub fn run() {
         {
             setup_tray(app)?;
             let handle = app.handle().clone();
+            // Recover a stalled first WebView navigation once, without requiring
+            // the user to right-click Refresh. Never loop or clear account data.
+            let recovery_handle = handle.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_secs(12));
+                let ready = recovery_handle.try_state::<DesktopStartupState>()
+                    .map(|state| state.0.load(Ordering::SeqCst)).unwrap_or(false);
+                if !ready {
+                    if let Some(window) = recovery_handle.get_webview_window("main") {
+                        let _ = window.eval("window.location.reload()");
+                    }
+                }
+            });
             enable_autostart_on_first_installed_run(&handle);
 
             let click_app = handle.clone();
