@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Apple, ArrowDownToLine, ArrowRight, BadgeCheck, CheckCircle2, Clock3,
-  Cloud, Download, ExternalLink, FileCheck2, Globe, HardDrive,
-  LoaderCircle, Monitor, RefreshCw, ShieldCheck, Smartphone, Sparkles,
-  Wifi, Zap
+  Apple, ArrowDownToLine, ArrowRight, ArrowUpRight, BadgeCheck, BarChart3,
+  CalendarCheck, CheckCircle2, ClipboardList, Clock3, Cloud, Download,
+  ExternalLink, FileCheck2, Fingerprint, Globe, HardDrive, LoaderCircle,
+  Monitor, RefreshCw, ShieldCheck, Smartphone, Sparkles, Users, WalletCards,
+  Wifi, Workflow, Zap
 } from 'lucide-react';
 
 type InstallPrompt = Event & {
@@ -225,7 +226,7 @@ const DownloadPortal: React.FC = () => {
           maskImage: 'linear-gradient(to bottom, black, transparent 85%)'
         }} />
 
-        <nav className="relative mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
+        <nav className="sticky top-0 z-40 mx-auto flex max-w-7xl items-center justify-between border-b border-white/10 bg-[#06152e]/85 px-5 py-4 backdrop-blur-2xl sm:px-8 lg:px-10">
           <a href="/" className="flex min-w-0 items-center gap-3" aria-label="Embroidery Statement home">
             <img src="/embroidery-statement-mark.svg" alt="" className="h-11 w-11 rounded-xl bg-white p-1.5 shadow-lg shadow-sky-950/30" />
             <span className="min-w-0">
@@ -464,26 +465,176 @@ const DownloadPortal: React.FC = () => {
         </div>
       </section>
 
-      <section id="features" className="border-y border-slate-200 bg-white px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="text-[10px] font-black uppercase tracking-[.23em] text-blue-700">Built for everyday operations</div>
-            <h2 className="mt-3 text-3xl font-black tracking-[-.045em] text-slate-950 sm:text-4xl">Everything in one connected workspace.</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">A practical business toolkit designed to help embroidery teams organise customers, transactions and daily work.</p>
+      
+      
+      <section className="relative isolate overflow-hidden bg-[#071a35] px-5 py-20 text-white sm:px-8 lg:px-10 lg:py-24">
+        <div className="pointer-events-none absolute -left-40 top-0 h-[30rem] w-[30rem] rounded-full bg-sky-500/15 blur-[100px]" />
+        <div className="pointer-events-none absolute -right-40 bottom-0 h-[32rem] w-[32rem] rounded-full bg-blue-600/20 blur-[110px]" />
+        <div className="pointer-events-none absolute inset-0 download-hero-grid opacity-40" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[.9fr_1.1fr]">
+          <div className="download-copy-enter">
+            <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-300/10 px-3.5 py-2 text-[10px] font-black uppercase tracking-[.2em] text-sky-200">
+              <Workflow size={13} /> One connected workspace
+            </div>
+            <h2 className="mt-6 max-w-xl text-3xl font-black leading-[1.08] tracking-[-.05em] sm:text-4xl lg:text-[3.25rem]">
+              A clearer way to manage your embroidery business.
+            </h2>
+            <p className="mt-5 max-w-xl text-sm leading-7 text-slate-300 sm:text-base">
+              Bring customer accounts, statements, transactions, team attendance and business reports into one organised workflow.
+            </p>
+            <div className="mt-8 grid max-w-xl grid-cols-2 gap-3">
+              {[
+                { icon: Users, label: 'Customer accounts' },
+                { icon: WalletCards, label: 'Statements & transactions' },
+                { icon: CalendarCheck, label: 'Team attendance' },
+                { icon: BarChart3, label: 'Business reports' }
+              ].map(item => (
+                <div key={item.label} className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[.055] px-3.5 py-3 text-[11px] font-bold text-slate-200 backdrop-blur-xl">
+                  <item.icon size={16} className="shrink-0 text-sky-300" /> {item.label}
+                </div>
+              ))}
+            </div>
+            <a href="#downloads" className="mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3.5 text-xs font-black text-[#071a35] shadow-xl shadow-black/20 transition hover:-translate-y-0.5 hover:bg-sky-50">
+              Explore the apps <ArrowUpRight size={15} />
+            </a>
           </div>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: FileCheck2, title: 'Customer statements', text: 'Keep customer accounts, transaction history and outstanding balances organised.' },
-              { icon: Cloud, title: 'Cloud synchronisation', text: 'Access shared records across supported devices using the same account.' },
-              { icon: Clock3, title: 'Daily operations', text: 'Manage business activity, reports and worker attendance in one place.' },
-              { icon: ShieldCheck, title: 'Account protection', text: 'Use account access controls and secure sign-in for your business workspace.' }
-            ].map((item, index) => (
-              <div key={item.title} className="rounded-2xl border border-slate-200 bg-[#fbfcff] p-5 transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-slate-900/5">
-                <div className="grid h-11 w-11 place-items-center rounded-xl bg-blue-50 text-blue-700"><item.icon size={21} /></div>
-                <h3 className="mt-4 text-sm font-black text-slate-900">{item.title}</h3>
-                <p className="mt-2 text-xs leading-6 text-slate-600">{item.text}</p>
+
+          <div className="relative mx-auto w-full max-w-[650px]">
+            <div className="absolute -inset-8 rounded-[3rem] bg-sky-400/10 blur-3xl" />
+            <div className="download-float relative rounded-[2rem] border border-white/15 bg-gradient-to-br from-white/[.16] to-white/[.035] p-3 shadow-2xl shadow-black/40 backdrop-blur-2xl sm:p-4">
+              <div className="flex items-center justify-between border-b border-white/10 px-3 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <img src="/embroidery-statement-mark.svg" alt="" className="h-7 w-7 rounded-lg bg-white p-1" />
+                  <div>
+                    <div className="text-[10px] font-black tracking-wide text-white">EMBROIDERY STATEMENT</div>
+                    <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[.18em] text-slate-400">Interface preview</div>
+                  </div>
+                </div>
+                <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-emerald-200">Product concept</span>
               </div>
+              <div className="grid grid-cols-[76px_1fr] gap-3 pt-3 sm:grid-cols-[116px_1fr] sm:gap-4">
+                <aside className="rounded-2xl border border-white/10 bg-[#06152e]/80 p-2 sm:p-3">
+                  <div className="mb-4 flex items-center gap-2 rounded-lg bg-sky-300/10 p-2">
+                    <div className="h-2 w-2 rounded-full bg-sky-300" />
+                    <span className="hidden text-[8px] font-bold text-sky-100 sm:block">Workspace</span>
+                  </div>
+                  {[
+                    { icon: Users, label: 'Customers', active: true },
+                    { icon: WalletCards, label: 'Accounts' },
+                    { icon: ClipboardList, label: 'Statements' },
+                    { icon: CalendarCheck, label: 'Attendance' },
+                    { icon: BarChart3, label: 'Reports' }
+                  ].map(item => (
+                    <div key={item.label} className={'mb-1 flex items-center gap-2 rounded-lg px-2 py-2 ' + (item.active ? 'bg-blue-500/20 text-sky-200' : 'text-slate-500')}>
+                      <item.icon size={13} />
+                      <span className="hidden text-[8px] font-semibold sm:block">{item.label}</span>
+                    </div>
+                  ))}
+                  <div className="mt-5 hidden rounded-lg border border-white/10 p-2 sm:block">
+                    <div className="h-1 w-10 rounded bg-slate-600" />
+                    <div className="mt-2 h-1 w-14 rounded bg-slate-700" />
+                  </div>
+                </aside>
+                <div className="min-w-0 rounded-2xl border border-white/10 bg-[#f7faff] p-3 text-slate-900 sm:p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[8px] font-bold uppercase tracking-[.18em] text-blue-600">Business workspace</div>
+                      <div className="mt-1 text-sm font-black tracking-tight sm:text-lg">Your operations, organised.</div>
+                    </div>
+                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-blue-100 text-blue-700"><Sparkles size={15}/></div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {[
+                      { icon: Users, title: 'Customer records', sub: 'Account overview' },
+                      { icon: WalletCards, title: 'Statements', sub: 'Transaction history' },
+                      { icon: BarChart3, title: 'Reports', sub: 'Business insights' }
+                    ].map(item => (
+                      <div key={item.title} className="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm sm:p-3">
+                        <item.icon size={15} className="text-blue-600"/>
+                        <div className="mt-3 text-[8px] font-black leading-4 text-slate-800 sm:text-[9px]">{item.title}</div>
+                        <div className="mt-0.5 text-[7px] text-slate-400">{item.sub}</div>
+                        <div className="mt-2 h-1 w-full rounded-full bg-slate-100"><div className="h-1 w-2/3 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400"/></div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[8px] font-black text-slate-800">Daily workflow</span>
+                      <span className="text-[7px] font-bold uppercase tracking-wider text-emerald-600">Connected view</span>
+                    </div>
+                    <div className="mt-3 space-y-2.5">
+                      {['Customer account management','Statement and transaction review','Attendance and reporting'].map((label, i) => (
+                        <div key={label} className="flex items-center gap-2">
+                          <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-blue-50 text-[8px] font-black text-blue-700">0{i+1}</span>
+                          <span className="h-1.5 flex-1 rounded-full bg-slate-100"/>
+                          <span className="hidden text-[7px] font-semibold text-slate-500 sm:block">{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-[7px] font-bold text-slate-400">
+                    <span>Illustrative interface preview</span>
+                    <span>Not live customer data</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="download-float-delayed absolute -bottom-5 -left-3 rounded-2xl border border-white/15 bg-[#10294b]/95 px-4 py-3 shadow-2xl backdrop-blur-xl sm:-left-7">
+              <div className="flex items-center gap-2.5">
+                <div className="grid h-8 w-8 place-items-center rounded-xl bg-emerald-300/10 text-emerald-300"><Cloud size={16}/></div>
+                <div>
+                  <div className="text-[9px] font-black text-white">One connected account</div>
+                  <div className="mt-0.5 text-[8px] text-slate-400">Across supported devices</div>
+                </div>
+              </div>
+            </div>
+            <div className="download-float absolute -right-2 -top-5 rounded-2xl border border-white/15 bg-[#10294b]/95 px-3.5 py-3 shadow-2xl backdrop-blur-xl sm:-right-5">
+              <div className="flex items-center gap-2 text-[9px] font-black text-white"><ShieldCheck size={14} className="text-emerald-300"/> Release transparency</div>
+              <div className="mt-1 text-[8px] text-slate-400">Versions · files · checksums</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" className="relative overflow-hidden border-y border-slate-200 bg-white px-5 py-20 sm:px-8 lg:px-10 lg:py-24">
+        <div className="pointer-events-none absolute -right-32 top-10 h-80 w-80 rounded-full bg-blue-100/60 blur-[90px]"/>
+        <div className="relative mx-auto max-w-7xl">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <div className="text-[10px] font-black uppercase tracking-[.23em] text-blue-700">Designed around your workflow</div>
+              <h2 className="mt-3 text-3xl font-black tracking-[-.05em] text-slate-950 sm:text-4xl lg:text-5xl">The essentials of your business. In one place.</h2>
+            </div>
+            <p className="max-w-md text-sm leading-7 text-slate-600">A focused set of tools for the everyday work behind an embroidery business—from customer accounts to team operations.</p>
+          </div>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { icon: Users, no: '01', title: 'Customer accounts', text: 'Keep customer details and account information organised and easy to review.', tone: 'blue' },
+              { icon: WalletCards, no: '02', title: 'Statements & transactions', text: 'Review account activity, transaction history and outstanding balances.', tone: 'violet' },
+              { icon: CalendarCheck, no: '03', title: 'Team attendance', text: 'Bring worker attendance and daily team records into your business workflow.', tone: 'cyan' },
+              { icon: BarChart3, no: '04', title: 'Business reports', text: 'Use organised business information to review activity and follow performance.', tone: 'indigo' },
+              { icon: Cloud, no: '05', title: 'Connected devices', text: 'Access shared records on supported devices with the same account.', tone: 'emerald' },
+              { icon: Fingerprint, no: '06', title: 'Account protection', text: 'Use secure sign-in and account controls to protect access to your workspace.', tone: 'amber' }
+            ].map(item => (
+              <article key={item.title} className="download-feature-card group relative overflow-hidden rounded-[1.6rem] border border-slate-200 bg-gradient-to-br from-white to-[#f8fbff] p-6 shadow-[0_12px_38px_rgba(15,23,42,.045)] transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_24px_60px_rgba(15,23,42,.09)]">
+                <div className="absolute right-5 top-5 text-[9px] font-black tracking-[.18em] text-slate-300">{item.no}</div>
+                <div className="grid h-12 w-12 place-items-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-700 transition duration-300 group-hover:scale-105 group-hover:bg-blue-600 group-hover:text-white">
+                  <item.icon size={21}/>
+                </div>
+                <h3 className="mt-5 text-base font-black tracking-tight text-slate-950">{item.title}</h3>
+                <p className="mt-2 max-w-sm text-xs leading-6 text-slate-600">{item.text}</p>
+                <div className="mt-6 h-px w-full bg-gradient-to-r from-blue-200 via-slate-100 to-transparent"/>
+                <div className="mt-3 flex items-center justify-between text-[9px] font-bold uppercase tracking-[.13em] text-slate-400">
+                  <span>Embroidery Statement</span><ArrowUpRight size={13} className="text-blue-500 opacity-0 transition group-hover:opacity-100"/>
+                </div>
+              </article>
             ))}
+          </div>
+          <div className="mt-8 flex flex-col gap-4 rounded-[1.5rem] border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-cyan-50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div>
+              <div className="text-sm font-black text-slate-900">Ready to bring your workflow together?</div>
+              <p className="mt-1 text-xs leading-5 text-slate-600">Choose the right version for your device and get started.</p>
+            </div>
+            <a href="#downloads" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#0b3b82] px-5 py-3 text-xs font-black text-white shadow-lg shadow-blue-900/15 transition hover:-translate-y-0.5 hover:bg-blue-800">Choose your app <ArrowRight size={14}/></a>
           </div>
         </div>
       </section>
@@ -562,6 +713,30 @@ const DownloadPortal: React.FC = () => {
         </div>
       </section>
 
+      
+      <section className="border-y border-slate-200 bg-[#f3f7fc] px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="text-[10px] font-black uppercase tracking-[.23em] text-blue-700">Clear. Current. Verified.</div>
+            <h2 className="mt-3 text-3xl font-black tracking-[-.05em] text-slate-950 sm:text-4xl">A more transparent download experience.</h2>
+            <p className="mt-3 text-sm leading-7 text-slate-600">Know which package you are choosing and where its release information comes from.</p>
+          </div>
+          <div className="mt-9 grid gap-4 md:grid-cols-3">
+            {[
+              { icon: PackageCheck, title: 'Official release source', text: 'Customer downloads are retrieved from the Embroidery Statement GitHub release archive.' },
+              { icon: Gauge, title: 'Version details upfront', text: 'See the version, package size and publication date before choosing a download.' },
+              { icon: ShieldCheck, title: 'Integrity information', text: 'Open the SHA-256 checksum when it is supplied with the published release.' }
+            ].map(item => (
+              <div key={item.title} className="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-[0_12px_35px_rgba(15,23,42,.045)]">
+                <div className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><item.icon size={20}/></div>
+                <h3 className="mt-4 text-sm font-black text-slate-950">{item.title}</h3>
+                <p className="mt-2 text-xs leading-6 text-slate-600">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section id="faq" className="scroll-mt-8 px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
         <div className="mx-auto max-w-4xl">
           <div className="text-center">
@@ -589,21 +764,23 @@ const DownloadPortal: React.FC = () => {
         </div>
       </section>
 
-      <footer className="border-t border-slate-200 bg-white px-5 py-8 sm:px-8 lg:px-10">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="relative overflow-hidden border-t border-white/10 bg-[#06152e] px-5 py-10 text-white sm:px-8 lg:px-10">
+        <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-blue-500/15 blur-[90px]"/>
+        <div className="relative mx-auto flex max-w-7xl flex-col gap-7 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <img src="/embroidery-statement-mark.svg" alt="" className="h-10 w-10 rounded-xl bg-[#071a35] p-1.5" />
+            <img src="/embroidery-statement-mark.svg" alt="" className="h-11 w-11 rounded-xl bg-white p-1.5"/>
             <div>
-              <div className="text-xs font-black tracking-wide text-slate-900">EMBROIDERY STATEMENT</div>
-              <div className="mt-1 text-[9px] font-semibold text-slate-500">Official software download center</div>
+              <div className="text-xs font-black tracking-[.12em] text-white">EMBROIDERY STATEMENT</div>
+              <div className="mt-1 text-[9px] font-semibold text-slate-400">Business management suite · Official downloads</div>
             </div>
           </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-[10px] font-bold text-slate-500">
-            <a href="/" className="hover:text-blue-700">Web App</a>
-            <a href={RELEASES_URL} target="_blank" rel="noreferrer" className="hover:text-blue-700">Release archive</a>
-            <a href="#faq" className="hover:text-blue-700">Installation help</a>
+          <div className="flex flex-wrap gap-x-5 gap-y-3 text-[10px] font-bold text-slate-300">
+            <a href="#downloads" className="transition hover:text-sky-300">Downloads</a>
+            <a href="#features" className="transition hover:text-sky-300">Features</a>
+            <a href={RELEASES_URL} target="_blank" rel="noreferrer" className="transition hover:text-sky-300">Release archive</a>
+            <a href="#faq" className="transition hover:text-sky-300">Installation help</a>
           </div>
-          <div className="text-[9px] text-slate-400">© {new Date().getFullYear()} Embroidery Statement. All rights reserved.</div>
+          <div className="text-[9px] leading-5 text-slate-500 sm:text-right">© {new Date().getFullYear()} Embroidery Statement.<br/>All rights reserved.</div>
         </div>
       </footer>
     </main>
