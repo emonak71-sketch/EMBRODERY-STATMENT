@@ -256,6 +256,11 @@ export const dbService = {
     if (error) throw handleDbError(error, 'searching customer by registered email');
     return Array.isArray(data) ? data[0] || null : data || null;
   },
+  ownerListCustomers: async (offset = 0) => {
+    const { data, error } = await supabase.rpc('owner_list_customers', { p_offset: offset });
+    if (error) throw handleDbError(error, 'loading registered customers');
+    return data || [];
+  },
   ownerSearchCustomer: async (identifier: string) => {
     const { data, error } = await supabase.rpc('owner_search_customer', {
       p_identifier: identifier.trim()
