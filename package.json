@@ -1,7 +1,7 @@
 {
   "name": "embrodery-statement",
   "private": true,
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -21,7 +21,8 @@
     "android:customer:build": "npm run desktop:icons && npx --yes @tauri-apps/cli@2 android build --apk --ci --target aarch64",
     "build:customer": "vite build --config vite.customer.config.ts --outDir dist-customer",
     "tauri": "npx --yes @tauri-apps/cli@2",
-    "test:motion": "node scripts/motion-system-contract.test.mjs"
+    "test:motion": "node scripts/motion-system-contract.test.mjs",
+    "test:owner-customer-contacts": "node scripts/owner-customer-phone-contract.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",

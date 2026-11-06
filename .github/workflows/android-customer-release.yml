@@ -79,6 +79,8 @@ jobs:
 
       - name: Install locked dependencies
         run: npm ci
+      - name: Test Owner customer phone lookup contract
+        run: npm run test:owner-customer-contacts
 
       - name: Generate Android launcher icons
         run: npm run desktop:icons

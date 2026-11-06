@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   CalendarDays, CheckCircle2, Clock3, CreditCard, History, LockKeyhole,
-  RefreshCw, Search, ShieldCheck, UserRound, CalendarClock
+  RefreshCw, Search, ShieldCheck, UserRound, CalendarClock, Phone, Save
 } from 'lucide-react';
 import { dbService } from '../services/supabaseService';
 
@@ -41,6 +41,7 @@ type AccessStatus = {
 type CustomerLookup = {
   customer_id:string;
   customer_email:string;
+  customer_phone:string|null;
   business_name:string;
   account_created_at:string;
   email_verified:boolean;
@@ -70,7 +71,7 @@ const money=(n:number)=>new Intl.NumberFormat('en-BD',{style:'currency',currency
 const dateLabel=(value?:string|null)=>value?new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value)):'—';
 const shortDate=(value?:string|null)=>value?new Intl.DateTimeFormat('en-GB',{dateStyle:'medium'}).format(new Date(value)):'—';
 
-const SubscriptionBilling:React.FC<{onAccessRefresh?:()=>void|Promise<void>}>=({onAccessRefresh})=>{
+const SubscriptionBilling:React.FC<{ownerMode?:boolean;onAccessRefresh?:()=>void|Promise<void>}>=({ownerMode=false,onAccessRefresh})=>{
  const [subscription,setSubscription]=useState<Subscription|null>(null);
  const [transactions,setTransactions]=useState<BillingTransaction[]>([]);
  const [accessStatus,setAccessStatus]=useState<AccessStatus>(null);
@@ -79,7 +80,9 @@ const SubscriptionBilling:React.FC<{onAccessRefresh?:()=>void|Promise<void>}>=({
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
 
- const [customerEmail,setCustomerEmail]=useState('');
+ const [customerLookupInput,setCustomerLookupInput]=useState('');
+ const [customerPhone,setCustomerPhone]=useState('');
+ const [savingPhone,setSavingPhone]=useState(false);
  const [customer,setCustomer]=useState<CustomerLookup|null>(null);
  const [grantHistory,setGrantHistory]=useState<AccessGrant[]>([]);
  const [durationChoice,setDurationChoice]=useState('30');
@@ -95,36 +98,58 @@ const SubscriptionBilling:React.FC<{onAccessRefresh?:()=>void|Promise<void>}>=({
  const load=useCallback(async()=>{
   setLoading(true);setError('');
   try{
-   const [s,t,admin,access]=await Promise.all([
+   const [s,t,access,admin]=await Promise.all([
     dbService.getMySubscription(),
     dbService.getMyBillingTransactions(),
-    dbService.isBillingAdmin(),
-    dbService.getMyTrialStatus()
+    dbService.getMyTrialStatus(),
+    ownerMode ? dbService.isBillingAdmin() : Promise.resolve(false)
    ]);
+   if(ownerMode&&!admin)throw new Error('Owner access required. Sign in with the authorised Owner account.');
    setSubscription(s as Subscription|null);
    setTransactions(t as BillingTransaction[]);
-   setIsAdmin(Boolean(admin));
+   setIsAdmin(Boolean(ownerMode&&admin));
    setAccessStatus(access as AccessStatus);
    await onAccessRefresh?.();
   }catch(e:any){setError(e.message||'Could not load subscription access information.');}
   finally{setLoading(false);}
- },[onAccessRefresh]);
+ },[ownerMode,onAccessRefresh]);
  useEffect(()=>{void load();},[load]);
 
  const searchCustomer=async(e?:React.FormEvent)=>{
   e?.preventDefault();
-  const email=customerEmail.trim().toLowerCase();
-  if(!email){setError('Enter the exact Gmail address used by the customer to register.');return;}
-  setSearching(true);setError('');setNotice('');setCustomer(null);setGrantHistory([]);
+  const identifier=customerLookupInput.trim();
+  if(!identifier){setError('Enter the customer Gmail or saved mobile number.');return;}
+  setSearching(true);setError('');setNotice('');setCustomer(null);setCustomerPhone('');setGrantHistory([]);
   try{
-   const found=await dbService.ownerSearchCustomerByEmail(email);
-   if(!found){setError('No customer account found with this email. Ask the customer to register and verify this email first.');return;}
+   const found=await dbService.ownerSearchCustomer(identifier);
+   if(!found){
+    setError(identifier.includes('@')
+     ?'No customer account found with this Gmail. Ask the customer to register and verify this email first.'
+     :'No customer is linked to this mobile number yet. Search by the registered Gmail first, save the number, then search by phone.');
+    return;
+   }
    const record=found as CustomerLookup;
    setCustomer(record);
+   setCustomerPhone(record.customer_phone||'');
    const history=await dbService.ownerGetCustomerAccessHistory(record.customer_id);
    setGrantHistory(history as AccessGrant[]);
   }catch(e:any){setError(e.message||'Customer lookup failed.');}
   finally{setSearching(false);}
+ };
+
+ const saveCustomerPhone=async()=>{
+  if(!customer||savingPhone)return;
+  if(!customer.email_verified){setError('Customer must verify the registered Gmail before a phone number can be linked.');return;}
+  if(!customerPhone.trim()){setError('Enter the customer mobile number first.');return;}
+  setSavingPhone(true);setError('');setNotice('');
+  try{
+   const saved=await dbService.ownerSaveCustomerPhone(customer.customer_email,customerPhone);
+   if(!saved)throw new Error('The customer mobile number was not saved.');
+   setCustomer(current=>current?{...current,customer_phone:saved.customer_phone}:current);
+   setCustomerPhone(saved.customer_phone);
+   setNotice(`Mobile number saved: ${saved.customer_phone}. You can now search this number to retrieve ${saved.customer_email}. The customer will continue signing in with Gmail.`);
+  }catch(e:any){setError(e.message||'Could not save the customer mobile number.');}
+  finally{setSavingPhone(false);}
  };
 
  const grantAccess=async()=>{
@@ -148,7 +173,7 @@ const SubscriptionBilling:React.FC<{onAccessRefresh?:()=>void|Promise<void>}>=({
    if(!result)throw new Error('The access grant was not returned by the server.');
    setNotice(`Access granted for ${days} days. Payment recorded: ${money(amount)} on ${paymentDate}. Starts: ${dateLabel(result.starts_at)} · Ends: ${dateLabel(result.ends_at)}.`);
    setPaymentNote('');setPaymentReference('');setPaymentAmount('');
-   const updated=await dbService.ownerSearchCustomerByEmail(customer.customer_email);
+   const updated=await dbService.ownerSearchCustomer(customer.customer_email);
    if(updated){
     setCustomer(updated as CustomerLookup);
     const history=await dbService.ownerGetCustomerAccessHistory(customer.customer_id);
@@ -184,6 +209,7 @@ const SubscriptionBilling:React.FC<{onAccessRefresh?:()=>void|Promise<void>}>=({
    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
     <div className="flex items-center gap-2 text-sm font-black"><ShieldCheck size={17} className="text-emerald-600"/>{isAdmin?'Owner Account':'Your Current Access'}</div>
     {isAdmin?<div className="mt-3 flex flex-wrap items-center justify-between gap-3"><div><div className="text-xl font-black text-emerald-700">Unlimited Owner Access</div><p className="mt-1 text-xs text-slate-500">This account is registered as the billing owner. It does not need a customer subscription.</p></div><span className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-black text-emerald-800">OWNER VERIFIED</span></div>
+    :accessStatus?.access_source==='owner_admin'?<div className="mt-3 space-y-2"><div className="text-xl font-black text-emerald-700">Account Access Active</div><p className="text-sm text-slate-600 dark:text-slate-300">Your account is active. Customer sign-in and account data remain separate from Owner Control Center permissions.</p></div>
     :activeGrant?<div className="mt-3 space-y-2"><div className="text-xl font-black text-emerald-700">Owner-Activated Subscription</div><div className="text-sm text-slate-600 dark:text-slate-300">Your access is active until <b>{dateLabel(accessStatus?.manual_access_until||accessStatus?.access_until)}</b>.</div></div>
     :activeSubscription?<div className="mt-3 space-y-2"><div className="text-xl font-black text-emerald-700">Subscription Active</div><div className="text-sm text-slate-600 dark:text-slate-300">Access until <b>{dateLabel(accessStatus?.subscription_access_until||accessStatus?.access_until)}</b>.</div></div>
     :accessStatus?.is_trial_active?<div className="mt-3 space-y-2"><div className="text-xl font-black text-emerald-700">15-Day Free Trial</div><div className="text-sm font-bold text-emerald-700">{trialDaysRemaining} {trialDaysRemaining===1?'day':'days'} remaining</div><div className="text-xs text-slate-500">Trial ends: {dateLabel(accessStatus.trial_ends_at)}</div>{accessStatus.manual_access_starts_at&&accessStatus.manual_access_until&&<p className="text-xs text-sky-700">A paid access period is scheduled to start on {dateLabel(accessStatus.manual_access_starts_at)}.</p>}</div>
@@ -193,27 +219,40 @@ const SubscriptionBilling:React.FC<{onAccessRefresh?:()=>void|Promise<void>}>=({
    {isAdmin?<section className="space-y-5 rounded-2xl border border-amber-200 bg-white p-5 shadow-sm dark:border-amber-900 dark:bg-slate-900">
     <div>
      <div className="flex items-center gap-2 text-base font-black"><UserRound size={18} className="text-amber-600"/>Customer Access Manager</div>
-     <p className="mt-1 text-sm text-slate-500">The customer must register and verify their email first. Search the exact email, verify their Nagad payment outside the app, then assign access.</p>
+     <p className="mt-1 text-sm text-slate-500">Customers register and sign in with Gmail. Search by their registered Gmail or a saved Bangladesh mobile number; verify payment, then assign access.</p>
     </div>
     <form onSubmit={searchCustomer} className="flex flex-col gap-3 sm:flex-row">
-     <label className="min-w-0 flex-1 text-xs font-bold text-slate-600 dark:text-slate-300">Customer's registered email
-      <input type="email" required value={customerEmail} onChange={e=>setCustomerEmail(e.target.value)} placeholder="customer@gmail.com" className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-800"/>
+     <label className="min-w-0 flex-1 text-xs font-bold text-slate-600 dark:text-slate-300">Customer Gmail or saved mobile number
+      <input type="text" required inputMode={customerLookupInput.includes('@')?'email':'tel'} autoComplete="off" value={customerLookupInput} onChange={e=>setCustomerLookupInput(e.target.value)} placeholder="customer@gmail.com or 017XXXXXXXX" className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-800"/>
      </label>
      <button type="submit" disabled={searching} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-black text-white disabled:opacity-50 dark:bg-sky-700">
       <Search size={15}/>{searching?'Searching…':'Find Customer'}
      </button>
     </form>
+    <p className="text-[11px] text-slate-500">The registered Gmail is retrieved directly from the customer's verified account. A mobile number is only a private admin lookup key; it does not replace Gmail sign-in.</p>
 
     {customer&&<div className="space-y-5 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
      <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
        <div className="text-lg font-black text-slate-900 dark:text-white">{customer.business_name||'Customer Account'}</div>
-       <div className="mt-1 break-all text-sm text-slate-500">{customer.customer_email}</div>
+       <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Registered Gmail · Customer sign-in</div>
+       <div className="mt-1 break-all text-sm font-semibold text-slate-700 dark:text-slate-200">{customer.customer_email}</div>
        <div className="mt-1 text-xs text-slate-400">Registered: {dateLabel(customer.account_created_at)}</div>
       </div>
       <span className={'rounded-full px-3 py-1.5 text-[10px] font-black '+(customer.email_verified?'bg-emerald-100 text-emerald-800':'bg-amber-100 text-amber-800')}>
        {customer.email_verified?'EMAIL VERIFIED':'EMAIL NOT VERIFIED'}
       </span>
+     </div>
+
+     <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 dark:border-sky-900 dark:bg-sky-950/20">
+      <div className="flex items-center gap-2 text-sm font-black"><Phone size={16} className="text-sky-700 dark:text-sky-300"/>Customer Mobile Number</div>
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+       <input type="tel" inputMode="tel" autoComplete="off" maxLength={20} value={customerPhone} onChange={e=>setCustomerPhone(e.target.value)} placeholder="017XXXXXXXX or +88017XXXXXXXX" className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-800"/>
+       <button type="button" onClick={()=>void saveCustomerPhone()} disabled={savingPhone||!customer.email_verified||!customerPhone.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-700 px-5 py-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-50">
+        <Save size={14}/>{savingPhone?'Saving…':customer.customer_phone?'Update Number':'Save Number'}
+       </button>
+      </div>
+      <p className="mt-2 text-[11px] leading-5 text-slate-500">Save this customer's Bangladesh mobile number once. Later, searching with the number will automatically retrieve the Gmail shown above. Gmail remains the customer's login ID.</p>
      </div>
 
      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

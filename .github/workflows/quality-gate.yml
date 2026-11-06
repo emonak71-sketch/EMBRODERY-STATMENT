@@ -81,6 +81,8 @@ jobs:
         run: npm run test:app-lock
       - name: Test premium motion system contract
         run: npm run test:motion
+      - name: Test Owner customer phone lookup contract
+        run: npm run test:owner-customer-contacts
       - name: Generate Windows icons
         run: npm run desktop:icons
       - name: Build unsigned NSIS installer for CI only
