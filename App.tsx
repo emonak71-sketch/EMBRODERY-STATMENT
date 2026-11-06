@@ -19,6 +19,8 @@ import SupportCenter from './components/SupportCenter';
 import NotificationCenter from './components/NotificationCenter';
 import AndroidUpdateBanner from './components/AndroidUpdateBanner';
 import SplashScreen from './components/SplashScreen';
+import AccountPlanStatus from './components/AccountPlanStatus';
+import type { AccountAccess } from './desktop/subscriptionStatus';
 
 const sendSMSAlert = async (phone: string, message: string) => {
   try {
@@ -53,14 +55,14 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [hasPaidAccess, setHasPaidAccess] = useState<boolean | null>(null);
-  const [trialStatus, setTrialStatus] = useState<{trial_started_at:string;trial_ends_at:string;is_trial_active:boolean;is_trial_expired:boolean}|null>(null);
+  const [trialStatus, setTrialStatus] = useState<(AccountAccess & {trial_started_at:string;is_trial_active:boolean;is_trial_expired:boolean})|null>(null);
   const [attendanceRequest,setAttendanceRequest] = useState<{session:'morning'|'night';nonce:number}|null>(null);
 
   useEffect(() => {
     const onDesktopNavigate = (event:Event) => {
       const requested=(event as CustomEvent<{tab:'workers'|'settings';session?:'morning'|'night'}>).detail;
       if(!requested) return;
-      if(hasPaidAccess===false) { setActiveTab('billing'); return; }
+      if(hasPaidAccess===false && requested.tab!=='settings') { setActiveTab('billing'); return; }
       if(requested.tab==='workers') {
         setAttendanceRequest({session:requested.session||'morning',nonce:Date.now()});
         setActiveTab('workers');
@@ -73,13 +75,10 @@ const App: React.FC = () => {
   }, [hasPaidAccess]);
 
   const selectSidebarTab=(tab:TabType)=>{
-    if(hasPaidAccess===false && tab!=='billing' && tab!=='support') { setActiveTab('billing'); return; }
+    if(hasPaidAccess===false && tab!=='billing' && tab!=='support' && tab!=='settings') { setActiveTab('billing'); return; }
     if(tab==='workers') setAttendanceRequest(null);
     setActiveTab(tab);
   };
-  const trialDaysRemaining = trialStatus?.is_trial_active
-    ? Math.max(0, Math.ceil((new Date(trialStatus.trial_ends_at).getTime()-Date.now())/86_400_000))
-    : 0;
   const [parties, setParties] = useState<Party[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
@@ -118,7 +117,9 @@ const App: React.FC = () => {
     setTrialStatus(null);
     void refreshSubscriptionAccess();
     const timer = window.setInterval(() => void refreshSubscriptionAccess(), 60_000);
-    return () => window.clearInterval(timer);
+    const onFocus = () => void refreshSubscriptionAccess();
+    window.addEventListener('focus', onFocus);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', onFocus); };
   }, [currentUserId, refreshSubscriptionAccess]);
 
   const [stats, setStats] = useState({
@@ -526,7 +527,7 @@ const App: React.FC = () => {
     <div className="app-shell flex h-[100dvh] min-h-[100svh] w-full max-w-full overflow-hidden">
       <AndroidUpdateBanner />
       <Sidebar 
-        activeTab={hasPaidAccess===false && activeTab!=='support'?'billing':activeTab} 
+        activeTab={hasPaidAccess===false && activeTab!=='support' && activeTab!=='settings'?'billing':activeTab} 
         setActiveTab={selectSidebarTab}
         subscriptionLocked={hasPaidAccess===false} 
         parties={parties}
@@ -543,10 +544,10 @@ const App: React.FC = () => {
       />
 
       <main className="app-main min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 no-print">
-        <div className="mb-4 flex justify-end"><NotificationCenter userId={user.id}/></div>
-        {trialStatus?.is_trial_active && hasPaidAccess===true && <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sky-900 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100"><div><div className="text-xs font-black uppercase tracking-wider">15-Day Free Trial</div><div className="mt-1 text-sm font-semibold">{trialDaysRemaining} {trialDaysRemaining===1?"day":"days"} remaining. Your data stays saved when the trial ends.</div></div><button type="button" onClick={()=>selectSidebarTab('billing')} className="rounded-xl bg-sky-700 px-4 py-2 text-xs font-black text-white hover:bg-sky-800">View Subscription Plans</button></div>}
+        <div className="mb-4 flex items-center justify-end gap-3"><AccountPlanStatus access={trialStatus} compact/><NotificationCenter userId={user.id}/></div>
+
         {hasPaidAccess===false ? (
-          activeTab==='support' ? <SupportCenter userId={user.id} email={user.email}/> : <SubscriptionBilling onAccessRefresh={refreshSubscriptionAccess} />
+          activeTab==='support' ? <SupportCenter userId={user.id} email={user.email}/> : activeTab==='settings' ? <Settings user={user} onUpdateProfile={handleUpdateProfile} onAppLockUpdated={setAppLockUpdatedAt} accountAccess={trialStatus} onViewPlans={()=>selectSidebarTab('billing')}/> : <SubscriptionBilling onAccessRefresh={refreshSubscriptionAccess} />
         ) : <>
         {activeTab === 'workers' && <WorkerAttendance userId={user.id} companyName={user.business_name} requestedAttendance={attendanceRequest} />}
         {activeTab === 'billing' && <SubscriptionBilling onAccessRefresh={refreshSubscriptionAccess} />}
@@ -573,6 +574,8 @@ const App: React.FC = () => {
             user={user}
             onUpdateProfile={handleUpdateProfile}
             onAppLockUpdated={setAppLockUpdatedAt}
+            accountAccess={trialStatus}
+            onViewPlans={()=>selectSidebarTab('billing')}
           />
         )}
         {['sales', 'expenses'].includes(activeTab) && (

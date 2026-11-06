@@ -76,6 +76,12 @@ jobs:
       - name: Test Owner customer phone lookup contract
         run: npm run test:owner-customer-contacts
 
+      - name: Test subscription countdowns
+        run: node desktop/subscriptionStatus.test.mjs
+
+      - name: Test native startup cache recovery
+        run: node scripts/native-startup-cleanup.test.mjs
+
       - name: Generate Windows icons
         run: npm run desktop:icons
 
