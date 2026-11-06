@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
-import { LayoutDashboard, Users, Headset, LogOut, ShieldCheck, RefreshCw } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { LayoutDashboard, Users, Headset, LogOut, ShieldCheck, RefreshCw, Settings } from 'lucide-react';
 import SubscriptionBilling from './SubscriptionBilling';
 import OwnerSupportInbox from './OwnerSupportInbox';
 import NotificationCenter from './NotificationCenter';
+import OwnerUpdateSettings from './OwnerUpdateSettings';
 
 type OwnerUser = { id: string; email: string };
 const OwnerControlCenter: React.FC<{user:OwnerUser;onLogout:()=>void}> = ({user,onLogout}) => {
-  const [section,setSection]=useState<'overview'|'customers'|'support'>('overview');
+  const [section,setSection]=useState<'overview'|'customers'|'support'|'settings'>('overview');
+  useEffect(()=>{
+    const openSettings=()=>setSection('settings');
+    window.addEventListener('embroidery:owner-open-updates',openSettings);
+    return()=>window.removeEventListener('embroidery:owner-open-updates',openSettings);
+  },[]);
   return (
     <div className="owner-control-shell min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90 sm:px-6">
@@ -29,6 +35,7 @@ const OwnerControlCenter: React.FC<{user:OwnerUser;onLogout:()=>void}> = ({user,
             {id:'overview',label:'Overview',icon:<LayoutDashboard size={17}/>},
             {id:'customers',label:'Customers & Access',icon:<Users size={17}/>},
             {id:'support',label:'Support Inbox',icon:<Headset size={17}/>},
+            {id:'settings',label:'Settings',icon:<Settings size={17}/>},
           ].map(item=><button key={item.id} onClick={()=>setSection(item.id as any)} className={'mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-xs font-black transition '+(section===item.id?'bg-sky-600 text-white shadow-lg shadow-sky-900/15':'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800')}>{item.icon}{item.label}</button>)}
           <div className="mt-4 rounded-xl bg-slate-50 p-3 text-[10px] leading-5 text-slate-500 dark:bg-slate-800">This portal is restricted by the server-side Owner role. Customer accounts cannot grant themselves access.</div>
         </aside>
@@ -44,6 +51,7 @@ const OwnerControlCenter: React.FC<{user:OwnerUser;onLogout:()=>void}> = ({user,
           </section>}
           {section==='customers'&&<SubscriptionBilling ownerMode/>}
           {section==='support'&&<OwnerSupportInbox userId={user.id}/>}
+          {section==='settings'&&<OwnerUpdateSettings/>}
         </main>
       </div>
     </div>
