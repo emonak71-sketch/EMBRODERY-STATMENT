@@ -20,3 +20,10 @@
 - GitHub connector supports code/branches/PRs, not tag creation, secrets or workflow dispatch; authenticated browser is available for those.
 - Shell direct GitHub connection is unavailable; use connector for repository reads/writes.
 - Existing local workspace has historical changes; work in isolated directory verified byte-for-byte against current main tracked files.
+
+## Part A implementation
+- Added Windows/Android/Apple/other-device recommendations while keeping all cards visible even when release lookup fails.
+- Added browser-provided PWA install action and iPhone/iPad/Mac instructions; added manifest link.
+- Added explicit /download and /download.html rewrites before SPA fallback, plus offline-route handling.
+- Local typecheck, production build, App Lock, motion, owner/customer contacts, attendance and seven-device/routing checks PASS. Customer/Owner isolated builds checked separately.
+- PR CI and live verification pending; main unchanged.

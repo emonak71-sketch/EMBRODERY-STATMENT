@@ -20,7 +20,7 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
-    const offlinePage = url.pathname === '/owner.html' ? '/owner.html' : url.pathname === '/download.html' ? '/download.html' : '/index.html';
+    const offlinePage = url.pathname === '/owner.html' ? '/owner.html' : ['/download', '/download.html'].includes(url.pathname) ? '/download.html' : '/index.html';
     event.respondWith(fetch(request).then(async response => {
       if (response.ok) {
         await caches.open(CACHE_NAME).then(cache => cache.put(request, response.clone()));
