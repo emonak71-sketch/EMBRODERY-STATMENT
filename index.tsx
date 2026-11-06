@@ -4,6 +4,7 @@ import App from './App';
 import { LanguageProvider } from './contexts/LanguageContext';
 import DesktopHost from './desktop/DesktopHost';
 import AndroidUpdateBanner from './components/AndroidUpdateBanner';
+import StartupBoundary from './components/StartupBoundary';
 
 console.log('Mounting Embrodery Statement App...');
 
@@ -15,6 +16,6 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <><AndroidUpdateBanner/><LanguageProvider><DesktopHost><App /></DesktopHost></LanguageProvider></>
+    <StartupBoundary><AndroidUpdateBanner/><LanguageProvider><DesktopHost><App /></DesktopHost></LanguageProvider></StartupBoundary>
   </React.StrictMode>
 );

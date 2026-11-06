@@ -21,6 +21,14 @@ use tauri_plugin_autostart::ManagerExt as AutostartManagerExt;
 use tauri_plugin_updater::UpdaterExt;
 
 #[cfg(desktop)]
+#[tauri::command]
+fn desktop_startup_ready(app: AppHandle) {
+    if std::env::args().any(|arg| arg == "--startup-smoke") {
+        app.exit(0);
+    }
+}
+
+#[cfg(desktop)]
 #[derive(Clone, Default, Serialize, Deserialize)]
 struct DesktopPreferences {
     autostart: Option<bool>,
@@ -348,7 +356,7 @@ pub fn run() {
             builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
         }
         builder = builder.manage(NavigationState::default()).invoke_handler(tauri::generate_handler![
-            desktop_take_navigation, desktop_info, desktop_get_autostart, desktop_set_autostart,
+            desktop_startup_ready, desktop_take_navigation, desktop_info, desktop_get_autostart, desktop_set_autostart,
             desktop_get_start_minimized, desktop_set_start_minimized, desktop_notify_message,
             desktop_notify_attendance, desktop_notify_update, desktop_test_notification,
             desktop_check_update, desktop_install_update
@@ -383,6 +391,13 @@ pub fn run() {
             })?;
 
             let args = std::env::args().collect::<Vec<_>>();
+            if args.iter().any(|arg| arg == "--startup-smoke") {
+                let startup_handle = handle.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(Duration::from_secs(35));
+                    startup_handle.exit(1);
+                });
+            }
             let test_notification = args.iter().any(|arg| arg == "--test-notification");
             let exit_after_test_notification = args.iter().any(|arg| arg == "--exit-after-test-notification");
             if test_notification {

@@ -96,6 +96,13 @@ jobs:
           npx --yes @tauri-apps/cli@2 build --bundles nsis
           if ($LASTEXITCODE -ne 0) { throw 'Signed Customer NSIS build failed.' }
 
+      - name: Verify Customer cold startup without refresh
+        shell: pwsh
+        run: |
+          node scripts/check-local-startup.mjs dist-customer/index.html
+          if ($LASTEXITCODE -ne 0) { throw 'Customer local startup asset check failed.' }
+          ./scripts/windows-startup-smoke.ps1 -ExePath src-tauri/target/release/embroidery-statement.exe
+
       - name: Generate Customer updater manifests
         shell: pwsh
         run: |
@@ -152,6 +159,13 @@ jobs:
           $ErrorActionPreference = 'Stop'
           npx --yes @tauri-apps/cli@2 build --bundles nsis --config src-tauri/tauri.owner.conf.json
           if ($LASTEXITCODE -ne 0) { throw 'Signed Owner Control Center NSIS build failed.' }
+
+      - name: Verify Owner cold startup without refresh
+        shell: pwsh
+        run: |
+          node scripts/check-local-startup.mjs dist-owner/owner.html
+          if ($LASTEXITCODE -ne 0) { throw 'Owner local startup asset check failed.' }
+          ./scripts/windows-startup-smoke.ps1 -ExePath src-tauri/target/release/embroidery-statement.exe
 
       - name: Generate Owner updater manifest
         shell: pwsh
