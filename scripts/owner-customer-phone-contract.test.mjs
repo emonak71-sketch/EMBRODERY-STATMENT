@@ -29,7 +29,7 @@ assert.ok(migration.includes('alter table private.owner_customer_contacts enable
 assert.ok(migration.includes('revoke all on table private.owner_customer_contacts from public, anon, authenticated'), 'Customers must have no direct access to phone mappings');
 assert.ok(migration.includes('private.is_billing_admin()'), 'Both RPCs must require an authenticated Owner');
 assert.ok(migration.includes('grant execute on function public.owner_search_customer(text) to authenticated'), 'Only authenticated role may invoke the owner-gated search RPC');
-assert.ok(migration.includes('grant execute on function public.owner_save_customer_phone(text,text) to authenticated'), 'Only authenticated role may invoke the owner-gated save RPC');
+assert.match(migration, /grant execute on function public\\.owner_save_customer_phone\\(\\s*text\\s*,\\s*text\\s*\\)\\s+to authenticated/i, 'Only authenticated role may invoke the owner-gated save RPC');
 assert.ok(migration.includes("check (phone_number ~ '^01[3-9][0-9]{8}$')"), 'Stored phone must be a normalized Bangladesh mobile number');
 assert.ok(migration.includes('phone_number text not null unique'), 'Phone lookup must be unambiguous');
 assert.ok(migration.includes('u.email::text'), 'Search result must return the Auth email, not a user-editable email field');
