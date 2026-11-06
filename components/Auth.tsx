@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, Loader2, AlertCircle, ShieldCheck, Mail,
-  KeyRound, Eye, EyeOff, Languages, LockKeyhole, Building2, Sparkles
+  KeyRound, Eye, EyeOff, Languages, LockKeyhole, Building2
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -317,9 +317,6 @@ const Auth: React.FC<AuthProps> = ({
         <footer className="mt-5 flex items-center justify-center gap-2 text-xs font-semibold text-slate-400">
           <ShieldCheck className="h-4 w-4 text-emerald-400" />
           {tr('নিরাপদ Supabase Authentication', 'Secure Supabase Authentication')}
-          <span className="mx-1 text-slate-300">·</span>
-          <a href="/download.html" className="auth-link">{tr('অ্যাপ ডাউনলোড', 'Download Apps')}</a>
-          <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
         </footer>
       </div>
     </main>
