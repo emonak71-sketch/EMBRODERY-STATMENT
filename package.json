@@ -22,6 +22,7 @@
     "build:customer": "vite build --config vite.customer.config.ts --outDir dist-customer",
     "tauri": "npx --yes @tauri-apps/cli@2",
     "test:motion": "node scripts/motion-system-contract.test.mjs",
+    "test:downloads": "node scripts/download-portal.test.mjs",
     "test:owner-customer-contacts": "node scripts/owner-customer-phone-contract.test.mjs"
   },
   "dependencies": {
