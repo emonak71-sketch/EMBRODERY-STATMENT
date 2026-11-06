@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Apple, ArrowDownToLine, ArrowRight, ArrowUpRight, BadgeCheck, BarChart3,
   CalendarCheck, CheckCircle2, ClipboardList, Clock3, Cloud, Download,
-  ExternalLink, FileCheck2, Fingerprint, Globe, HardDrive, LoaderCircle,
+  ExternalLink, FileCheck2, Fingerprint, Gauge, Globe, HardDrive, LoaderCircle, PackageCheck,
   Monitor, RefreshCw, ShieldCheck, Smartphone, Sparkles, Users, WalletCards,
   Wifi, Workflow, Zap
 } from 'lucide-react';
