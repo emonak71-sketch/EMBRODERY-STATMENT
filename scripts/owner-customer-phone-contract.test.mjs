@@ -6,6 +6,7 @@ const billing = read('../components/SubscriptionBilling.tsx');
 const service = read('../services/supabaseService.ts');
 const owner = read('../components/OwnerControlCenter.tsx');
 const migration = read('../supabase/migrations/20261106130000_owner_customer_phone_lookup.sql');
+const indexMigration = read('../supabase/migrations/20261106133000_owner_customer_contacts_fk_index.sql');
 const pkg = JSON.parse(read('../package.json'));
 const lock = JSON.parse(read('../package-lock.json'));
 const customerConfig = JSON.parse(read('../src-tauri/tauri.conf.json'));
@@ -33,6 +34,8 @@ assert.ok(migration.includes("check (phone_number ~ '^01[3-9][0-9]{8}$')"), 'Sto
 assert.ok(migration.includes('phone_number text not null unique'), 'Phone lookup must be unambiguous');
 assert.ok(migration.includes('u.email::text'), 'Search result must return the Auth email, not a user-editable email field');
 assert.ok(migration.includes('on delete cascade'), 'Phone mapping must be removed with a deleted customer account');
+assert.ok(indexMigration.includes('owner_customer_contacts_updated_by_idx'), 'Updater foreign key must be indexed');
+assert.ok(indexMigration.includes('drop index if exists private.owner_customer_contacts_updated_at_idx'), 'Unused timestamp index should not be retained');
 
 assert.equal(pkg.version, '1.0.6');
 assert.equal(lock.version, pkg.version);
