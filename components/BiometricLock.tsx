@@ -41,9 +41,9 @@ export const BiometricLock = ({ onUnlock, onLogout }: { onUnlock: () => void, on
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950">
-      <div className="text-center space-y-6 w-full max-w-xs">
-        <div className="inline-flex p-5 bg-primary-100 dark:bg-primary-900/30 rounded-full text-primary-600 animate-pulse">
+    <div className="biometric-lock-screen min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950">
+      <div className="biometric-lock-card text-center space-y-6 w-full max-w-xs">
+        <div className="biometric-lock-icon inline-flex p-5 bg-primary-100 dark:bg-primary-900/30 rounded-full text-primary-600 animate-pulse">
           <Lock className="w-12 h-12" />
         </div>
         <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-wider">অ্যাপ লক</h2>

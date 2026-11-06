@@ -91,10 +91,10 @@ const OwnerApp: React.FC = () => {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#071a35] px-4 py-10 text-white">
+    <main className="owner-auth-screen min-h-screen overflow-hidden bg-[#071a35] px-4 py-10 text-white">
       <div className="pointer-events-none fixed inset-0 opacity-30" style={{background:'radial-gradient(circle at 15% 20%, #0b8fe5 0, transparent 34%), radial-gradient(circle at 85% 75%, #0d9488 0, transparent 30%)'}} />
       <div className="relative mx-auto flex min-h-[80vh] max-w-5xl items-center justify-center">
-        <section className="grid w-full overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.06] shadow-2xl backdrop-blur-xl md:grid-cols-[1.05fr_.95fr]">
+        <section className="owner-auth-panel grid w-full overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.06] shadow-2xl backdrop-blur-xl md:grid-cols-[1.05fr_.95fr]">
           <div className="hidden flex-col justify-between bg-gradient-to-br from-blue-950 to-slate-950 p-10 md:flex">
             <div>
               <img src="/embroidery-statement-mark.svg" alt="Embroidery Statement" className="mb-8 h-16 w-16 rounded-2xl bg-white p-2" />

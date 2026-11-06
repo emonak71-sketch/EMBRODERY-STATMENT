@@ -79,6 +79,8 @@ jobs:
         run: npm run test:attendance
       - name: Test App Lock security contract
         run: npm run test:app-lock
+      - name: Test premium motion system contract
+        run: npm run test:motion
       - name: Generate Windows icons
         run: npm run desktop:icons
       - name: Build unsigned NSIS installer for CI only

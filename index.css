@@ -1168,3 +1168,361 @@ body {
   flex-direction:row !important;
   gap:3rem !important;
 }
+
+
+/* ==========================================================================
+   EMBROIDERY STATEMENT — PREMIUM MOTION SYSTEM v2
+   One consistent motion language for Customer, Owner, Web, PWA and Desktop.
+   Visual-only layer: no business logic, data, layout dimensions or workflows.
+   ========================================================================== */
+:root {
+  --es-motion-ease: cubic-bezier(.16, 1, .3, 1);
+  --es-motion-standard: cubic-bezier(.2, .75, .25, 1);
+  --es-motion-fast: 160ms;
+  --es-motion-medium: 280ms;
+  --es-motion-slow: 520ms;
+}
+
+/* Main workspace pages enter with a clean, controlled lift. */
+.app-main > div {
+  animation: es-page-enter 520ms var(--es-motion-ease) both;
+  transform-origin: 50% 0;
+}
+@keyframes es-page-enter {
+  0% { opacity: 0; transform: translate3d(0, 18px, 0) scale(.993); filter: blur(3px); }
+  72% { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+
+/* Dashboard figures arrive in a deliberate sequence instead of all at once. */
+.dashboard-stat-card {
+  animation: es-stat-arrive 620ms var(--es-motion-ease) both !important;
+}
+.dashboard-stat-card:nth-child(1) { animation-delay: 45ms !important; }
+.dashboard-stat-card:nth-child(2) { animation-delay: 95ms !important; }
+.dashboard-stat-card:nth-child(3) { animation-delay: 145ms !important; }
+.dashboard-stat-card:nth-child(4) { animation-delay: 195ms !important; }
+.dashboard-stat-card:nth-child(5) { animation-delay: 245ms !important; }
+.dashboard-stat-card:nth-child(6) { animation-delay: 295ms !important; }
+@keyframes es-stat-arrive {
+  0% { opacity: 0; transform: translate3d(0, 20px, 0) scale(.975); }
+  72% { opacity: 1; transform: translate3d(0, -2px, 0) scale(1.003); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-stat-card:hover {
+    transform: translate3d(0, -5px, 0) scale(1.008) !important;
+    transition: transform 300ms var(--es-motion-ease), box-shadow 300ms ease, border-color 300ms ease;
+  }
+  .dashboard-stat-card:hover .text-xl {
+    transform: translate3d(2px, 0, 0);
+  }
+}
+
+/* Navigation uses a quiet rail and a short icon response for the active page. */
+.app-sidebar nav button {
+  overflow: hidden;
+  transition: background-color 240ms ease, color 240ms ease,
+    box-shadow 280ms ease, transform 280ms var(--es-motion-ease);
+}
+.app-sidebar nav button[class~="bg-primary-600"] {
+  animation: es-nav-arrive 380ms var(--es-motion-ease) both !important;
+}
+.app-sidebar nav button[class~="bg-primary-600"]::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  top: 22%;
+  width: 3px;
+  height: 56%;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(180deg, #a5f3fc, #fff);
+  box-shadow: 0 0 14px rgba(103, 232, 249, .72);
+  animation: es-nav-rail 420ms var(--es-motion-ease) both;
+}
+.app-sidebar nav button[class~="bg-primary-600"] svg {
+  animation: es-nav-icon 430ms var(--es-motion-ease) both !important;
+}
+@keyframes es-nav-arrive {
+  from { opacity: .82; transform: translate3d(-5px, 0, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes es-nav-rail {
+  from { opacity: 0; transform: scaleY(.25); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+@keyframes es-nav-icon {
+  0% { transform: scale(.82) rotate(-7deg); }
+  70% { transform: scale(1.12) rotate(2deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.app-sidebar {
+  transition: transform 380ms var(--es-motion-ease), box-shadow 380ms ease;
+}
+.app-sidebar button:active:not(:disabled),
+.app-main button:active:not(:disabled),
+.owner-sidebar button:active:not(:disabled) {
+  transform: scale(.975);
+  transition-duration: 90ms;
+}
+
+/* Inputs feel responsive without shifting the surrounding layout. */
+.app-main input:not([type="checkbox"]):not([type="radio"]):focus,
+.app-main textarea:focus,
+.app-main select:focus,
+.app-lock-panel input:focus,
+.owner-auth-panel input:focus {
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+.app-main [role="alert"], .app-main [role="status"],
+.app-lock-screen [role="alert"], .app-lock-screen [role="status"] {
+  animation: es-notice-enter 340ms var(--es-motion-ease) both;
+}
+@keyframes es-notice-enter {
+  from { opacity: 0; transform: translate3d(0, 8px, 0) scale(.99); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* Existing modal markup: animate the dim layer and its immediate content. */
+.app-main .fixed, .app-sidebar .fixed {
+  animation: es-overlay-enter 220ms ease-out both;
+}
+.app-main .fixed > div, .app-sidebar .fixed > div {
+  animation: es-modal-enter 420ms var(--es-motion-ease) both;
+}
+@keyframes es-overlay-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes es-modal-enter {
+  0% { opacity: 0; transform: translate3d(0, 16px, 0) scale(.975); filter: blur(3px); }
+  75% { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+
+/* Login / sign-up: refined glass arrival, directional form changes and field rhythm. */
+.auth-panel.auth-liquid-glass {
+  animation: es-auth-panel-enter 760ms var(--es-motion-ease) both !important;
+  transition: transform 340ms var(--es-motion-ease), box-shadow 340ms ease, border-color 340ms ease;
+}
+.auth-panel.auth-liquid-glass::before {
+  animation-duration: 16s;
+  animation-timing-function: ease-in-out;
+}
+.auth-panel.auth-liquid-glass::after {
+  animation-duration: 11s;
+  animation-delay: 1.2s;
+}
+.auth-mode-content {
+  animation: es-auth-content-enter 440ms var(--es-motion-ease) both !important;
+}
+.auth-mode-content.is-exiting.is-login,
+.auth-mode-content.is-exiting.is-signup {
+  animation: es-auth-content-exit 170ms ease-in both !important;
+}
+.auth-mode-content.is-entering.is-login {
+  animation: es-auth-content-left 460ms var(--es-motion-ease) both !important;
+}
+.auth-mode-content.is-entering.is-signup {
+  animation: es-auth-content-right 460ms var(--es-motion-ease) both !important;
+}
+.auth-form-stage > .auth-field {
+  animation: es-field-arrive 460ms var(--es-motion-ease) both;
+}
+.auth-form-stage > .auth-field:nth-of-type(1) { animation-delay: 70ms; }
+.auth-form-stage > .auth-field:nth-of-type(2) { animation-delay: 125ms; }
+.auth-form-stage > .auth-field:nth-of-type(3) { animation-delay: 180ms; }
+.auth-form-stage > .auth-field:nth-of-type(4) { animation-delay: 235ms; }
+.auth-form-stage > .auth-field:nth-of-type(5) { animation-delay: 290ms; }
+.auth-submit {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 220ms var(--es-motion-ease), box-shadow 260ms ease, filter 220ms ease;
+}
+.auth-submit::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -40%;
+  bottom: -40%;
+  left: -55%;
+  width: 35%;
+  transform: skewX(-22deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.32), transparent);
+  transition: left 620ms var(--es-motion-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .auth-submit:hover::after { left: 125%; }
+  .auth-submit:hover { box-shadow: 0 16px 34px rgba(23,73,200,.3), inset 0 1px 0 rgba(255,255,255,.32); }
+  .auth-panel.auth-liquid-glass:hover { transform: translate3d(0, -2px, 0); }
+}
+.auth-submit:active { transform: scale(.985); }
+@keyframes es-auth-panel-enter {
+  0% { opacity: 0; transform: translate3d(0, 22px, 0) scale(.972); filter: blur(7px); }
+  72% { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+@keyframes es-auth-content-enter {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); filter: blur(2px); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0); }
+}
+@keyframes es-auth-content-exit {
+  to { opacity: 0; transform: translate3d(0, -5px, 0); filter: blur(2px); }
+}
+@keyframes es-auth-content-left {
+  from { opacity: 0; transform: translate3d(-16px, 5px, 0); filter: blur(3px); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0); }
+}
+@keyframes es-auth-content-right {
+  from { opacity: 0; transform: translate3d(16px, 5px, 0); filter: blur(3px); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0); }
+}
+@keyframes es-field-arrive {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* Account App Lock and biometric screens share the same secure-access motion. */
+.app-lock-screen, .biometric-lock-screen {
+  animation: es-screen-enter 420ms ease-out both;
+}
+.app-lock-panel, .biometric-lock-card {
+  animation: es-lock-panel-enter 680ms var(--es-motion-ease) both;
+  transform-origin: 50% 60%;
+}
+.app-lock-emblem, .biometric-lock-icon {
+  animation: es-lock-emblem-enter 720ms var(--es-motion-ease) both,
+    es-lock-emblem-breathe 5.5s ease-in-out 900ms infinite;
+}
+.app-lock-form > label {
+  animation: es-field-arrive 420ms var(--es-motion-ease) both;
+}
+.app-lock-form > label:nth-of-type(1) { animation-delay: 70ms; }
+.app-lock-form > label:nth-of-type(2) { animation-delay: 130ms; }
+.app-lock-form > label:nth-of-type(3) { animation-delay: 190ms; }
+.app-lock-form > button { animation: es-field-arrive 440ms var(--es-motion-ease) 210ms both; }
+@keyframes es-screen-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes es-lock-panel-enter {
+  0% { opacity: 0; transform: translate3d(0, 22px, 0) scale(.965); filter: blur(7px); }
+  75% { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+@keyframes es-lock-emblem-enter {
+  from { opacity: 0; transform: scale(.72) rotate(-12deg); }
+  72% { opacity: 1; transform: scale(1.08) rotate(3deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes es-lock-emblem-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34,211,238,0); }
+  50% { box-shadow: 0 0 0 9px rgba(34,211,238,.055); }
+}
+
+/* Owner Control Center receives the same motion language, independently. */
+.owner-auth-screen > .relative > section {
+  animation: es-auth-panel-enter 760ms var(--es-motion-ease) both;
+}
+.owner-auth-screen > .relative > section > div:first-child {
+  animation: es-field-arrive 640ms var(--es-motion-ease) 100ms both;
+}
+.owner-auth-panel form > label {
+  animation: es-field-arrive 440ms var(--es-motion-ease) both;
+}
+.owner-auth-panel form > label:nth-of-type(1) { animation-delay: 100ms; }
+.owner-auth-panel form > label:nth-of-type(2) { animation-delay: 170ms; }
+.owner-auth-panel form > button { animation: es-field-arrive 440ms var(--es-motion-ease) 230ms both; }
+.owner-control-shell { animation: es-screen-enter 360ms ease-out both; }
+.owner-main > section {
+  animation: es-page-enter 500ms var(--es-motion-ease) both;
+}
+.owner-main > section .grid > button {
+  animation: es-stat-arrive 540ms var(--es-motion-ease) both;
+}
+.owner-main > section .grid > button:nth-child(1) { animation-delay: 60ms; }
+.owner-main > section .grid > button:nth-child(2) { animation-delay: 125ms; }
+.owner-main > section .grid > button:nth-child(3) { animation-delay: 190ms; }
+.owner-sidebar button {
+  transition: background-color 220ms ease, color 220ms ease, transform 260ms var(--es-motion-ease), box-shadow 260ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .owner-sidebar button:hover { transform: translate3d(3px, 0, 0); }
+}
+
+/* The embroidery-machine splash remains the brand signature; only its title timing is polished. */
+.splash-machine-scene .machine-scene-kicker {
+  animation: es-kicker-arrive 650ms var(--es-motion-ease) 80ms both;
+}
+@keyframes es-kicker-arrive {
+  from { opacity: 0; transform: translate3d(0, 9px, 0); letter-spacing: .38em; }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* Mobile uses shorter, lighter motion. Touch devices never depend on hover effects. */
+@media (max-width: 640px) {
+  .app-main > div { animation-duration: 400ms; }
+  .dashboard-stat-card { animation-duration: 460ms !important; }
+  .dashboard-stat-card:nth-child(n) { animation-delay: 35ms !important; }
+  .app-main .fixed > div, .app-sidebar .fixed > div { animation-duration: 320ms; }
+}
+@media (hover: none) {
+  .dashboard-stat-card:hover { transform: none !important; }
+  .auth-panel.auth-liquid-glass:hover { transform: none !important; }
+  .owner-sidebar button:hover { transform: none !important; }
+}
+
+/* Accessibility, battery and print safety: motion is optional, content is not. */
+@media (prefers-reduced-motion: reduce) {
+  .app-main > div,
+  .dashboard-stat-card,
+  .app-sidebar nav button[class~="bg-primary-600"],
+  .app-sidebar nav button[class~="bg-primary-600"]::before,
+  .app-sidebar nav button[class~="bg-primary-600"] svg,
+  .auth-panel.auth-liquid-glass,
+  .auth-panel.auth-liquid-glass::before,
+  .auth-panel.auth-liquid-glass::after,
+  .auth-mode-content,
+  .auth-form-stage > .auth-field,
+  .app-lock-screen,
+  .app-lock-panel,
+  .app-lock-emblem,
+  .app-lock-form > label,
+  .app-lock-form > button,
+  .biometric-lock-screen,
+  .biometric-lock-card,
+  .biometric-lock-icon,
+  .owner-auth-screen > .relative > section,
+  .owner-auth-screen > .relative > section > div:first-child,
+  .owner-auth-panel form > label,
+  .owner-auth-panel form > button,
+  .owner-control-shell,
+  .owner-main > section,
+  .owner-main > section .grid > button,
+  .splash-machine-scene .machine-scene-kicker,
+  .app-main .fixed,
+  .app-main .fixed > div,
+  .app-sidebar .fixed,
+  .app-sidebar .fixed > div,
+  .app-main [role="alert"],
+  .app-main [role="status"],
+  .app-lock-screen [role="alert"],
+  .app-lock-screen [role="status"] {
+    animation: none !important;
+    filter: none !important;
+    transform: none !important;
+  }
+  .app-main button, .app-sidebar button, .owner-sidebar button,
+  .auth-submit, .auth-panel.auth-liquid-glass {
+    transition-duration: .01ms !important;
+  }
+}
+@media print {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    filter: none !important;
+  }
+}

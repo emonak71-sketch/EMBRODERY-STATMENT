@@ -8,7 +8,7 @@ type OwnerUser = { id: string; email: string };
 const OwnerControlCenter: React.FC<{user:OwnerUser;onLogout:()=>void}> = ({user,onLogout}) => {
   const [section,setSection]=useState<'overview'|'customers'|'support'>('overview');
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
+    <div className="owner-control-shell min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90 sm:px-6">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -23,7 +23,7 @@ const OwnerControlCenter: React.FC<{user:OwnerUser;onLogout:()=>void}> = ({user,
         </div>
       </header>
       <div className="mx-auto grid max-w-[1600px] gap-5 p-4 sm:p-6 lg:grid-cols-[250px_minmax(0,1fr)]">
-        <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <aside className="owner-sidebar h-fit rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-3 flex items-center gap-2 px-3 py-3 text-xs font-black uppercase tracking-widest text-slate-400"><ShieldCheck size={15} className="text-emerald-600"/> Owner Workspace</div>
           {[
             {id:'overview',label:'Overview',icon:<LayoutDashboard size={17}/>},
@@ -32,7 +32,7 @@ const OwnerControlCenter: React.FC<{user:OwnerUser;onLogout:()=>void}> = ({user,
           ].map(item=><button key={item.id} onClick={()=>setSection(item.id as any)} className={'mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-xs font-black transition '+(section===item.id?'bg-sky-600 text-white shadow-lg shadow-sky-900/15':'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800')}>{item.icon}{item.label}</button>)}
           <div className="mt-4 rounded-xl bg-slate-50 p-3 text-[10px] leading-5 text-slate-500 dark:bg-slate-800">This portal is restricted by the server-side Owner role. Customer accounts cannot grant themselves access.</div>
         </aside>
-        <main className="min-w-0 space-y-5">
+        <main className="owner-main min-w-0 space-y-5">
           {section==='overview'&&<section className="space-y-5">
             <div><div className="text-[10px] font-black uppercase tracking-[.2em] text-sky-600">Operations dashboard</div><h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Welcome to your control center</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Manage the complete customer lifecycle from one owner account. Subscription changes and support replies sync to customer Web, PWA, Windows and Android sessions through the shared backend.</p></div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
