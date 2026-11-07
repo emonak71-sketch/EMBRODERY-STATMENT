@@ -31,13 +31,15 @@ export function detectDevice(
     return { name: /iPhone/i.test(ua) ? 'iPhone' : 'iPad', recommended: 'web', apple: 'ios' };
   }
   if (/Windows NT/i.test(ua) || /Win/i.test(platform)) {
-    const architecture = bitnessHint === '32' || /WOW64|Win32|i686/i.test(ua)
+    const architecture = bitnessHint === '32'
       ? 'x86'
       : /arm/i.test(architectureHint || '') || /ARM64/i.test(ua)
         ? 'arm64'
-        : bitnessHint === '64' || /Win64|x64|amd64/i.test(ua)
+        : bitnessHint === '64' || /WOW64|Win64|x64|amd64/i.test(ua)
           ? 'x64'
-          : 'unknown';
+          : /Win32|i686|\bx86\b/i.test(ua)
+            ? 'x86'
+            : 'unknown';
     const label = architecture === 'x86' ? 'Windows 32-bit' : architecture === 'x64' ? 'Windows 64-bit' : architecture === 'arm64' ? 'Windows ARM64' : 'Windows';
     return { name: label, recommended: 'windows', architecture };
   }
@@ -242,7 +244,7 @@ const DownloadPortal: React.FC = () => {
   };
 
   const recommended = (kind: Device['recommended']) => device.recommended === kind;
-  const windowsDownload = device.architecture === 'x86' ? windowsX86 : windows;
+  const windowsDownload = device.architecture === 'x86' ? windowsX86 : (device.architecture === 'x64' || device.architecture === 'arm64') ? windows : null;
   const windowsArchitectureLabel = device.architecture === 'x86' ? '32-bit (x86)' : device.architecture === 'arm64' ? '64-bit (ARM)' : device.architecture === 'x64' ? '64-bit (x64)' : '64-bit (x64)';
   const appVersion = windows?.version || android?.version || 'Latest';
   const webInstallGuide = device.apple === 'ios'
@@ -442,10 +444,14 @@ const DownloadPortal: React.FC = () => {
                 </a>
               ) : device.architecture === 'x86' ? (
                 <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-xs font-semibold text-amber-800">The Windows 32-bit installer is not published yet. Do not install the 64-bit package on this device.</div>
-              ) : windows ? (
-                <a href={windows.url} className="mt-5 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-3 text-xs font-black text-white shadow-lg shadow-blue-700/15 transition hover:bg-blue-800">
-                  <Download size={16} /> Download Windows 64-bit EXE <ArrowRight size={14} />
-                </a>
+              ) : device.architecture === 'unknown' && (windows || windowsX86) ? (
+                <div className="mt-5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-center text-xs font-semibold text-sky-900">
+                  Confirm your Windows system type in Settings → System → About before downloading.
+                  <div className="mt-3 flex flex-wrap justify-center gap-3">
+                    {windows && <a href={windows.url} className="font-black underline underline-offset-2">64-bit EXE</a>}
+                    {windowsX86 && <a href={windowsX86.url} className="font-black underline underline-offset-2">32-bit EXE</a>}
+                  </div>
+                </div>
               ) : (
                 <div className="mt-5 rounded-xl border border-dashed border-slate-300 px-4 py-3 text-center text-xs font-semibold text-slate-500">Latest signed installer is not available.</div>
               )}
