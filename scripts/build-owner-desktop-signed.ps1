@@ -33,7 +33,11 @@ try {
   & npm run desktop:owner:build
   if ($LASTEXITCODE -ne 0) { throw 'Owner signed Windows build failed.' }
 
-  Write-Host 'SUCCESS: signed Owner installer build completed.'
+  Write-Host 'Generating the Owner update manifest...'
+  & node scripts/create-owner-update-manifest.mjs
+  if ($LASTEXITCODE -ne 0) { throw 'Owner update manifest generation failed.' }
+
+  Write-Host 'SUCCESS: signed Owner installer and update manifest are ready.'
   Write-Host 'Output: src-tauri/target/release/bundle/nsis/'
   Write-Host 'Keep the matching .exe.sig file. It is required for the update manifest.'
 }
