@@ -16,14 +16,31 @@ type Device = {
   name: string;
   recommended: 'web' | 'windows' | 'android';
   apple?: 'ios' | 'mac';
+  architecture?: 'x86' | 'x64' | 'arm64' | 'unknown';
 };
 
-export function detectDevice(ua: string, platform: string, touchPoints: number): Device {
+export function detectDevice(
+  ua: string,
+  platform: string,
+  touchPoints: number,
+  architectureHint?: string,
+  bitnessHint?: string
+): Device {
   if (/Android/i.test(ua)) return { name: 'Android', recommended: 'android' };
   if (/iPhone|iPad|iPod/i.test(ua) || (/Mac/i.test(platform) && touchPoints > 1)) {
     return { name: /iPhone/i.test(ua) ? 'iPhone' : 'iPad', recommended: 'web', apple: 'ios' };
   }
-  if (/Windows NT/i.test(ua) || /Win/i.test(platform)) return { name: 'Windows', recommended: 'windows' };
+  if (/Windows NT/i.test(ua) || /Win/i.test(platform)) {
+    const architecture = bitnessHint === '32' || /WOW64|Win32|i686/i.test(ua)
+      ? 'x86'
+      : /arm/i.test(architectureHint || '') || /ARM64/i.test(ua)
+        ? 'arm64'
+        : bitnessHint === '64' || /Win64|x64|amd64/i.test(ua)
+          ? 'x64'
+          : 'unknown';
+    const label = architecture === 'x86' ? 'Windows 32-bit' : architecture === 'x64' ? 'Windows 64-bit' : architecture === 'arm64' ? 'Windows ARM64' : 'Windows';
+    return { name: label, recommended: 'windows', architecture };
+  }
   if (/Mac/i.test(platform) || /Macintosh/i.test(ua)) return { name: 'Mac', recommended: 'web', apple: 'mac' };
   return { name: 'your device', recommended: 'web' };
 }
@@ -85,7 +102,7 @@ const releaseSummary = (body?: string) => {
 };
 
 const DownloadPortal: React.FC = () => {
-  const [device] = useState(() =>
+  const [device, setDevice] = useState(() =>
     detectDevice(navigator.userAgent, navigator.platform, navigator.maxTouchPoints)
   );
   const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null);
@@ -93,10 +110,22 @@ const DownloadPortal: React.FC = () => {
   const [installError, setInstallError] = useState('');
   const [android, setAndroid] = useState<DownloadItem | null>(null);
   const [windows, setWindows] = useState<DownloadItem | null>(null);
+  const [windowsX86, setWindowsX86] = useState<DownloadItem | null>(null);
   const [releases, setReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+
+  useEffect(() => {
+    const uaData = (navigator as Navigator & {
+      userAgentData?: { getHighEntropyValues?: (hints: string[]) => Promise<{ architecture?: string; bitness?: string }> };
+    }).userAgentData;
+    if (uaData?.getHighEntropyValues) {
+      void uaData.getHighEntropyValues(['architecture', 'bitness']).then(hints => {
+        setDevice(detectDevice(navigator.userAgent, navigator.platform, navigator.maxTouchPoints, hints.architecture, hints.bitness));
+      }).catch(() => undefined);
+    }
+  }, []);
 
   useEffect(() => {
     const ready = (event: Event) => {
@@ -136,10 +165,15 @@ const DownloadPortal: React.FC = () => {
         /^android-v\d+\.\d+\.\d+$/.test(release.tag_name) &&
         release.assets.some(asset => asset.name === 'Embroidery-Statement-Android.apk')
       );
-      const windowsAsset = windowsRelease?.assets.find(asset =>
+      const isWindowsCustomerInstaller = (asset: Asset) =>
         asset.name.toLowerCase().endsWith('.exe') &&
         !asset.name.toLowerCase().includes('owner') &&
-        !asset.name.toLowerCase().includes('uninstall')
+        !asset.name.toLowerCase().includes('uninstall');
+      const windowsAsset = windowsRelease?.assets.find(asset =>
+        isWindowsCustomerInstaller(asset) && /(?:x64|x86_64|amd64)-setup\.exe$/i.test(asset.name)
+      );
+      const windowsX86Asset = windowsRelease?.assets.find(asset =>
+        isWindowsCustomerInstaller(asset) && /(?:x86|i686|win32)-setup\.exe$/i.test(asset.name)
       );
       const androidAsset = androidRelease?.assets.find(asset =>
         asset.name === 'Embroidery-Statement-Android.apk'
@@ -150,6 +184,16 @@ const DownloadPortal: React.FC = () => {
         url: windowsAsset.browser_download_url,
         size: windowsAsset.size,
         digest: windowsAsset.digest,
+        publishedAt: windowsRelease.published_at,
+        releaseUrl: windowsRelease.html_url,
+        notes: windowsRelease.body || ''
+      } : null);
+
+      setWindowsX86(windowsRelease && windowsX86Asset ? {
+        version: windowsRelease.tag_name.slice(1),
+        url: windowsX86Asset.browser_download_url,
+        size: windowsX86Asset.size,
+        digest: windowsX86Asset.digest,
         publishedAt: windowsRelease.published_at,
         releaseUrl: windowsRelease.html_url,
         notes: windowsRelease.body || ''
@@ -198,6 +242,8 @@ const DownloadPortal: React.FC = () => {
   };
 
   const recommended = (kind: Device['recommended']) => device.recommended === kind;
+  const windowsDownload = device.architecture === 'x86' ? windowsX86 : windows;
+  const windowsArchitectureLabel = device.architecture === 'x86' ? '32-bit (x86)' : device.architecture === 'arm64' ? '64-bit (ARM)' : device.architecture === 'x64' ? '64-bit (x64)' : '64-bit (x64)';
   const appVersion = windows?.version || android?.version || 'Latest';
   const webInstallGuide = device.apple === 'ios'
     ? 'On iPhone or iPad: open this page in Safari, tap Share, choose Add to Home Screen, then tap Add.'
@@ -383,21 +429,33 @@ const DownloadPortal: React.FC = () => {
               <h3 className="mt-5 text-xl font-black tracking-tight text-slate-950">Windows</h3>
               <p className="mt-2 min-h-[48px] text-xs leading-6 text-slate-600">A dedicated desktop experience for Windows 10 and 11. Download the official customer installer.</p>
               <div className="mt-5 rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center justify-between text-[10px] text-slate-500"><span>Latest customer version</span><span className="font-black text-slate-900">{windows ? 'v' + windows.version : 'Checking…'}</span></div>
+                <div className="flex items-center justify-between text-[10px] text-slate-500"><span>Detected device</span><span className="font-black text-slate-900">{device.name}</span></div>
+                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500"><span>Recommended installer</span><span className="font-bold text-slate-800">{windowsArchitectureLabel}</span></div>
+                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500"><span>Latest customer version</span><span className="font-black text-slate-900">{windowsDownload ? 'v' + windowsDownload.version : windows ? 'v' + windows.version : 'Checking…'}</span></div>
                 <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500"><span>Installer format</span><span className="font-bold text-slate-800">Windows EXE</span></div>
-                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500"><span>File size</span><span className="font-bold text-slate-800">{windows ? formatSize(windows.size) : 'Not available'}</span></div>
-                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500"><span>Published</span><span className="font-bold text-slate-800">{formatDate(windows?.publishedAt)}</span></div>
+                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500"><span>File size</span><span className="font-bold text-slate-800">{windowsDownload ? formatSize(windowsDownload.size) : 'Not available'}</span></div>
+                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500"><span>Published</span><span className="font-bold text-slate-800">{formatDate(windowsDownload?.publishedAt || windows?.publishedAt)}</span></div>
               </div>
-              {windows ? (
+              {windowsDownload ? (
+                <a href={windowsDownload.url} className="mt-5 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-3 text-xs font-black text-white shadow-lg shadow-blue-700/15 transition hover:bg-blue-800">
+                  <Download size={16} /> Download Windows {device.architecture === 'x86' ? '32-bit' : '64-bit'} EXE <ArrowRight size={14} />
+                </a>
+              ) : device.architecture === 'x86' ? (
+                <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-xs font-semibold text-amber-800">The Windows 32-bit installer is not published yet. Do not install the 64-bit package on this device.</div>
+              ) : windows ? (
                 <a href={windows.url} className="mt-5 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-3 text-xs font-black text-white shadow-lg shadow-blue-700/15 transition hover:bg-blue-800">
-                  <Download size={16} /> Download Windows EXE <ArrowRight size={14} />
+                  <Download size={16} /> Download Windows 64-bit EXE <ArrowRight size={14} />
                 </a>
               ) : (
                 <div className="mt-5 rounded-xl border border-dashed border-slate-300 px-4 py-3 text-center text-xs font-semibold text-slate-500">Latest signed installer is not available.</div>
               )}
               <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] font-semibold text-slate-500"><ShieldCheck size={13} className="text-emerald-600" /> Customer installer · digitally signed release</div>
-              {windows?.digest && <details className="mt-4 rounded-xl border border-slate-200 px-3 py-2"><summary className="cursor-pointer text-[10px] font-bold text-slate-600">View SHA-256 checksum</summary><code className="mt-2 block break-all text-[9px] leading-5 text-slate-500">{windows.digest.replace('sha256:', '')}</code></details>}
-              {windows && <a href={windows.releaseUrl} target="_blank" rel="noreferrer" className="mt-3 text-center text-[10px] font-bold text-blue-700 hover:underline">Release notes and file archive <ExternalLink size={11} className="inline" /></a>}
+              {windowsDownload?.digest && <details className="mt-4 rounded-xl border border-slate-200 px-3 py-2"><summary className="cursor-pointer text-[10px] font-bold text-slate-600">View SHA-256 checksum</summary><code className="mt-2 block break-all text-[9px] leading-5 text-slate-500">{windowsDownload.digest.replace('sha256:', '')}</code></details>}
+              {windows && <div className="mt-3 flex flex-wrap justify-center gap-3 text-[10px] font-bold text-blue-700">
+                {windows && <a href={windows.url} className="hover:underline">64-bit EXE</a>}
+                {windowsX86 && <a href={windowsX86.url} className="hover:underline">32-bit EXE</a>}
+                <a href={windows.releaseUrl} target="_blank" rel="noreferrer" className="hover:underline">Release notes & archive <ExternalLink size={11} className="inline" /></a>
+              </div>}
             </article>
 
             <article className={'relative flex flex-col rounded-[1.65rem] border bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(15,23,42,.1)] ' + (recommended('android') ? 'border-violet-400 ring-4 ring-violet-100' : 'border-slate-200')}>
