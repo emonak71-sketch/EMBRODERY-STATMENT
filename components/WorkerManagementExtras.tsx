@@ -5,13 +5,14 @@ import {
   Download, FileImage, FileText, History, IdCard, Loader2, MessageSquare,
   Printer, RefreshCw, Search, ShieldCheck, TrendingUp, Upload, Wallet, X
 } from 'lucide-react';
+import { addCalendarYear } from '../desktop/accountingCore';
 import { dbService } from '../services/supabaseService';
 import { useLanguage } from '../contexts/LanguageContext';
 
 type Worker = {
   id: string; worker_code: string; full_name: string; phone: string;
   designation: string; joining_date: string; monthly_salary: number; is_active: boolean;
-  active_salary_month?: string;
+  active_salary_month?: string; salary_review_base_date?: string;
 };
 type WorkerDocument = {
   id: string; worker_id: string; document_type: string; file_path: string;
@@ -493,10 +494,9 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
   const dueInfo = (worker: Worker) => {
     const latest = increments.filter(i => i.worker_id === worker.id)
       .sort((a, b) => b.effective_date.localeCompare(a.effective_date))[0];
-    const baseDate = latest?.effective_date || worker.joining_date;
-    const due = new Date(baseDate + 'T00:00:00');
-    due.setFullYear(due.getFullYear() + 1);
-    const dueDate = [due.getFullYear(), String(due.getMonth() + 1).padStart(2, '0'), String(due.getDate()).padStart(2, '0')].join('-');
+    const baseDate = [latest?.effective_date, worker.salary_review_base_date].filter(Boolean).sort().at(-1) || worker.joining_date;
+    const dueDate = addCalendarYear(baseDate);
+    const due = new Date(dueDate + 'T00:00:00');
     return { dueDate, eligible: new Date(today() + 'T00:00:00') >= due, latest };
   };
 

@@ -1,7 +1,7 @@
 {
   "name": "embrodery-statement",
   "private": true,
-  "version": "1.0.11",
+  "version": "1.0.12",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -23,7 +23,8 @@
     "tauri": "npx --yes @tauri-apps/cli@2",
     "test:motion": "node scripts/motion-system-contract.test.mjs",
     "test:downloads": "node scripts/download-portal.test.mjs",
-    "test:owner-customer-contacts": "node scripts/owner-customer-phone-contract.test.mjs"
+    "test:owner-customer-contacts": "node scripts/owner-customer-phone-contract.test.mjs",
+    "test:accounting": "node desktop/accountingCore.test.mjs && node scripts/business-recovery-db.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",
@@ -34,6 +35,7 @@
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.15",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "10.4.21",

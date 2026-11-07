@@ -19,6 +19,7 @@ import SupportCenter from './components/SupportCenter';
 import NotificationCenter from './components/NotificationCenter';
 import AndroidUpdateBanner from './components/AndroidUpdateBanner';
 import SplashScreen from './components/SplashScreen';
+const AccountTools = React.lazy(() => import('./components/AccountTools'));
 import AccountPlanStatus from './components/AccountPlanStatus';
 import type { AccountAccess } from './desktop/subscriptionStatus';
 
@@ -549,6 +550,7 @@ const App: React.FC = () => {
         {hasPaidAccess===false ? (
           activeTab==='support' ? <SupportCenter userId={user.id} email={user.email}/> : activeTab==='settings' ? <Settings user={user} onUpdateProfile={handleUpdateProfile} onAppLockUpdated={setAppLockUpdatedAt} accountAccess={trialStatus} onViewPlans={()=>selectSidebarTab('billing')}/> : <SubscriptionBilling onAccessRefresh={refreshSubscriptionAccess} />
         ) : <>
+        {activeTab === 'account_tools' && <React.Suspense fallback={<p role="status">Loading account controls…</p>}><AccountTools user={user} parties={parties} transactions={transactions} onRefresh={refreshData} onRestoreParty={async(id)=>{await dbService.updateParty(id,{is_deleted:false});await refreshData();}}/></React.Suspense>}
         {activeTab === 'workers' && <WorkerAttendance userId={user.id} companyName={user.business_name} requestedAttendance={attendanceRequest} />}
         {activeTab === 'billing' && <SubscriptionBilling onAccessRefresh={refreshSubscriptionAccess} />}
         {activeTab === 'support' && <SupportCenter userId={user.id} email={user.email}/>}
@@ -623,7 +625,7 @@ const App: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 max-w-xs w-full text-center animate-in zoom-in-95">
             <h4 className="text-lg font-black uppercase tracking-tight mb-2 text-rose-600">Delete Transaction?</h4>
             <p className="text-[11px] font-bold text-slate-500 mb-8 leading-relaxed">
-              Are you sure you want to delete this record?
+              This record can be restored from Account controls → Recycle bin for 30 days.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setTxToDelete(null)} className="py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all">Cancel</button>
