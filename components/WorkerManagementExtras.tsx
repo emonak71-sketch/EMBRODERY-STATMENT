@@ -35,7 +35,7 @@ type Payroll = {
   paid_at?: string | null; payment_method?: string | null; payment_reference?: string | null;
 };
 type SmsLog = {
-  id: string; worker_id: string; event_type: 'salary_paid' | 'advance_paid' | 'custom'; related_id?: string | null; idempotency_key: string;
+  id: string; worker_id: string; event_type: 'salary_paid' | 'advance_paid' | 'custom' | 'worker_completed'; related_id?: string | null; idempotency_key: string;
   mobile: string; message: string; sms_mode: 'non-masking' | 'masking';
   sender_id?: string | null; status: 'pending' | 'accepted' | 'failed';
   error_message?: string | null; attempts: number; created_at: string; accepted_at?: string | null;
