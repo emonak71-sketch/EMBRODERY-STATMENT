@@ -3,6 +3,7 @@ import { Download, RefreshCw, Settings, ShieldCheck } from 'lucide-react';
 import { desktopInvoke, isWindowsDesktop } from '../desktop/tauriBridge';
 import { APP_VERSION } from '../desktop/appVersion';
 import type { DesktopUpdateInfo } from './DesktopSettings';
+import { dbService } from '../services/supabaseService';
 
 export default function OwnerUpdateSettings() {
   const desktop = isWindowsDesktop();
@@ -12,6 +13,19 @@ export default function OwnerUpdateSettings() {
   const [error, setError] = useState('');
   const [lastCheck, setLastCheck] = useState(() => localStorage.getItem('owner_last_update_check') || '');
   const busy = useRef(false);
+  const [workerSmsEnabled, setWorkerSmsEnabled] = useState(false);
+  const [smsLoading, setSmsLoading] = useState(true);
+  const [smsSaving, setSmsSaving] = useState(false);
+  const [smsMessage, setSmsMessage] = useState('');
+  const [smsError, setSmsError] = useState('');
+  useEffect(() => { let active = true; dbService.getWorkerSmsEnabled().then(value => { if (active) setWorkerSmsEnabled(value); }).catch(e => { if (active) setSmsError(String(e?.message || e)); }).finally(() => { if (active) setSmsLoading(false); }); return () => { active = false; }; }, []);
+  const updateWorkerSms = async (enabled: boolean) => {
+    if (smsSaving) return;
+    setSmsSaving(true); setSmsError(''); setSmsMessage('');
+    try { const saved = await dbService.setWorkerSmsEnabled(enabled); setWorkerSmsEnabled(saved); setSmsMessage(saved ? 'Worker SMS service is enabled for customer apps.' : 'Worker SMS service is disabled. SMS controls are hidden and sending is blocked server-side.'); }
+    catch (e: any) { setSmsError(e?.message || 'Could not update SMS service.'); }
+    finally { setSmsSaving(false); }
+  };
   useEffect(() => {
     if (!desktop) return;
     let active = true;
@@ -53,6 +67,12 @@ export default function OwnerUpdateSettings() {
   return <section className="space-y-5">
     <div><div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-sky-600"><Settings size={16}/>Settings</div>
       <h1 className="mt-2 text-2xl font-black">Owner Application Settings</h1></div>
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-base font-black">Worker SMS Service</h2><p className="mt-1 max-w-2xl text-sm text-slate-500">Control SMS for all customer accounts. When disabled, customer SMS buttons and history are hidden, and the server rejects every send request.</p></div><span className={'rounded-full px-3 py-1 text-xs font-black '+(workerSmsEnabled?'bg-emerald-100 text-emerald-800':'bg-slate-200 text-slate-700')}>{smsLoading?'Loading…':workerSmsEnabled?'ON':'OFF'}</span></div>
+      {smsMessage && <p role="status" className="mt-3 rounded-xl bg-sky-50 p-3 text-sm text-sky-800">{smsMessage}</p>}
+      {smsError && <p role="alert" className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{smsError}</p>}
+      <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={smsLoading||smsSaving||workerSmsEnabled} onClick={()=>void updateWorkerSms(true)} className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40">{smsSaving?'Saving…':'Enable SMS'}</button><button type="button" disabled={smsLoading||smsSaving||!workerSmsEnabled} onClick={()=>void updateWorkerSms(false)} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-700 disabled:opacity-40">{smsSaving?'Saving…':'Disable SMS'}</button></div>
+    </div>
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <h2 className="flex items-center gap-2 text-base font-black"><ShieldCheck size={18} className="text-sky-600"/>Application Updates</h2>
       <p className="mt-2 text-sm text-slate-500">Current version: <strong>{info?.current_version || APP_VERSION}</strong></p>
