@@ -210,6 +210,9 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
   const [smsSending, setSmsSending] = useState(false);
   const [smsLogs, setSmsLogs] = useState<SmsLog[]>([]);
   const [smsLogsLoading, setSmsLogsLoading] = useState(false);
+  const [smsEnabled, setSmsEnabled] = useState(false);
+  useEffect(() => { let active = true; dbService.getWorkerSmsEnabled().then(value => { if (active) setSmsEnabled(value); }).catch(() => { if (active) setSmsEnabled(false); }); return () => { active = false; }; }, []);
+  useEffect(() => { if (!smsEnabled && tab === 'sms') setTab('documents'); }, [smsEnabled, tab]);
 
   const selectedWorker = useMemo(
     () => workers.find(w => w.id === selectedWorkerId) || null,
@@ -347,9 +350,9 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
     event.preventDefault();
     if (!selectedWorker || incrementSaving.current) return;
     const currentSalary = Number(selectedWorker.monthly_salary) || 0;
-    const newSalary = Math.round(Number(incrementValue) * 100) / 100;
-    const roundedAmount = (Math.round(newSalary * 100) - Math.round(currentSalary * 100)) / 100;
-    if (!Number.isFinite(newSalary) || roundedAmount <= 0) { setError(tr('বেতন বৃদ্ধির পরিমাণ সঠিক নয়।', 'Enter a valid increment amount.')); return; }
+    const roundedAmount = Math.round(Number(incrementValue) * 100) / 100;
+    const newSalary = Math.round((currentSalary + roundedAmount) * 100) / 100;
+    if (!Number.isFinite(roundedAmount) || roundedAmount <= 0) { setError(tr('বেতন বৃদ্ধির পরিমাণ সঠিক নয়।', 'Enter a valid increment amount.')); return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(incrementDate) || incrementDate > today()) { setError(tr('আজ বা আগের কার্যকর হওয়ার তারিখ দিন।', 'Choose today or an earlier effective date.')); return; }
     incrementSaving.current = true;
     setSaving(true); setError(''); setNotice('');
@@ -403,8 +406,12 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
       );
       setAdvanceAmount('');
       setAdvanceReason('');
-      setSmsDraft({ worker: selectedWorker, message: advanceMessage, eventType: 'advance_paid', relatedId: advanceRow.id });
-      setNotice(tr('অগ্রিম সংরক্ষিত হয়েছে। SMS পাঠাতে চাইলে বার্তাটি যাচাই করে Send চাপুন।', 'Advance saved. Review the editable SMS draft and press Send only if you want to notify the worker.'));
+      if (smsEnabled) {
+        setSmsDraft({ worker: selectedWorker, message: advanceMessage, eventType: 'advance_paid', relatedId: advanceRow.id });
+        setNotice(tr('অগ্রিম সংরক্ষিত হয়েছে। SMS পাঠাতে চাইলে বার্তাটি যাচাই করে Send চাপুন।', 'Advance saved. Review the editable SMS draft and press Send only if you want to notify the worker.'));
+      } else {
+        setNotice(tr('অগ্রিম সংরক্ষিত হয়েছে। Owner SMS সেবা বন্ধ রেখেছেন।', 'Advance saved. SMS service is disabled by the Owner.'));
+      }
     } catch (e: any) {
       setError(e.message || 'Advance could not be recorded. Check the salary month; it may already be paid.');
     } finally { setSaving(false); }
@@ -455,7 +462,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
     [workers, slipWorkerId]
   );
   const requestSlipSms = () => {
-    if (!selectedSlip || !slipWorker || selectedSlip.status !== 'paid') return;
+    if (!smsEnabled || !selectedSlip || !slipWorker || selectedSlip.status !== 'paid') return;
     setSmsDraft({
       worker: slipWorker,
       eventType: 'custom',
@@ -468,7 +475,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
   };
 
   const sendSmsDraft = async () => {
-    if (!smsDraft) return;
+    if (!smsEnabled || !smsDraft) return;
     if (!smsDraft.worker.phone) { setError(tr('এই কর্মীর মোবাইল নম্বর নেই।', 'This worker has no mobile number.')); return; }
     setSmsSending(true);
     setError('');
@@ -532,7 +539,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
           ['annual', tr('বার্ষিক রিপোর্ট', 'Annual Report'), CalendarDays],
           ['payslip', tr('পে-স্লিপ', 'Payslips'), FileImage],
           ['sms', tr('SMS হিস্ট্রি', 'SMS History'), MessageSquare]
-        ] as const).map(([id, label, Icon]) => (
+        ] as const).filter(([id]) => id !== 'sms' || smsEnabled).map(([id, label, Icon]) => (
           <button key={id} onClick={() => setTab(id)} className={'flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold transition ' + (tab === id ? 'bg-blue-700 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800')}>
             <Icon size={15} />{label}
           </button>
@@ -619,15 +626,15 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
               </div>
               <form onSubmit={submitIncrement} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                 <h3 className="font-black">{tr('বেতন বাড়ান', 'Increase salary')}</h3>
-                <p className="mb-4 mt-1 text-sm text-slate-500">{tr('নতুন মোট মাসিক বেতন লিখে সেভ করুন। আপনি সেভ করলেই শুধু বেতন বদলাবে।', 'Enter the new total monthly salary and save. Salary changes only when you save.')}</p>
+                <p className="mb-4 mt-1 text-sm text-slate-500">{tr('বর্তমান বেতনের সঙ্গে কত টাকা বাড়াবেন তা লিখুন। নতুন বেতন নিজে থেকেই হিসাব হবে।', 'Enter how much to add to the current salary. The new salary is calculated automatically.')}</p>
                 <fieldset disabled={saving} className="space-y-4">
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="text-sm font-bold">{tr('নতুন মাসিক বেতন (৳)', 'New monthly salary (BDT)')}<input type="number" inputMode="decimal" min={(Number(selectedWorker.monthly_salary)+0.01).toFixed(2)} step="0.01" required value={incrementValue} onChange={e=>setIncrementValue(e.target.value)} placeholder={tr('যেমন: ১৫০০০', 'e.g. 15000')} className="mt-2 w-full rounded-xl border bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800" /></label>
+                    <label className="text-sm font-bold">{tr('কত টাকা বাড়াবেন (৳)', 'Increase amount (BDT)')}<input type="number" inputMode="decimal" min="0.01" step="0.01" required value={incrementValue} onChange={e=>setIncrementValue(e.target.value)} placeholder={tr('যেমন: ১০০০', 'e.g. 1000')} className="mt-2 w-full rounded-xl border bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800" /></label>
                     <label className="text-sm font-bold">{tr('কোন তারিখ থেকে', 'Effective from')}<input type="date" max={today()} required value={incrementDate} onChange={e=>setIncrementDate(e.target.value)} className="mt-2 w-full rounded-xl border bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800" /></label>
                   </div>
-                  {Number(incrementValue)>Number(selectedWorker.monthly_salary)&&<p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">{money(selectedWorker.monthly_salary)} → <b>{money(Number(incrementValue))}</b> · {tr('বাড়ছে ', 'Increase: ')}{money((Math.round(Number(incrementValue)*100)-Math.round(Number(selectedWorker.monthly_salary)*100))/100)}<span className="mt-1 block text-xs">{tr('সেভ করলে পরের পর্যালোচনা: ', 'After saving, next review: ')}{incrementDate ? dateLabel(addCalendarYear([incrementDate, dueInfo(selectedWorker).baseDate].sort().at(-1)!)) : '—'}</span></p>}
+                  {Number(incrementValue)>0&&<p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">{money(selectedWorker.monthly_salary)} → <b>{money(Number(selectedWorker.monthly_salary)+Number(incrementValue))}</b> · {tr('বাড়ছে ', 'Increase: ')}{money(Number(incrementValue))}<span className="mt-1 block text-xs">{tr('সেভ করলে পরের পর্যালোচনা: ', 'After saving, next review: ')}{incrementDate ? dateLabel(addCalendarYear([incrementDate, dueInfo(selectedWorker).baseDate].sort().at(-1)!)) : '—'}</span></p>}
                   <details><summary className="cursor-pointer text-xs text-slate-500">{tr('কারণ / নোট (ঐচ্ছিক)', 'Reason / note (optional)')}</summary><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold">{tr('কারণ', 'Reason')}<select value={incrementReason} onChange={e=>setIncrementReason(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><option value="annual_appraisal">{tr('বার্ষিক মূল্যায়ন', 'Annual review')}</option><option value="promotion">{tr('পদোন্নতি', 'Promotion')}</option><option value="performance">{tr('কর্মদক্ষতা', 'Performance')}</option><option value="market_adjustment">{tr('বাজার সমন্বয়', 'Market adjustment')}</option><option value="special">{tr('বিশেষ', 'Special')}</option></select></label><label className="text-xs font-bold">{tr('নোট', 'Note')}<input value={incrementNotes} onChange={e=>setIncrementNotes(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800" /></label></div></details>
-                  <button disabled={saving||!Number.isFinite(Number(incrementValue))||Number(incrementValue)<=Number(selectedWorker.monthly_salary)} className="w-full rounded-xl bg-emerald-700 px-5 py-3 text-sm font-black text-white disabled:opacity-50 sm:w-auto">{saving?tr('সংরক্ষণ হচ্ছে…', 'Saving…'):tr('নতুন বেতন সেভ করুন', 'Save new salary')}</button>
+                  <button disabled={saving||!Number.isFinite(Number(incrementValue))||Number(incrementValue)<=0} className="w-full rounded-xl bg-emerald-700 px-5 py-3 text-sm font-black text-white disabled:opacity-50 sm:w-auto">{saving?tr('সংরক্ষণ হচ্ছে…', 'Saving…'):tr('বেতন বৃদ্ধি সেভ করুন', 'Save salary increase')}</button>
                 </fieldset>
               </form>
               <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><h3 className="mb-3 font-black">{tr('কবে কবে বেতন বেড়েছে', 'Salary increase history')}</h3><div className="space-y-3">{incrementRows.filter(r=>r.worker_id===selectedWorker.id).map(row=><div key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><div><p className="text-sm font-bold">{dateLabel(row.effective_date)}</p><p className="mt-1 text-sm">{money(row.previous_salary)} → <b>{money(row.new_salary)}</b></p></div><span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">+{money(row.increment_amount)}</span></div>)}</div>{!incrementRows.some(r=>r.worker_id===selectedWorker.id)&&<p className="text-sm text-slate-500">{tr('এখনো বেতন বৃদ্ধির রেকর্ড নেই।', 'No salary increases recorded yet.')}</p>}</div>
@@ -678,7 +685,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
                 <div><h3 className="font-black">{tr('SMS পাঠানোর ইতিহাস', 'SMS Sending History')}</h3><p className="text-xs text-slate-500">{tr('Accepted মানে DNotify অনুরোধ গ্রহণ করেছে; এটি মোবাইলে Delivered হওয়ার নিশ্চয়তা নয়।', 'Accepted means DNotify accepted the request; it is not a handset delivery confirmation.')}</p></div>
                 <div className="flex gap-2">
                   <button onClick={loadSmsLogs} disabled={smsLogsLoading} className="rounded-lg border px-3 py-2 text-xs font-bold dark:border-slate-700"><RefreshCw size={13} className="mr-1 inline" />{tr('রিফ্রেশ', 'Refresh')}</button>
-                  <button onClick={() => selectedWorker && setSmsDraft({ worker: selectedWorker, message: '', eventType: 'custom', idempotencyKey: crypto.randomUUID() })} disabled={!selectedWorker?.phone} className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"><MessageSquare size={13} className="mr-1 inline" />{tr('Custom SMS', 'Compose SMS')}</button>
+                  <button onClick={() => selectedWorker && setSmsDraft({ worker: selectedWorker, message: '', eventType: 'custom', idempotencyKey: crypto.randomUUID() })} disabled={!smsEnabled || !selectedWorker?.phone} className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"><MessageSquare size={13} className="mr-1 inline" />{tr('Custom SMS', 'Compose SMS')}</button>
                 </div>
               </div>
               {smsLogsLoading ? <p className="py-8 text-center text-sm text-slate-500"><Loader2 size={16} className="mr-2 inline animate-spin" />{tr('লোড হচ্ছে...', 'Loading...')}</p> : (
@@ -738,7 +745,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
         </>
       )}
 
-      {smsDraft && (
+      {smsEnabled && smsDraft && (
         <div className="fixed inset-0 z-[260] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900">
             <div className="mb-3 flex items-center justify-between"><div><h3 className="font-black">{tr('SMS বার্তা সম্পাদনা', 'Edit SMS Message')}</h3><p className="text-xs text-slate-500">{smsDraft.worker.full_name} · {smsDraft.worker.phone || 'No phone number'}</p></div><button onClick={() => setSmsDraft(null)} className="rounded-lg p-2 text-slate-500"><X size={18} /></button></div>
