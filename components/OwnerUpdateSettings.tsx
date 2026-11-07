@@ -77,7 +77,7 @@ export default function OwnerUpdateSettings() {
       <h2 className="flex items-center gap-2 text-base font-black"><ShieldCheck size={18} className="text-sky-600"/>Application Updates</h2>
       <p className="mt-2 text-sm text-slate-500">Current version: <strong>{info?.current_version || APP_VERSION}</strong></p>
       {!desktop ? <p className="mt-4 text-sm text-slate-500">Open Settings in the Owner Windows application to check for and install EXE updates.</p> : <>
-        <p className="mt-2 text-sm text-slate-500">Check for a new version, then choose Update Now when you are ready.</p>
+        <p role="status" className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm leading-6 text-sky-900 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-100">Owner Control Center updates are distributed through the private Owner-only release channel. The public updater is intentionally not used, so the private installer is never exposed through a public GitHub release. Automatic update checks are paused until the secure private updater is connected.</p>
         {lastCheck && <p className="mt-2 text-xs text-slate-500">Last check: {lastCheck}</p>}
         {message && <p role="status" className="mt-4 rounded-xl bg-sky-50 p-3 text-sm text-sky-800 dark:bg-sky-950/30 dark:text-sky-200">{message}</p>}
         {error && <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">{error}</p>}
@@ -85,14 +85,15 @@ export default function OwnerUpdateSettings() {
           <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">New version available: {info.available_version}</p>
           {info.notes && <p className="mt-2 whitespace-pre-wrap text-sm text-slate-500">{info.notes}</p>}
         </div>}
-        <div className="mt-5 flex flex-wrap gap-3">
+        {/* Public updater is deliberately disabled for the private Owner application. */}
+        {false && <div className="mt-5 flex flex-wrap gap-3">
           <button type="button" disabled={action !== null} onClick={() => void checkUpdates()} className="inline-flex items-center gap-2 rounded-xl bg-sky-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">
             <RefreshCw size={16} className={action === 'checking' ? 'animate-spin' : ''}/>{action === 'checking' ? 'Checking…' : 'Check for Updates'}
           </button>
           {info?.available_version && info.configured && !info.portable && <button type="button" disabled={action !== null} onClick={() => void installUpdate()} className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">
             <Download size={16}/>{action === 'installing' ? 'Updating…' : 'Update Now'}
           </button>}
-        </div>
+        </div>}
       </>}
     </div>
   </section>;
