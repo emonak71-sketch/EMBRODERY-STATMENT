@@ -14,7 +14,7 @@ type InstallPrompt = Event & {
 
 type Device = {
   name: string;
-  recommended: 'web' | 'windows' | 'android';
+  recommended: 'web' | 'windows' | 'android' | 'mac';
   apple?: 'ios' | 'mac';
   architecture?: 'x86' | 'x64' | 'arm64' | 'unknown';
 };
@@ -43,7 +43,10 @@ export function detectDevice(
     const label = architecture === 'x86' ? 'Windows 32-bit' : architecture === 'x64' ? 'Windows 64-bit' : architecture === 'arm64' ? 'Windows ARM64' : 'Windows';
     return { name: label, recommended: 'windows', architecture };
   }
-  if (/Mac/i.test(platform) || /Macintosh/i.test(ua)) return { name: 'Mac', recommended: 'web', apple: 'mac' };
+  if (/Mac/i.test(platform) || /Macintosh/i.test(ua)) {
+    const architecture = /arm/i.test(architectureHint || '') ? 'arm64' : /x86|intel/i.test(architectureHint || '') ? 'x64' : 'unknown';
+    return { name: architecture === 'arm64' ? 'Mac (Apple Silicon)' : architecture === 'x64' ? 'Mac (Intel)' : 'Mac', recommended: 'mac', apple: 'mac', architecture };
+  }
   return { name: 'your device', recommended: 'web' };
 }
 
@@ -113,6 +116,8 @@ const DownloadPortal: React.FC = () => {
   const [showAllPlatforms, setShowAllPlatforms] = useState(false);
   const [android, setAndroid] = useState<DownloadItem | null>(null);
   const [windows, setWindows] = useState<DownloadItem | null>(null);
+  const [macIntel, setMacIntel] = useState<DownloadItem | null>(null);
+  const [macArm, setMacArm] = useState<DownloadItem | null>(null);
   const [windowsX86, setWindowsX86] = useState<DownloadItem | null>(null);
   const [releases, setReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,6 +186,12 @@ const DownloadPortal: React.FC = () => {
       const androidAsset = androidRelease?.assets.find(asset =>
         asset.name === 'Embroidery-Statement-Android.apk'
       );
+      const macIntelAsset = windowsRelease?.assets.find(asset =>
+        asset.name === 'Embroidery.Statement_' + windowsRelease.tag_name.slice(1) + '_macOS_x64.dmg'
+      );
+      const macArmAsset = windowsRelease?.assets.find(asset =>
+        asset.name === 'Embroidery.Statement_' + windowsRelease.tag_name.slice(1) + '_macOS_arm64.dmg'
+      );
 
       setWindows(windowsRelease && windowsAsset ? {
         version: windowsRelease.tag_name.slice(1),
@@ -197,6 +208,26 @@ const DownloadPortal: React.FC = () => {
         url: windowsX86Asset.browser_download_url,
         size: windowsX86Asset.size,
         digest: windowsX86Asset.digest,
+        publishedAt: windowsRelease.published_at,
+        releaseUrl: windowsRelease.html_url,
+        notes: windowsRelease.body || ''
+      } : null);
+
+      setMacIntel(windowsRelease && macIntelAsset ? {
+        version: windowsRelease.tag_name.slice(1),
+        url: macIntelAsset.browser_download_url,
+        size: macIntelAsset.size,
+        digest: macIntelAsset.digest,
+        publishedAt: windowsRelease.published_at,
+        releaseUrl: windowsRelease.html_url,
+        notes: windowsRelease.body || ''
+      } : null);
+
+      setMacArm(windowsRelease && macArmAsset ? {
+        version: windowsRelease.tag_name.slice(1),
+        url: macArmAsset.browser_download_url,
+        size: macArmAsset.size,
+        digest: macArmAsset.digest,
         publishedAt: windowsRelease.published_at,
         releaseUrl: windowsRelease.html_url,
         notes: windowsRelease.body || ''
@@ -246,8 +277,9 @@ const DownloadPortal: React.FC = () => {
 
   const recommended = (kind: Device['recommended']) => device.recommended === kind;
   const windowsDownload = device.architecture === 'x86' ? windowsX86 : (device.architecture === 'x64' || device.architecture === 'arm64') ? windows : null;
+  const macDownload = device.architecture === 'arm64' ? macArm : device.architecture === 'x64' ? macIntel : null;
   const windowsArchitectureLabel = device.architecture === 'x86' ? '32-bit (x86)' : device.architecture === 'arm64' ? '64-bit (ARM)' : device.architecture === 'x64' ? '64-bit (x64)' : '64-bit (x64)';
-  const appVersion = windows?.version || android?.version || 'Latest';
+  const appVersion = windows?.version || android?.version || macIntel?.version || macArm?.version || 'Latest';
   const webInstallGuide = device.apple === 'ios'
     ? 'On iPhone or iPad: open this page in Safari, tap Share, choose Add to Home Screen, then tap Add.'
     : device.apple === 'mac'
@@ -492,6 +524,41 @@ const DownloadPortal: React.FC = () => {
               <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] font-semibold text-slate-500"><ShieldCheck size={13} className="text-emerald-600" /> Signed APK · same app identity for updates</div>
               {android?.digest && <details className="mt-4 rounded-xl border border-slate-200 px-3 py-2"><summary className="cursor-pointer text-[10px] font-bold text-slate-600">View SHA-256 checksum</summary><code className="mt-2 block break-all text-[9px] leading-5 text-slate-500">{android.digest.replace('sha256:', '')}</code></details>}
               {android && <a href={android.releaseUrl} target="_blank" rel="noreferrer" className="mt-3 text-center text-[10px] font-bold text-violet-700 hover:underline">Release notes and file archive <ExternalLink size={11} className="inline" /></a>}
+            </article>}
+
+            {(showAllPlatforms || recommended('mac')) && <article className={'relative flex flex-col rounded-[1.65rem] border bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(15,23,42,.1)] ' + (recommended('mac') ? 'border-slate-500 ring-4 ring-slate-100' : 'border-slate-200')}>
+              {recommended('mac') && <div className="absolute -top-3 left-6 rounded-full bg-slate-800 px-3 py-1 text-[9px] font-black uppercase tracking-[.14em] text-white shadow-lg">Recommended for you</div>}
+              <div className="flex items-start justify-between">
+                <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-800"><Apple size={27} /></div>
+                <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[.12em] text-slate-700">macOS desktop app</span>
+              </div>
+              <h3 className="mt-5 text-xl font-black tracking-tight text-slate-950">Mac Customer App</h3>
+              <p className="mt-2 min-h-[48px] text-xs leading-6 text-slate-600">Dedicated macOS installer for Intel Macs and Apple Silicon Macs (M-series).</p>
+              <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+                <div className="flex items-center justify-between text-[10px] text-slate-500"><span>Detected device</span><span className="font-black text-slate-900">{device.name}</span></div>
+                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500"><span>Installer architecture</span><span className="font-bold text-slate-800">{device.architecture === 'arm64' ? 'Apple Silicon' : device.architecture === 'x64' ? 'Intel' : 'Choose manually'}</span></div>
+                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500"><span>Latest version</span><span className="font-black text-slate-900">{macDownload ? 'v' + macDownload.version : macIntel || macArm ? 'v' + (macIntel || macArm)!.version : 'Checking…'}</span></div>
+                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500"><span>Installer format</span><span className="font-bold text-slate-800">DMG</span></div>
+                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500"><span>File size</span><span className="font-bold text-slate-800">{macDownload ? formatSize(macDownload.size) : 'Choose architecture'}</span></div>
+              </div>
+              {macDownload ? (
+                <a href={macDownload.url} className="mt-5 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-800 px-4 py-3 text-xs font-black text-white shadow-lg transition hover:bg-slate-900">
+                  <Download size={16} /> Download Mac {device.architecture === 'arm64' ? 'Apple Silicon' : 'Intel'} DMG <ArrowRight size={14} />
+                </a>
+              ) : (
+                <div className="mt-5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-center text-xs font-semibold text-sky-900">
+                  Choose the installer for your Mac:
+                  <div className="mt-2 flex justify-center gap-4">
+                    {macIntel && <a href={macIntel.url} className="underline underline-offset-2">Intel DMG</a>}
+                    {macArm && <a href={macArm.url} className="underline underline-offset-2">Apple Silicon DMG</a>}
+                  </div>
+                  {!macIntel && !macArm && <span>Mac installer is being built or has not been published yet.</span>}
+                </div>
+              )}
+              <div className="mt-3 text-center text-[10px] font-semibold text-slate-500">Customer app only · DMG installer · updater-signed</div>
+              {macDownload?.digest && <details className="mt-4 rounded-xl border border-slate-200 px-3 py-2"><summary className="cursor-pointer text-[10px] font-bold text-slate-600">View SHA-256 checksum</summary><code className="mt-2 block break-all text-[9px] leading-5 text-slate-500">{macDownload.digest.replace('sha256:', '')}</code></details>}
+              {(macIntel || macArm) && <a href={(macDownload || macIntel || macArm)!.releaseUrl} target="_blank" rel="noreferrer" className="mt-3 text-center text-[10px] font-bold text-slate-700 hover:underline">Release notes and file archive <ExternalLink size={11} className="inline" /></a>}
+              <p className="mt-3 text-[10px] leading-5 text-amber-700">Note: Apple Developer ID signing and notarization are separate from updater signing and may be required to avoid macOS Gatekeeper warnings.</p>
             </article>}
 
             {(showAllPlatforms || recommended('web')) && <article className={'relative flex flex-col rounded-[1.65rem] border bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(15,23,42,.1)] ' + (recommended('web') ? 'border-emerald-400 ring-4 ring-emerald-100' : 'border-slate-200')}>
