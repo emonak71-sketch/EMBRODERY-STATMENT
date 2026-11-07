@@ -396,7 +396,7 @@ const DownloadPortal: React.FC = () => {
             <div>
               <div className="text-[10px] font-black uppercase tracking-[.23em] text-blue-700">Choose your platform</div>
               <h2 className="mt-3 text-3xl font-black tracking-[-.045em] text-slate-950 sm:text-4xl">Get the right app for your device.</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">We detected <strong>{device.name}</strong>. Your recommended option is highlighted, but every platform remains available below.</p>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">We detected <strong>{device.name}</strong>. The matching app is shown first. Choose another device to view all available platforms.</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-[10px] font-bold text-slate-600 shadow-sm">
