@@ -32,7 +32,7 @@ const manifest = {
   }
 };
 
-fs.writeFileSync('latest-owner.json', JSON.stringify(manifest, null, 2) + '\\n');
+fs.writeFileSync('latest-owner.json', JSON.stringify(manifest, null, 2) + '\n');
 console.log('Created latest-owner.json for version ' + version);
 console.log('Upload these three files to GitHub Release v' + version + ':');
 console.log('  ' + installer);
