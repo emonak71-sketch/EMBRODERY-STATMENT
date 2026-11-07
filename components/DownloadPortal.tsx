@@ -110,6 +110,7 @@ const DownloadPortal: React.FC = () => {
   const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null);
   const [installing, setInstalling] = useState(false);
   const [installError, setInstallError] = useState('');
+  const [showAllPlatforms, setShowAllPlatforms] = useState(false);
   const [android, setAndroid] = useState<DownloadItem | null>(null);
   const [windows, setWindows] = useState<DownloadItem | null>(null);
   const [windowsX86, setWindowsX86] = useState<DownloadItem | null>(null);
@@ -395,7 +396,7 @@ const DownloadPortal: React.FC = () => {
             <div>
               <div className="text-[10px] font-black uppercase tracking-[.23em] text-blue-700">Choose your platform</div>
               <h2 className="mt-3 text-3xl font-black tracking-[-.045em] text-slate-950 sm:text-4xl">Get the right app for your device.</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">We detected <strong>{device.name}</strong>. Your recommended option is highlighted, but every platform remains available below.</p>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">We detected <strong>{device.name}</strong>. The matching app is shown first. Choose another device to view all available platforms.</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-[10px] font-bold text-slate-600 shadow-sm">
@@ -404,6 +405,9 @@ const DownloadPortal: React.FC = () => {
               </div>
               <button onClick={() => void loadReleases()} disabled={loading} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-[10px] font-extrabold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-700 disabled:opacity-50">
                 <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
+              </button>
+              <button onClick={() => setShowAllPlatforms(value => !value)} className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3.5 py-2 text-[10px] font-extrabold text-blue-800 shadow-sm transition hover:bg-blue-100">
+                {showAllPlatforms ? 'Show recommended only' : 'Choose another device'}
               </button>
             </div>
           </div>
@@ -422,7 +426,7 @@ const DownloadPortal: React.FC = () => {
           )}
 
           <div className="mt-8 grid gap-5 lg:grid-cols-3">
-            <article className={'relative flex flex-col rounded-[1.65rem] border bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(15,23,42,.1)] ' + (recommended('windows') ? 'border-blue-400 ring-4 ring-blue-100' : 'border-slate-200')}>
+            {(showAllPlatforms || recommended('windows')) && <article className={'relative flex flex-col rounded-[1.65rem] border bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(15,23,42,.1)] ' + (recommended('windows') ? 'border-blue-400 ring-4 ring-blue-100' : 'border-slate-200')}>
               {recommended('windows') && <div className="absolute -top-3 left-6 rounded-full bg-blue-600 px-3 py-1 text-[9px] font-black uppercase tracking-[.14em] text-white shadow-lg">Recommended for you</div>}
               <div className="flex items-start justify-between">
                 <div className="grid h-14 w-14 place-items-center rounded-2xl bg-blue-50 text-blue-700"><Monitor size={27} /></div>
@@ -462,9 +466,9 @@ const DownloadPortal: React.FC = () => {
                 {windowsX86 && <a href={windowsX86.url} className="hover:underline">32-bit EXE</a>}
                 <a href={windows.releaseUrl} target="_blank" rel="noreferrer" className="hover:underline">Release notes & archive <ExternalLink size={11} className="inline" /></a>
               </div>}
-            </article>
+            </article>}
 
-            <article className={'relative flex flex-col rounded-[1.65rem] border bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(15,23,42,.1)] ' + (recommended('android') ? 'border-violet-400 ring-4 ring-violet-100' : 'border-slate-200')}>
+            {(showAllPlatforms || recommended('android')) && <article className={'relative flex flex-col rounded-[1.65rem] border bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(15,23,42,.1)] ' + (recommended('android') ? 'border-violet-400 ring-4 ring-violet-100' : 'border-slate-200')}>
               {recommended('android') && <div className="absolute -top-3 left-6 rounded-full bg-violet-600 px-3 py-1 text-[9px] font-black uppercase tracking-[.14em] text-white shadow-lg">Recommended for you</div>}
               <div className="flex items-start justify-between">
                 <div className="grid h-14 w-14 place-items-center rounded-2xl bg-violet-50 text-violet-700"><Smartphone size={27} /></div>
@@ -488,9 +492,9 @@ const DownloadPortal: React.FC = () => {
               <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] font-semibold text-slate-500"><ShieldCheck size={13} className="text-emerald-600" /> Signed APK · same app identity for updates</div>
               {android?.digest && <details className="mt-4 rounded-xl border border-slate-200 px-3 py-2"><summary className="cursor-pointer text-[10px] font-bold text-slate-600">View SHA-256 checksum</summary><code className="mt-2 block break-all text-[9px] leading-5 text-slate-500">{android.digest.replace('sha256:', '')}</code></details>}
               {android && <a href={android.releaseUrl} target="_blank" rel="noreferrer" className="mt-3 text-center text-[10px] font-bold text-violet-700 hover:underline">Release notes and file archive <ExternalLink size={11} className="inline" /></a>}
-            </article>
+            </article>}
 
-            <article className={'relative flex flex-col rounded-[1.65rem] border bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(15,23,42,.1)] ' + (recommended('web') ? 'border-emerald-400 ring-4 ring-emerald-100' : 'border-slate-200')}>
+            {(showAllPlatforms || recommended('web')) && <article className={'relative flex flex-col rounded-[1.65rem] border bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(15,23,42,.1)] ' + (recommended('web') ? 'border-emerald-400 ring-4 ring-emerald-100' : 'border-slate-200')}>
               {recommended('web') && <div className="absolute -top-3 left-6 rounded-full bg-emerald-600 px-3 py-1 text-[9px] font-black uppercase tracking-[.14em] text-white shadow-lg">Recommended for you</div>}
               <div className="flex items-start justify-between">
                 <div className="grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><Globe size={27} /></div>
@@ -513,7 +517,7 @@ const DownloadPortal: React.FC = () => {
               {installError && <p role="alert" className="mt-2 text-center text-[10px] text-rose-600">{installError}</p>}
               <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 text-[10px] leading-5 text-emerald-900">{webInstallGuide}</div>
               <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] font-semibold text-slate-500"><Apple size={13} /> Works in supported modern browsers</div>
-            </article>
+            </article>}
           </div>
 
           <div className="mt-7 flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
