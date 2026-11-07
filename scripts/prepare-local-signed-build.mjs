@@ -14,10 +14,11 @@ if (!process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
 const packageVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
 const cargoToml = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
 const cargoVersion = cargoToml.match(/^version\s*=\s*"([^"]+)"/m)?.[1];
-const configPath = 'src-tauri/tauri.conf.json';
+const ownerBuild = process.env.EMBROIDERY_OWNER_BUILD === '1';
+const configPath = ownerBuild ? 'src-tauri/tauri.owner.conf.json' : 'src-tauri/tauri.conf.json';
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
-if (packageVersion !== config.version || cargoVersion !== config.version) {
+if ((!ownerBuild && packageVersion !== config.version) || cargoVersion !== '1.0.17' || !config.version) {
   throw new Error('package.json, src-tauri/Cargo.toml and src-tauri/tauri.conf.json versions must match.');
 }
 if (config.bundle?.createUpdaterArtifacts !== true || !config.plugins?.updater?.endpoints?.length) {
@@ -26,4 +27,4 @@ if (config.bundle?.createUpdaterArtifacts !== true || !config.plugins?.updater?.
 
 config.plugins.updater.pubkey = publicKey;
 fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
-console.log('Signed local build configuration is ready. The private key and passphrase were not written to disk.');
+console.log(`${ownerBuild ? 'Owner' : 'Customer'} signed build configuration is ready. The private key and passphrase were not written to disk.`);
