@@ -481,11 +481,26 @@ export const dbService = {
     if(error) throw handleDbError(error,'saving payroll'); return data?.[0];
   },
 
+  getWorkerSmsEnabled: async (): Promise<boolean> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.rpc('get_worker_sms_enabled');
+    if (error) throw handleDbError(error, 'checking SMS service status');
+    return data === true;
+  },
+  setWorkerSmsEnabled: async (enabled: boolean): Promise<boolean> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error('Please sign in again.');
+    const { data, error } = await supabase.rpc('owner_set_worker_sms_enabled', { p_enabled: enabled });
+    if (error) throw handleDbError(error, 'updating SMS service status');
+    return data === true;
+  },
+
   // Worker documents are stored in a private account-scoped bucket.
   // Send SMS through the authenticated DNotify Edge Function. API tokens never enter the browser.
   sendWorkerSms: async (payload: {
     worker_id: string;
-    event_type: 'salary_paid' | 'advance_paid' | 'custom';
+    event_type: 'salary_paid' | 'advance_paid' | 'custom' | 'worker_completed';
     related_id?: string;
     idempotency_key?: string;
     message: string;
