@@ -30,7 +30,8 @@ assert.equal(exports.detectDevice('Mozilla/5.0 (Windows NT 10.0)', 'Win32', 0, '
 assert.equal(exports.detectDevice('Mozilla/5.0 (Windows NT 10.0; ARM64)', 'Win32', 0, 'arm', '64').architecture, 'arm64');
 const portalText = fs.readFileSync(path, 'utf8');
 assert.match(portalText, /Windows 32-bit installer is not published yet/);
-assert.match(portalText, /Download Windows 64-bit EXE/);
+assert.match(portalText, /Download Windows \{device\.architecture/);
+assert.match(portalText, /32-bit EXE/);
 const routes = JSON.parse(fs.readFileSync(new URL('../vercel.json', import.meta.url))).rewrites;
 for (const route of ['/download', '/download.html']) assert.equal(routes.find(r => r.source === route)?.destination, '/download.html');
 assert.equal(routes.at(-1).destination, '/index.html');
