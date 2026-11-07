@@ -362,7 +362,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
         previous_salary: currentSalary,
         increment_amount: roundedAmount,
         increment_percentage: currentSalary > 0 ? Math.round((roundedAmount / currentSalary) * 10000) / 100 : 0,
-        new_salary: Math.round((currentSalary + roundedAmount) * 100) / 100,
+        new_salary: newSalary,
         effective_date: incrementDate,
         reason: incrementReason,
         notes: incrementNotes,
