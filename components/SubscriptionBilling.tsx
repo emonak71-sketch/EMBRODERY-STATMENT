@@ -84,6 +84,9 @@ const SubscriptionBilling:React.FC<{ownerMode?:boolean;onAccessRefresh?:()=>void
 
  const [customerLookupInput,setCustomerLookupInput]=useState('');
  const [customerPhone,setCustomerPhone]=useState('');
+ const [customerSmsEnabled,setCustomerSmsEnabled]=useState(false);
+ const [customerSmsLoading,setCustomerSmsLoading]=useState(false);
+ const [customerSmsSaving,setCustomerSmsSaving]=useState(false);
  const [savingPhone,setSavingPhone]=useState(false);
  const [customer,setCustomer]=useState<CustomerLookup|null>(null);
  const [grantHistory,setGrantHistory]=useState<AccessGrant[]>([]);
@@ -135,6 +138,9 @@ const SubscriptionBilling:React.FC<{ownerMode?:boolean;onAccessRefresh?:()=>void
    const record=found as CustomerLookup;
    setCustomer(record);
    setCustomerPhone(record.customer_phone||'');
+   setCustomerSmsLoading(true);
+   try { setCustomerSmsEnabled(await dbService.ownerGetCustomerWorkerSms(record.customer_id)); }
+   finally { setCustomerSmsLoading(false); }
    const history=await dbService.ownerGetCustomerAccessHistory(record.customer_id);
    setGrantHistory(history as AccessGrant[]);
   }catch(e:any){setError(e.message||'Customer lookup failed.');}
@@ -257,6 +263,17 @@ const SubscriptionBilling:React.FC<{ownerMode?:boolean;onAccessRefresh?:()=>void
        </button>
       </div>
       <p className="mt-2 text-[11px] leading-5 text-slate-500">Save this customer's Bangladesh mobile number once. Later, searching with the number will automatically retrieve the Gmail shown above. Gmail remains the customer's login ID.</p>
+     </div>
+
+     <div className="rounded-xl border border-violet-200 bg-violet-50/70 p-4 dark:border-violet-900 dark:bg-violet-950/20">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+       <div><div className="text-sm font-black">Worker SMS Permission</div><p className="mt-1 text-xs leading-5 text-slate-500">Control SMS only for this customer. When OFF, SMS sending is blocked by the server for this account, even if the global SMS service is ON.</p></div>
+       <span className={'rounded-full px-3 py-1.5 text-xs font-black '+(customerSmsEnabled?'bg-emerald-100 text-emerald-800':'bg-slate-200 text-slate-700')}>{customerSmsLoading?'Loading…':customerSmsEnabled?'SMS ON':'SMS OFF'}</span>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+       <button type="button" disabled={customerSmsLoading||customerSmsSaving||customerSmsEnabled} onClick={async()=>{setCustomerSmsSaving(true);setError('');setNotice('');try{const saved=await dbService.ownerSetCustomerWorkerSms(customer.customer_id,true);setCustomerSmsEnabled(saved);setNotice('Worker SMS enabled for '+customer.customer_email+'.');}catch(e:any){setError(e.message||'Could not enable customer SMS.');}finally{setCustomerSmsSaving(false);}}} className="rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-40">{customerSmsSaving?'Saving…':'Enable SMS for this customer'}</button>
+       <button type="button" disabled={customerSmsLoading||customerSmsSaving||!customerSmsEnabled} onClick={async()=>{setCustomerSmsSaving(true);setError('');setNotice('');try{const saved=await dbService.ownerSetCustomerWorkerSms(customer.customer_id,false);setCustomerSmsEnabled(saved);setNotice('Worker SMS disabled for '+customer.customer_email+'.');}catch(e:any){setError(e.message||'Could not disable customer SMS.');}finally{setCustomerSmsSaving(false);}}} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-700 disabled:opacity-40">{customerSmsSaving?'Saving…':'Disable SMS for this customer'}</button>
+      </div>
      </div>
 
      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
