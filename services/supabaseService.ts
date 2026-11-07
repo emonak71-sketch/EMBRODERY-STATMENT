@@ -484,8 +484,22 @@ export const dbService = {
   getWorkerSmsEnabled: async (): Promise<boolean> => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) throw new Error('Please sign in again.');
-    const { data, error } = await supabase.rpc('get_worker_sms_enabled');
-    if (error) throw handleDbError(error, 'checking SMS service status');
+    const [{ data: globalEnabled, error: globalError }, { data: ownSetting, error: ownError }] = await Promise.all([
+      supabase.rpc('get_worker_sms_enabled'),
+      supabase.from('customer_service_settings').select('worker_sms_enabled').maybeSingle()
+    ]);
+    if (globalError) throw handleDbError(globalError, 'checking global SMS service status');
+    if (ownError) throw handleDbError(ownError, 'checking your SMS permission');
+    return globalEnabled === true && ownSetting?.worker_sms_enabled === true;
+  },
+  ownerGetCustomerWorkerSms: async (customerId: string): Promise<boolean> => {
+    const { data, error } = await supabase.rpc('owner_get_customer_worker_sms', { p_customer_id: customerId });
+    if (error) throw handleDbError(error, 'checking customer SMS permission');
+    return data === true;
+  },
+  ownerSetCustomerWorkerSms: async (customerId: string, enabled: boolean): Promise<boolean> => {
+    const { data, error } = await supabase.rpc('owner_set_customer_worker_sms', { p_customer_id: customerId, p_enabled: enabled });
+    if (error) throw handleDbError(error, 'updating customer SMS permission');
     return data === true;
   },
   setWorkerSmsEnabled: async (enabled: boolean): Promise<boolean> => {
