@@ -230,7 +230,7 @@ jobs:
           $customerSignature = $customerInstaller.FullName + '.sig'
           $ownerSignature = $ownerInstaller.FullName + '.sig'
           if (-not (Test-Path $customerSignature) -or -not (Test-Path $ownerSignature)) { throw 'One or both updater signatures are missing.' }
-          $assets = @($customerInstaller.FullName,$customerSignature,$ownerInstaller.FullName,$ownerSignature,'latest.json','latest-customer.json','latest-owner.json')
+          $assets = @($customerInstaller.FullName,$customerSignature,'latest.json','latest-customer.json')
 
           gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -eq 0) {
@@ -263,16 +263,15 @@ jobs:
           $customerManifestAsset = $release.assets | Where-Object { $_.name -eq 'latest-customer.json' } | Select-Object -First 1
           $ownerManifestAsset = $release.assets | Where-Object { $_.name -eq 'latest-owner.json' } | Select-Object -First 1
           $legacyManifestAsset = $release.assets | Where-Object { $_.name -eq 'latest.json' } | Select-Object -First 1
-          if (-not $customerInstaller -or -not $ownerInstaller -or -not $customerManifestAsset -or -not $ownerManifestAsset -or -not $legacyManifestAsset) {
-            throw 'The release is missing one of the Customer/Owner installers or updater manifests.'
+          if (-not $customerInstaller -or -not $customerManifestAsset -or -not $legacyManifestAsset) {
+            throw 'The release is missing the Customer installer or updater manifests.'
           }
 
           $customerManifest = Invoke-RestMethod -Uri $customerManifestAsset.browser_download_url -Headers @{'Cache-Control'='no-cache'} -TimeoutSec 60
-          $ownerManifest = Invoke-RestMethod -Uri $ownerManifestAsset.browser_download_url -Headers @{'Cache-Control'='no-cache'} -TimeoutSec 60
           $legacyManifest = Invoke-RestMethod -Uri $legacyManifestAsset.browser_download_url -Headers @{'Cache-Control'='no-cache'} -TimeoutSec 60
-          foreach ($manifest in @($customerManifest,$ownerManifest,$legacyManifest)) {
+          foreach ($manifest in @($customerManifest,$legacyManifest)) {
             if ($manifest.version -ne $version) { throw "Updater manifest version mismatch: expected $version, got $($manifest.version)." }
-            if (-not $manifest.platforms.'windows-x86_64'.signature) { throw 'An updater manifest has no Windows signature.' }
+            if (-not $manifest.platforms.'windows-x86_64'.signature) { throw 'A Customer updater manifest has no Windows signature.' }
           }
           function Assert-ManifestAssetUrl($manifestUrl, $asset, $label) {
             $uri = [System.Uri]$manifestUrl
@@ -287,12 +286,10 @@ jobs:
             Write-Host "Verified $label updater manifest targets $manifestAssetName."
           }
           Assert-ManifestAssetUrl $customerManifest.platforms.'windows-x86_64'.url $customerInstaller 'Customer'
-          Assert-ManifestAssetUrl $ownerManifest.platforms.'windows-x86_64'.url $ownerInstaller 'Owner'
           Assert-ManifestAssetUrl $legacyManifest.platforms.'windows-x86_64'.url $customerInstaller 'Legacy'
 
           $latestUrls = @(
             "https://github.com/$env:GITHUB_REPOSITORY/releases/latest/download/latest-customer.json",
-            "https://github.com/$env:GITHUB_REPOSITORY/releases/latest/download/latest-owner.json",
             "https://github.com/$env:GITHUB_REPOSITORY/releases/latest/download/latest.json"
           )
           foreach ($url in $latestUrls) {
@@ -300,7 +297,7 @@ jobs:
             if ($manifest.version -ne $version) { throw "Latest updater endpoint $url returned $($manifest.version), expected $version." }
           }
 
-          $urls = @($customerManifestAsset.browser_download_url,$ownerManifestAsset.browser_download_url,$legacyManifestAsset.browser_download_url,$customerManifest.platforms.'windows-x86_64'.url,$ownerManifest.platforms.'windows-x86_64'.url,$legacyManifest.platforms.'windows-x86_64'.url,$customerInstaller.browser_download_url,$ownerInstaller.browser_download_url) + $latestUrls
+          $urls = @($customerManifestAsset.browser_download_url,$legacyManifestAsset.browser_download_url,$customerManifest.platforms.'windows-x86_64'.url,$legacyManifest.platforms.'windows-x86_64'.url,$customerInstaller.browser_download_url) + $latestUrls
           foreach ($url in $urls) {
             $verified = $false
             for ($attempt = 1; $attempt -le 5; $attempt++) {
