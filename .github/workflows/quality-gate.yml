@@ -21,6 +21,9 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Test accounting, recovery and salary review boundaries
+        run: npm run test:accounting
+
       - name: Dependency security audit
         run: npm audit --audit-level=high
       - name: Production customer and Owner Web/PWA build

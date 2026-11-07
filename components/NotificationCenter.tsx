@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Bell, Check, CheckCheck, X } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
+import { accountToolsService } from '../services/accountToolsService';
 import { desktopInvoke, isTauriApp } from '../desktop/tauriBridge';
 
 type Notice = {id:string;notification_type:string;title:string;body:string;payload:Record<string,unknown>;created_at:string;read_at:string|null};
@@ -13,7 +14,11 @@ const NotificationCenter:React.FC<{userId:string}> = ({userId}) => {
     if(!error)setItems((data||[]) as Notice[]);
   },[userId]);
   useEffect(()=>{
-    void load();
+    const refresh=async()=>{try{await accountToolsService.syncReviews();}catch(e){console.warn('Salary review reminders unavailable',e);}await load();};
+    void refresh();
+    const timer=window.setInterval(()=>void refresh(),60*60*1000);
+    const visible=()=>{if(!document.hidden)void refresh();};
+    document.addEventListener('visibilitychange',visible);
     const channel=supabase.channel('app-notifications-'+userId)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'app_notifications',filter:'user_id=eq.'+userId},payload=>{
         const notice=payload.new as Notice;
@@ -24,7 +29,7 @@ const NotificationCenter:React.FC<{userId:string}> = ({userId}) => {
           try{new Notification(notice.title,{body:notice.body,icon:'/embroidery-statement-logo-180.png'});}catch{}
         }
       }).subscribe();
-    return()=>{void supabase.removeChannel(channel);};
+    return()=>{window.clearInterval(timer);document.removeEventListener('visibilitychange',visible);void supabase.removeChannel(channel);};
   },[load,userId]);
   const markRead=async(id:string)=>{
     const {error}=await supabase.from('app_notifications').update({read_at:new Date().toISOString()}).eq('id',id).eq('user_id',userId);

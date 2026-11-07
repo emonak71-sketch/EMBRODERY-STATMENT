@@ -2,6 +2,10 @@ name: Customer Android Direct APK Release
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - 'package.json'
     tags:
       - 'android-v*'
   workflow_dispatch:
@@ -46,6 +50,10 @@ jobs:
         shell: bash
         run: |
           VERSION="$(node -p "require('./package.json').version")"
+          if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+            RELEASE_TAG="android-v$VERSION"
+            echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          fi
           if [[ "$RELEASE_TAG" != "android-v$VERSION" ]]; then
             echo "Android release tag $RELEASE_TAG does not match package version android-v$VERSION."
             exit 1
@@ -81,6 +89,9 @@ jobs:
         run: npm ci
       - name: Test Owner customer phone lookup contract
         run: npm run test:owner-customer-contacts
+
+      - name: Test account controls and recovery
+        run: npm run test:accounting
 
       - name: Generate Android launcher icons
         run: npm run desktop:icons

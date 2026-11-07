@@ -3,8 +3,11 @@ name: Windows Desktop Signed Release
 on:
   push:
     branches:
+      - main
       - release
       - 'release/*'
+    paths:
+      - 'package.json'
     tags:
       - 'v*'
   workflow_dispatch:
@@ -66,6 +69,9 @@ jobs:
       - name: Type-check application
         run: npm run typecheck
 
+      - name: Test account controls and recovery
+        run: npm run test:accounting
+
       - name: Test attendance and Dhaka reminder logic
         run: npm run test:attendance
 
@@ -85,8 +91,8 @@ jobs:
       - name: Generate Windows icons
         run: npm run desktop:icons
 
-      - name: Resolve release tag from app version on the release branch
-        if: startsWith(github.ref, 'refs/heads/release')
+      - name: Resolve release tag from app version on a branch
+        if: startsWith(github.ref, 'refs/heads/')
         shell: pwsh
         run: |
           $version = (Get-Content 'package.json' -Raw | ConvertFrom-Json).version

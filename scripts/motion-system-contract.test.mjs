@@ -34,7 +34,7 @@ assert.ok(ownerControl.includes('owner-control-shell') && ownerControl.includes(
 assert.ok(splash.includes('customer-brand-intro') && splash.includes('brand-intro-thread'), 'Customer startup must use the new threaded logo reveal');
 assert.ok(customerHtml.includes('/index.css?v=1.0.11'), 'Customer PWA must request the refreshed motion stylesheet');
 assert.ok(ownerHtml.includes('/index.css?v=1.0.11'), 'Owner PWA must request the refreshed motion stylesheet');
-assert.equal(pkg.version, '1.0.11');
+assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
 assert.equal(lock.version, pkg.version);
 assert.equal(lock.packages[''].version, pkg.version);
 assert.equal(tauri.version, pkg.version);
