@@ -500,7 +500,7 @@ export const dbService = {
   // Send SMS through the authenticated DNotify Edge Function. API tokens never enter the browser.
   sendWorkerSms: async (payload: {
     worker_id: string;
-    event_type: 'salary_paid' | 'advance_paid' | 'custom';
+    event_type: 'salary_paid' | 'advance_paid' | 'custom' | 'worker_completed';
     related_id?: string;
     idempotency_key?: string;
     message: string;
