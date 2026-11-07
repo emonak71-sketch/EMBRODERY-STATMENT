@@ -42,7 +42,7 @@ type SmsLog = {
 };
 type SmsDraft = {
   worker: Worker; message: string;
-  eventType: 'salary_paid' | 'advance_paid' | 'custom';
+  eventType: 'salary_paid' | 'advance_paid' | 'custom' | 'worker_completed';
   relatedId?: string;
   idempotencyKey?: string;
 };
@@ -211,7 +211,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
   const [smsLogs, setSmsLogs] = useState<SmsLog[]>([]);
   const [smsLogsLoading, setSmsLogsLoading] = useState(false);
   const [smsEnabled, setSmsEnabled] = useState(false);
-  useEffect(() => { let active = true; dbService.getWorkerSmsEnabled().then(value => { if (active) setSmsEnabled(value); }).catch(() => { if (active) setSmsEnabled(false); }); return () => { active = false; }; }, []);
+  useEffect(() => { let active = true; const refresh = () => dbService.getWorkerSmsEnabled().then(value => { if (active) setSmsEnabled(value); }).catch(() => { if (active) setSmsEnabled(false); }); void refresh(); const onFocus = () => void refresh(); window.addEventListener('focus', onFocus); return () => { active = false; window.removeEventListener('focus', onFocus); }; }, []);
   useEffect(() => { if (!smsEnabled && tab === 'sms') setTab('documents'); }, [smsEnabled, tab]);
 
   const selectedWorker = useMemo(
@@ -485,7 +485,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
         worker_id: smsDraft.worker.id,
         event_type: smsDraft.eventType,
         related_id: smsDraft.relatedId,
-        idempotency_key: smsDraft.eventType === 'custom' ? (smsDraft.idempotencyKey || crypto.randomUUID()) : undefined,
+        idempotency_key: (smsDraft.eventType === 'custom' || smsDraft.eventType === 'worker_completed') ? (smsDraft.idempotencyKey || crypto.randomUUID()) : undefined,
         message: smsDraft.message
       });
       setNotice(result.duplicate
@@ -721,7 +721,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
               </div>
               {selectedSlip && slipWorker ? (
                 <>
-                  <div className="flex flex-wrap gap-2"><button onClick={() => exportElement(slipRef.current, 'Salary-Slip-' + slipWorker.worker_code + '-' + slipMonth, 'print')} className="rounded-lg border px-3 py-2 text-xs font-bold dark:border-slate-700"><Printer size={13} className="mr-1 inline" />{tr('প্রিন্ট', 'Print')}</button><button onClick={() => exportElement(slipRef.current, 'Salary-Slip-' + slipWorker.worker_code + '-' + slipMonth, 'pdf')} className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-bold text-white"><Download size={13} className="mr-1 inline" />PDF</button><button onClick={() => exportElement(slipRef.current, 'Salary-Slip-' + slipWorker.worker_code + '-' + slipMonth, 'png')} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold dark:bg-slate-800">PNG</button>{selectedSlip.status === 'paid' && <button onClick={requestSlipSms} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white"><MessageSquare size={13} className="mr-1 inline" />{tr('SMS তৈরি করুন', 'Customize SMS')}</button>}</div>
+                  <div className="flex flex-wrap gap-2"><button onClick={() => exportElement(slipRef.current, 'Salary-Slip-' + slipWorker.worker_code + '-' + slipMonth, 'print')} className="rounded-lg border px-3 py-2 text-xs font-bold dark:border-slate-700"><Printer size={13} className="mr-1 inline" />{tr('প্রিন্ট', 'Print')}</button><button onClick={() => exportElement(slipRef.current, 'Salary-Slip-' + slipWorker.worker_code + '-' + slipMonth, 'pdf')} className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-bold text-white"><Download size={13} className="mr-1 inline" />PDF</button><button onClick={() => exportElement(slipRef.current, 'Salary-Slip-' + slipWorker.worker_code + '-' + slipMonth, 'png')} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold dark:bg-slate-800">PNG</button>{selectedSlip.status === 'paid' && smsEnabled && <button onClick={requestSlipSms} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white"><MessageSquare size={13} className="mr-1 inline" />{tr('SMS তৈরি করুন', 'Customize SMS')}</button>}</div>
                   <div className="overflow-x-auto rounded-xl bg-slate-100 p-4 dark:bg-slate-950"><div ref={slipRef} className="mx-auto w-[620px] max-w-full rounded-2xl border border-slate-200 bg-white p-7 text-slate-900 shadow-xl">
                     <div className="flex items-start justify-between border-b-2 border-blue-800 pb-4"><div><div className="text-2xl font-black">{companyName || 'Embroidery Statement'}</div><div className="mt-1 text-xs uppercase tracking-[.2em] text-blue-700">{selectedSlip.status === 'paid' ? 'Salary Payment Receipt' : 'Salary Statement — Not Paid'}</div></div><div className="rounded-xl bg-blue-50 p-3 text-blue-800"><FileText size={26} /></div></div>
                     <div className="mt-5 grid grid-cols-2 gap-3 text-sm"><div><span className="text-xs text-slate-500">Worker</span><div className="font-black">{slipWorker.full_name}</div></div><div><span className="text-xs text-slate-500">Worker ID</span><div className="font-black">{slipWorker.worker_code}</div></div><div><span className="text-xs text-slate-500">Salary Month</span><div className="font-bold">{slipMonth}</div></div><div><span className="text-xs text-slate-500">Payment Date</span><div className="font-bold">{dateLabel(selectedSlip.paid_at)}</div></div></div>
