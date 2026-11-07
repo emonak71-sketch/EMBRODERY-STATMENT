@@ -99,6 +99,16 @@ Deno.serve(async (req: Request) => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
+    const { data: customerSmsSetting, error: customerSmsSettingError } = await admin
+      .from("customer_service_settings")
+      .select("worker_sms_enabled")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (customerSmsSettingError) throw new Error("Could not verify this account's SMS permission.");
+    if (customerSmsSetting?.worker_sms_enabled !== true) {
+      return jsonResponse({ ok: false, error: "Worker SMS is disabled for this customer account. Contact the app owner if you need it enabled." }, 403);
+    }
+
     const { data: worker, error: workerError } = await admin
       .from("Workers")
       .select("id, user_id, full_name, phone")
