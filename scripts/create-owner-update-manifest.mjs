@@ -34,7 +34,7 @@ const manifest = {
 
 fs.writeFileSync('latest-owner.json', JSON.stringify(manifest, null, 2) + '\n');
 console.log('Created latest-owner.json for version ' + version);
-console.log('Upload these three files to GitHub Release v' + version + ':');
+console.log('Upload these two files to GitHub Release v' + version + ':');
 console.log('  ' + installer);
 console.log('  ' + signaturePath);
-console.log('  latest-owner.json');
+console.log('Commit and push latest-owner.json to the main branch; Owner checks this stable manifest URL.');
