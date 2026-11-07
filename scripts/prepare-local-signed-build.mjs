@@ -19,7 +19,7 @@ const configPath = ownerBuild ? 'src-tauri/tauri.owner.conf.json' : 'src-tauri/t
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
 if (cargoVersion !== packageVersion || (!ownerBuild && packageVersion !== config.version) || !config.version) {
-  throw new Error('package.json, src-tauri/Cargo.toml and src-tauri/tauri.conf.json versions must match.');
+  throw new Error('package.json and src-tauri/Cargo.toml versions must match; the selected Tauri config must have a version.');
 }
 if (config.bundle?.createUpdaterArtifacts !== true || !config.plugins?.updater?.endpoints?.length) {
   throw new Error('Tauri updater artifacts or GitHub updater endpoint are not configured.');
