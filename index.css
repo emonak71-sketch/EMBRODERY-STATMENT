@@ -1613,3 +1613,172 @@ body {
     transition: none !important;
   }
 }
+
+
+/* ─────────────────────────────────────────────────────────────
+   Customer app · Liquid Glass visual refresh
+   Translucent layered materials, soft specular edges and depth.
+   Functional layout, controls and data components remain unchanged.
+───────────────────────────────────────────────────────────── */
+:root {
+  --liquid-tint: rgba(255,255,255,.58);
+  --liquid-edge: rgba(255,255,255,.76);
+  --liquid-shadow: 0 18px 52px rgba(30,55,90,.085), 0 2px 8px rgba(30,55,90,.035);
+  --liquid-blue: #1687f8;
+}
+.dark {
+  --liquid-tint: rgba(24,34,52,.62);
+  --liquid-edge: rgba(255,255,255,.13);
+  --liquid-shadow: 0 22px 60px rgba(0,0,0,.28), 0 2px 10px rgba(0,0,0,.16);
+}
+.app-shell {
+  background:
+    radial-gradient(ellipse at 14% 8%, rgba(87,174,255,.18), transparent 36%),
+    radial-gradient(ellipse at 86% 88%, rgba(125,112,255,.11), transparent 34%),
+    linear-gradient(145deg,#f7faff 0%,#edf3fb 52%,#f8faff 100%) !important;
+}
+.dark .app-shell {
+  background:
+    radial-gradient(ellipse at 14% 8%,rgba(44,126,255,.19),transparent 38%),
+    radial-gradient(ellipse at 88% 88%,rgba(116,91,255,.13),transparent 36%),
+    linear-gradient(145deg,#080f1d 0%,#0c1728 55%,#080f1d 100%) !important;
+}
+.app-shell::before {
+  opacity:.9;
+  background:
+    radial-gradient(ellipse at 50% -12%,rgba(255,255,255,.78),transparent 48%),
+    radial-gradient(ellipse at 8% 54%,rgba(111,190,255,.10),transparent 34%),
+    radial-gradient(ellipse at 95% 35%,rgba(173,157,255,.10),transparent 32%) !important;
+}
+.dark .app-shell::before {
+  background:
+    radial-gradient(ellipse at 50% -12%,rgba(160,194,255,.09),transparent 48%),
+    radial-gradient(ellipse at 8% 54%,rgba(37,99,235,.12),transparent 34%),
+    radial-gradient(ellipse at 95% 35%,rgba(124,58,237,.10),transparent 32%) !important;
+}
+@media (min-width:768px) {
+  .app-sidebar {
+    top:14px !important; bottom:14px !important; left:14px !important;
+    height:calc(100% - 28px) !important;
+    border:1px solid rgba(255,255,255,.78) !important;
+    border-radius:30px !important;
+    background:rgba(255,255,255,.58) !important;
+    box-shadow:0 22px 65px rgba(35,58,92,.10),inset 0 1px 0 rgba(255,255,255,.92) !important;
+    -webkit-backdrop-filter:blur(34px) saturate(185%) !important;
+    backdrop-filter:blur(34px) saturate(185%) !important;
+  }
+  .dark .app-sidebar {
+    border-color:rgba(255,255,255,.12) !important;
+    background:rgba(15,25,43,.68) !important;
+    box-shadow:0 24px 70px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.08) !important;
+  }
+}
+.app-sidebar::before {
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(145deg,rgba(255,255,255,.44),transparent 32%,transparent 72%,rgba(255,255,255,.10));
+  opacity:.8;
+}
+.dark .app-sidebar::before { background:linear-gradient(145deg,rgba(255,255,255,.07),transparent 34%,transparent 72%,rgba(255,255,255,.025)); }
+.app-sidebar > div { position:relative;z-index:1; }
+.app-sidebar nav button {
+  border:1px solid transparent;
+  border-radius:15px !important;
+  letter-spacing:.075em !important;
+}
+.app-sidebar nav button[class~="bg-primary-600"] {
+  background:linear-gradient(135deg,rgba(30,136,255,.96),rgba(69,103,245,.94)) !important;
+  border-color:rgba(255,255,255,.38) !important;
+  box-shadow:0 9px 24px rgba(34,122,245,.24),inset 0 1px 0 rgba(255,255,255,.38) !important;
+}
+.app-sidebar nav button:not([class~="bg-primary-600"]):hover {
+  background:rgba(255,255,255,.56) !important;
+  border-color:rgba(255,255,255,.62) !important;
+}
+.dark .app-sidebar nav button:not([class~="bg-primary-600"]):hover {
+  background:rgba(255,255,255,.075) !important;border-color:rgba(255,255,255,.08) !important;
+}
+.app-main {
+  padding-top:clamp(18px,2.4vw,34px) !important;
+}
+.app-main [class~="bg-white"][class~="dark:bg-slate-900"],
+.app-main [class~="bg-white"][class*="dark:bg-slate-"],
+.app-main [class*="rounded-"][class*="border"][class*="bg-white"] {
+  position:relative;
+  border:1px solid rgba(255,255,255,.82) !important;
+  border-radius:24px !important;
+  background:rgba(255,255,255,.57) !important;
+  box-shadow:var(--liquid-shadow),inset 0 1px 0 rgba(255,255,255,.92) !important;
+  -webkit-backdrop-filter:blur(28px) saturate(175%) !important;
+  backdrop-filter:blur(28px) saturate(175%) !important;
+}
+.dark .app-main [class~="bg-white"][class~="dark:bg-slate-900"],
+.dark .app-main [class~="bg-white"][class*="dark:bg-slate-"],
+.dark .app-main [class*="rounded-"][class*="border"][class*="bg-white"] {
+  border-color:rgba(255,255,255,.11) !important;
+  background:rgba(19,30,48,.62) !important;
+  box-shadow:var(--liquid-shadow),inset 0 1px 0 rgba(255,255,255,.075) !important;
+}
+.app-main .dashboard-stat-card {
+  border-radius:26px !important;
+  background:linear-gradient(145deg,rgba(255,255,255,.76),rgba(255,255,255,.40)) !important;
+  border-color:rgba(255,255,255,.88) !important;
+  box-shadow:0 16px 42px rgba(40,65,100,.075),inset 0 1px 0 rgba(255,255,255,.95) !important;
+  -webkit-backdrop-filter:blur(30px) saturate(180%) !important;
+  backdrop-filter:blur(30px) saturate(180%) !important;
+}
+.dark .app-main .dashboard-stat-card {
+  background:linear-gradient(145deg,rgba(34,48,70,.76),rgba(17,29,47,.55)) !important;
+  border-color:rgba(255,255,255,.12) !important;
+}
+.app-main button[class*="bg-primary-600"],
+.app-main button[class*="bg-primary-500"] {
+  border:1px solid rgba(255,255,255,.34);
+  box-shadow:0 8px 22px rgba(25,117,235,.20),inset 0 1px 0 rgba(255,255,255,.28);
+}
+.app-main input:not([type="checkbox"]):not([type="radio"]),
+.app-main textarea,.app-main select {
+  border-radius:14px !important;
+  background:rgba(255,255,255,.54) !important;
+  border-color:rgba(140,160,190,.24) !important;
+  -webkit-backdrop-filter:blur(16px);
+  backdrop-filter:blur(16px);
+}
+.dark .app-main input:not([type="checkbox"]):not([type="radio"]),
+.dark .app-main textarea,.dark .app-main select {
+  background:rgba(8,17,31,.42) !important;
+  border-color:rgba(255,255,255,.12) !important;
+}
+.app-menu-trigger {
+  border-radius:17px !important;
+  background:rgba(255,255,255,.62) !important;
+  border:1px solid rgba(255,255,255,.82) !important;
+  box-shadow:0 10px 28px rgba(30,55,90,.12),inset 0 1px 0 white !important;
+  -webkit-backdrop-filter:blur(28px) saturate(180%) !important;
+  backdrop-filter:blur(28px) saturate(180%) !important;
+}
+.dark .app-menu-trigger {
+  background:rgba(22,34,54,.72) !important;
+  border-color:rgba(255,255,255,.13) !important;
+  box-shadow:0 12px 30px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+.app-main > div:first-child {
+  min-height:42px;
+}
+@media (prefers-reduced-motion:no-preference) {
+  .app-main [class*="rounded-"][class*="border"][class*="bg-white"],
+  .app-main .dashboard-stat-card {
+    transition:transform 320ms cubic-bezier(.2,.8,.2,1),box-shadow 320ms ease,border-color 320ms ease,background 320ms ease;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .app-main > div { animation:none !important; }
+}
+@media (max-width:767px) {
+  .app-sidebar {
+    background:rgba(248,251,255,.82) !important;
+    -webkit-backdrop-filter:blur(34px) saturate(180%) !important;
+    backdrop-filter:blur(34px) saturate(180%) !important;
+  }
+  .dark .app-sidebar { background:rgba(8,16,30,.88) !important; }
+  .app-main { padding:18px 14px 24px !important; }
+}
