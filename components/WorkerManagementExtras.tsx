@@ -5,7 +5,7 @@ import {
   Download, FileImage, FileText, History, IdCard, Loader2, MessageSquare,
   Printer, RefreshCw, Search, ShieldCheck, TrendingUp, Upload, Wallet, X
 } from 'lucide-react';
-import { addCalendarYear } from '../desktop/accountingCore';
+import { addCalendarYear, daysBetween } from '../desktop/accountingCore';
 import { dbService } from '../services/supabaseService';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -185,8 +185,9 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
   const slipRef = useRef<HTMLDivElement>(null);
 
   const [increments, setIncrements] = useState<Increment[]>([]);
-  const [incrementMode, setIncrementMode] = useState<'amount' | 'percentage'>('amount');
-  const [incrementValue, setIncrementValue] = useState('1000');
+  const [incrementValue, setIncrementValue] = useState('');
+  const incrementSaving = useRef(false);
+  useEffect(() => { setIncrementValue(''); setIncrementDate(today()); setIncrementNotes(''); setIncrementReason('annual_appraisal'); setNotice(''); }, [selectedWorkerId]);
   const [incrementDate, setIncrementDate] = useState(today());
   const [incrementReason, setIncrementReason] = useState('annual_appraisal');
   const [incrementNotes, setIncrementNotes] = useState('');
@@ -344,12 +345,13 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
 
   const submitIncrement = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!selectedWorker) return;
+    if (!selectedWorker || incrementSaving.current) return;
     const currentSalary = Number(selectedWorker.monthly_salary) || 0;
-    const entered = Number(incrementValue) || 0;
-    const amount = incrementMode === 'percentage' ? currentSalary * entered / 100 : entered;
-    const roundedAmount = Math.round(amount * 100) / 100;
-    if (roundedAmount <= 0) { setError(tr('বেতন বৃদ্ধির পরিমাণ সঠিক নয়।', 'Enter a valid increment amount.')); return; }
+    const newSalary = Math.round(Number(incrementValue) * 100) / 100;
+    const roundedAmount = (Math.round(newSalary * 100) - Math.round(currentSalary * 100)) / 100;
+    if (!Number.isFinite(newSalary) || roundedAmount <= 0) { setError(tr('বেতন বৃদ্ধির পরিমাণ সঠিক নয়।', 'Enter a valid increment amount.')); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(incrementDate) || incrementDate > today()) { setError(tr('আজ বা আগের কার্যকর হওয়ার তারিখ দিন।', 'Choose today or an earlier effective date.')); return; }
+    incrementSaving.current = true;
     setSaving(true); setError(''); setNotice('');
     try {
       await dbService.addWorkerSalaryIncrement({
@@ -363,12 +365,13 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
         notes: incrementNotes,
         approved_by: 'Admin'
       });
+      setIncrementValue('');
       await Promise.all([loadWorkers(), loadIncrements(), onWorkersChanged?.()]);
       setNotice(tr('বেতন বৃদ্ধি সংরক্ষিত হয়েছে এবং বর্তমান বেতন আপডেট হয়েছে।', 'Increment saved and worker salary updated.'));
       setIncrementNotes('');
     } catch (e: any) {
       setError(e.message || 'Increment could not be saved. Refresh the worker salary and try again.');
-    } finally { setSaving(false); }
+    } finally { incrementSaving.current = false; setSaving(false); }
   };
 
   useEffect(() => {
@@ -497,7 +500,9 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
     const baseDate = [latest?.effective_date, worker.salary_review_base_date].filter(Boolean).sort().at(-1) || worker.joining_date;
     const dueDate = addCalendarYear(baseDate);
     const due = new Date(dueDate + 'T00:00:00');
-    return { dueDate, eligible: new Date(today() + 'T00:00:00') >= due, latest };
+    const reminder = new Date(dueDate + 'T00:00:00Z');
+    reminder.setUTCDate(reminder.getUTCDate() - 15);
+    return { baseDate, reminderDate: reminder.toISOString().slice(0,10), days: daysBetween(today(), dueDate), dueDate, eligible: new Date(today() + 'T00:00:00') >= due, latest };
   };
 
   const noWorkers = !loading && workers.length === 0;
@@ -542,7 +547,7 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
           {tab !== 'annual' && (
             <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
               <label className="text-xs font-bold text-slate-600 dark:text-slate-300">{tr('কর্মী নির্বাচন', 'Select worker')}</label>
-              <select value={selectedWorkerId} onChange={e => { setSelectedWorkerId(e.target.value); setSlipWorkerId(e.target.value); }} className="min-w-[220px] flex-1 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800">
+              <select aria-label={tr('কর্মী নির্বাচন', 'Select worker')} disabled={saving} value={selectedWorkerId} onChange={e => { setSelectedWorkerId(e.target.value); setSlipWorkerId(e.target.value); }} className="min-w-[220px] flex-1 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800">
                 {workers.map(w => <option key={w.id} value={w.id}>{w.worker_code} — {w.full_name}</option>)}
               </select>
               <span className="text-xs text-slate-400">{selectedWorker?.designation || ''}</span>
@@ -609,21 +614,24 @@ const WorkerManagementExtras: React.FC<Props> = ({ userId, companyName, onWorker
             <section className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs text-slate-500">{tr('বর্তমান মাসিক বেতন', 'Current monthly salary')}</div><div className="mt-1 text-xl font-black">{money(selectedWorker.monthly_salary)}</div></div>
-                <div className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs text-slate-500">{tr('যোগদানের তারিখ', 'Joining date')}</div><div className="mt-1 text-xl font-black">{dateLabel(selectedWorker.joining_date)}</div></div>
-                <div className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs text-slate-500">{tr('পরবর্তী Increment Review', 'Next increment review')}</div><div className="mt-1 text-xl font-black">{dateLabel(dueInfo(selectedWorker).dueDate)}</div><div className="text-xs text-slate-500">{dueInfo(selectedWorker).eligible ? tr('এক বছর পূর্ণ হয়েছে', 'One-year review due') : tr('এখনো সময় হয়নি', 'Not due yet')}</div></div>
+                <div className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs text-slate-500">{dueInfo(selectedWorker).latest || selectedWorker.salary_review_base_date ? tr('শেষ বেতন বেড়েছে', 'Last salary increase') : tr('যোগদানের তারিখ', 'Joining date')}</div><div className="mt-1 text-xl font-black">{dateLabel(dueInfo(selectedWorker).baseDate)}</div></div>
+                <div className="rounded-2xl border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs text-slate-500">{tr('আবার বেতন বাড়ানোর পর্যালোচনা', 'Next salary review')}</div><div className="mt-1 text-xl font-black">{dateLabel(dueInfo(selectedWorker).dueDate)}</div><div className="text-xs text-slate-500">{dueInfo(selectedWorker).eligible ? tr('পর্যালোচনার সময় হয়েছে', 'Review is due') : dueInfo(selectedWorker).days + tr(' দিন বাকি', ' days left')} · {tr('রিমাইন্ডার: ', 'Reminder: ')}{dateLabel(dueInfo(selectedWorker).reminderDate)}</div></div>
               </div>
               <form onSubmit={submitIncrement} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <h3 className="mb-3 flex items-center gap-2 font-black"><TrendingUp size={18} className="text-emerald-600" />{tr('নতুন বেতন বৃদ্ধি যোগ করুন', 'Record a Salary Increment')}</h3>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <label className="text-xs font-bold">{tr('বৃদ্ধির হিসাব', 'Increment mode')}<select value={incrementMode} onChange={e => setIncrementMode(e.target.value as 'amount' | 'percentage')} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><option value="amount">{tr('টাকার পরিমাণ', 'Fixed amount')}</option><option value="percentage">{tr('শতকরা হার', 'Percentage')}</option></select></label>
-                  <label className="text-xs font-bold">{incrementMode === 'amount' ? tr('কত টাকা বাড়বে', 'Increment amount') : tr('কত শতাংশ বাড়বে', 'Increment percentage')}<input type="number" min="0.01" step="0.01" required value={incrementValue} onChange={e => setIncrementValue(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800" /></label>
-                  <label className="text-xs font-bold">{tr('কার্যকর হওয়ার তারিখ', 'Effective date')}<input type="date" max={today()} required value={incrementDate} onChange={e => setIncrementDate(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800" /></label>
-                  <label className="text-xs font-bold">{tr('কারণ', 'Reason')}<select value={incrementReason} onChange={e => setIncrementReason(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><option value="annual_appraisal">{tr('বার্ষিক মূল্যায়ন', 'Annual appraisal')}</option><option value="promotion">{tr('পদোন্নতি', 'Promotion')}</option><option value="performance">{tr('কর্মদক্ষতা', 'Performance')}</option><option value="market_adjustment">{tr('বাজার সমন্বয়', 'Market adjustment')}</option><option value="special">{tr('বিশেষ', 'Special')}</option></select></label>
-                  <label className="text-xs font-bold sm:col-span-2">{tr('নোট (ঐচ্ছিক)', 'Notes (optional)')}<input value={incrementNotes} onChange={e => setIncrementNotes(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800" /></label>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-500">{tr('নতুন বেতন হবে', 'New salary will be')} <b>{money((Number(selectedWorker.monthly_salary) || 0) + (incrementMode === 'percentage' ? (Number(selectedWorker.monthly_salary) || 0) * (Number(incrementValue) || 0) / 100 : Number(incrementValue) || 0))}</b></p><button disabled={saving} className="rounded-xl bg-emerald-600 px-5 py-3 text-xs font-black text-white disabled:opacity-50">{saving ? tr('সংরক্ষণ হচ্ছে...', 'Saving...') : tr('Increment সংরক্ষণ', 'Save increment')}</button></div>
+                <h3 className="font-black">{tr('বেতন বাড়ান', 'Increase salary')}</h3>
+                <p className="mb-4 mt-1 text-sm text-slate-500">{tr('নতুন মোট মাসিক বেতন লিখে সেভ করুন। আপনি সেভ করলেই শুধু বেতন বদলাবে।', 'Enter the new total monthly salary and save. Salary changes only when you save.')}</p>
+                <fieldset disabled={saving} className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="text-sm font-bold">{tr('নতুন মাসিক বেতন (৳)', 'New monthly salary (BDT)')}<input type="number" inputMode="decimal" min={(Number(selectedWorker.monthly_salary)+0.01).toFixed(2)} step="0.01" required value={incrementValue} onChange={e=>setIncrementValue(e.target.value)} placeholder={tr('যেমন: ১৫০০০', 'e.g. 15000')} className="mt-2 w-full rounded-xl border bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800" /></label>
+                    <label className="text-sm font-bold">{tr('কোন তারিখ থেকে', 'Effective from')}<input type="date" max={today()} required value={incrementDate} onChange={e=>setIncrementDate(e.target.value)} className="mt-2 w-full rounded-xl border bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800" /></label>
+                  </div>
+                  {Number(incrementValue)>Number(selectedWorker.monthly_salary)&&<p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">{money(selectedWorker.monthly_salary)} → <b>{money(Number(incrementValue))}</b> · {tr('বাড়ছে ', 'Increase: ')}{money((Math.round(Number(incrementValue)*100)-Math.round(Number(selectedWorker.monthly_salary)*100))/100)}<span className="mt-1 block text-xs">{tr('সেভ করলে পরের পর্যালোচনা: ', 'After saving, next review: ')}{incrementDate ? dateLabel(addCalendarYear([incrementDate, dueInfo(selectedWorker).baseDate].sort().at(-1)!)) : '—'}</span></p>}
+                  <details><summary className="cursor-pointer text-xs text-slate-500">{tr('কারণ / নোট (ঐচ্ছিক)', 'Reason / note (optional)')}</summary><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold">{tr('কারণ', 'Reason')}<select value={incrementReason} onChange={e=>setIncrementReason(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><option value="annual_appraisal">{tr('বার্ষিক মূল্যায়ন', 'Annual review')}</option><option value="promotion">{tr('পদোন্নতি', 'Promotion')}</option><option value="performance">{tr('কর্মদক্ষতা', 'Performance')}</option><option value="market_adjustment">{tr('বাজার সমন্বয়', 'Market adjustment')}</option><option value="special">{tr('বিশেষ', 'Special')}</option></select></label><label className="text-xs font-bold">{tr('নোট', 'Note')}<input value={incrementNotes} onChange={e=>setIncrementNotes(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-50 p-3 dark:bg-slate-800" /></label></div></details>
+                  <button disabled={saving||!Number.isFinite(Number(incrementValue))||Number(incrementValue)<=Number(selectedWorker.monthly_salary)} className="w-full rounded-xl bg-emerald-700 px-5 py-3 text-sm font-black text-white disabled:opacity-50 sm:w-auto">{saving?tr('সংরক্ষণ হচ্ছে…', 'Saving…'):tr('নতুন বেতন সেভ করুন', 'Save new salary')}</button>
+                </fieldset>
               </form>
-              <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="p-4 font-black">{tr('বেতন বৃদ্ধির ইতিহাস', 'Salary Increment History')}</div><table className="w-full min-w-[700px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500 dark:bg-slate-800"><tr>{['Date','Previous Salary','Increase','New Salary','Reason'].map(x => <th key={x} className="p-3">{x}</th>)}</tr></thead><tbody>{incrementRows.filter(r => r.worker_id === selectedWorker.id).map(row => <tr key={row.id} className="border-t dark:border-slate-800"><td className="p-3">{dateLabel(row.effective_date)}</td><td className="p-3">{money(row.previous_salary)}</td><td className="p-3 font-bold text-emerald-700">+{money(row.increment_amount)} ({Number(row.increment_percentage).toFixed(1)}%)</td><td className="p-3 font-black">{money(row.new_salary)}</td><td className="p-3">{row.reason}</td></tr>)}</tbody></table>{incrementRows.filter(r => r.worker_id === selectedWorker.id).length === 0 && <p className="p-5 text-sm text-slate-500">{tr('এখনো কোনো Increment নেই।', 'No increment history yet.')}</p>}</div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><h3 className="mb-3 font-black">{tr('কবে কবে বেতন বেড়েছে', 'Salary increase history')}</h3><div className="space-y-3">{incrementRows.filter(r=>r.worker_id===selectedWorker.id).map(row=><div key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><div><p className="text-sm font-bold">{dateLabel(row.effective_date)}</p><p className="mt-1 text-sm">{money(row.previous_salary)} → <b>{money(row.new_salary)}</b></p></div><span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">+{money(row.increment_amount)}</span></div>)}</div>{!incrementRows.some(r=>r.worker_id===selectedWorker.id)&&<p className="text-sm text-slate-500">{tr('এখনো বেতন বৃদ্ধির রেকর্ড নেই।', 'No salary increases recorded yet.')}</p>}</div>
+
             </section>
           )}
 
