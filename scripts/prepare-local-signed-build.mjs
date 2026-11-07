@@ -18,7 +18,7 @@ const ownerBuild = process.env.EMBROIDERY_OWNER_BUILD === '1';
 const configPath = ownerBuild ? 'src-tauri/tauri.owner.conf.json' : 'src-tauri/tauri.conf.json';
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
-if ((!ownerBuild && packageVersion !== config.version) || cargoVersion !== '1.0.17' || !config.version) {
+if (cargoVersion !== packageVersion || (!ownerBuild && packageVersion !== config.version) || !config.version) {
   throw new Error('package.json, src-tauri/Cargo.toml and src-tauri/tauri.conf.json versions must match.');
 }
 if (config.bundle?.createUpdaterArtifacts !== true || !config.plugins?.updater?.endpoints?.length) {
