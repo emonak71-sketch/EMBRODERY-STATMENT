@@ -21,7 +21,7 @@ const cases = [
 ];
 for (const [ua, platform, touch, expected] of cases) assert.equal(exports.detectDevice(ua, platform, touch).recommended, expected);
 assert.equal(exports.detectDevice(cases[4][0], 'MacIntel', 5).apple, 'ios');
-assert.equal(exports.detectDevice(cases[5][0], 'MacIntel', 0).apple, 'mac');
+assert.equal(exports.detectDevice(cases[7][0], 'MacIntel', 0).apple, 'mac');
 assert.equal(exports.detectDevice('Mozilla/5.0 (Windows NT 10.0; WOW64)', 'Win32', 0).architecture, 'x64');
 assert.equal(exports.detectDevice('Mozilla/5.0 (Windows NT 10.0; Win32; x86)', 'Win32', 0).architecture, 'x86');
 assert.equal(exports.detectDevice('Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'Win32', 0).architecture, 'x64');
