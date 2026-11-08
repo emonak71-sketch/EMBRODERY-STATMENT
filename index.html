@@ -4,13 +4,36 @@
   <meta charset="UTF-8">
   <script src="/native-startup.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Embroidery Statement | Business Management</title>
+  <title>Embroidery Statement | Embroidery Business Management Software</title>
+  <meta name="description" content="Embroidery Statement is business management software for embroidery businesses. Manage customer records, statements, payments and daily operations from the web app.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://embroidery-statement.vercel.app/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Embroidery Statement">
+  <meta property="og:title" content="Embroidery Statement | Embroidery Business Management Software">
+  <meta property="og:description" content="Manage your embroidery business with customer records, statements, payments and everyday business tools.">
+  <meta property="og:url" content="https://embroidery-statement.vercel.app/">
+  <meta property="og:image" content="https://embroidery-statement.vercel.app/embroidery-statement-logo-180.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Embroidery Statement | Business Management Software">
+  <meta name="twitter:description" content="Business management software for embroidery businesses.">
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/svg+xml" href="/embroidery-statement-logo.svg?v=2">
   <link rel="apple-touch-icon" sizes="180x180" href="/embroidery-statement-logo-180.png">
   <meta name="theme-color" content="#0648c8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Embroidery Statement",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web, Windows, Android",
+    "description": "Business management software for embroidery businesses, with customer records, statements, payments and daily business tools.",
+    "url": "https://embroidery-statement.vercel.app/"
+  }
+  </script>
   <style>
     @media print {
       .no-print { display: none !important; }
@@ -21,24 +44,14 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     .dark ::-webkit-scrollbar-thumb { background: #334155; }
-    
-    .ledger-preview-wrapper {
-      -webkit-overflow-scrolling: touch;
-    }
-    
-    /* Mobile optimization for high animation feel */
-    body {
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
-    }
+    .ledger-preview-wrapper { -webkit-overflow-scrolling: touch; }
+    body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   </style>
 <link rel="stylesheet" href="/index.css?v=1.0.11">
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
   <div id="root"><div role="status" style="min-height:100vh;display:grid;place-items:center;background:#071a35;color:white;font:600 16px system-ui">Loading Embroidery Statement…</div></div>
-  
   <script type="module" src="/index.tsx"></script>
-  
   <script>
     if ('serviceWorker' in navigator && !window.__TAURI_INTERNALS__ && !window.__TAURI__) {
       window.addEventListener('load', () => {
