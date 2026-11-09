@@ -13,6 +13,14 @@
       "destination": "/download.html"
     },
     {
+      "source": "/features",
+      "destination": "/features.html"
+    },
+    {
+      "source": "/features.html",
+      "destination": "/features.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
