@@ -120,6 +120,9 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $version = (Get-Content 'package.json' -Raw | ConvertFrom-Json).version
+          $releaseNotesPath = "RELEASE_NOTES_$version.md"
+          if (-not (Test-Path $releaseNotesPath)) { throw "Missing release notes: $releaseNotesPath" }
+          $releaseNotes = [System.IO.File]::ReadAllText($releaseNotesPath)
           $bundleDirectory = 'src-tauri/target/release/bundle/nsis'
           $installer = Get-ChildItem $bundleDirectory -Filter '*.exe' |
             Where-Object { $_.Name -notmatch 'uninstall' -and $_.Name -notmatch 'Owner' } |
@@ -142,7 +145,7 @@ jobs:
           $downloadUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/$encodedAssetName"
           $manifest = [ordered]@{
             version = $version
-            notes = "Embroidery Statement $version — Customer Windows x64 update."
+            notes = $releaseNotes
             pub_date = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
             platforms = [ordered]@{
               'windows-x86_64' = [ordered]@{ signature = $signature; url = $downloadUrl }
@@ -204,7 +207,7 @@ jobs:
           $downloadUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/$encodedAssetName"
           $manifest = [ordered]@{
             version = $version
-            notes = "Embroidery Statement Owner Control Center $version — Windows x64 update."
+            notes = $releaseNotes
             pub_date = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
             platforms = [ordered]@{
               'windows-x86_64' = [ordered]@{ signature = $signature; url = $downloadUrl }
