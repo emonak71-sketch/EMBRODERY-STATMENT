@@ -1,6 +1,6 @@
 [package]
 name = "embroidery_statement"
-version = "1.0.18"
+version = "1.0.19"
 description = "Embroidery Statement customer and owner applications"
 authors = ["Embroidery Statement"]
 edition = "2021"
