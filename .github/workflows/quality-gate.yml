@@ -30,6 +30,8 @@ jobs:
         run: npm run build
       - name: Test download portal device detection and routes
         run: npm run test:downloads
+      - name: Test startup update popup and release notes
+        run: npm run test:updates
 
       - name: Verify customer-only desktop and Android bundle
         run: npm run build:customer
