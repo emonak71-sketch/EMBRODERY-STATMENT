@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {ArrowDownToLine, CheckCircle2, Clock3, LoaderCircle, ShieldCheck, X} from 'lucide-react';
 import {desktopInvoke, desktopListen, isWindowsDesktop} from './tauriBridge';
@@ -34,15 +34,14 @@ const DesktopUpdatePrompt:React.FC<{audience:Audience}>=({audience})=>{
   const [info,setInfo]=useState<DesktopUpdateInfo|null>(null);
   const [installing,setInstalling]=useState(false);
   const [error,setError]=useState('');
-  const checking=useRef(false);
-
   useEffect(()=>{
     if(!isWindowsDesktop()) return;
     let active=true;
+    let checking=false;
     let unlisten:(()=>void)|undefined;
     const checkForUpdate=async()=>{
-      if(!active||checking.current) return;
-      checking.current=true;
+      if(!active||checking) return;
+      checking=true;
       try{
         const next=await desktopInvoke<DesktopUpdateInfo>('desktop_check_update');
         if(!active) return;
@@ -52,7 +51,7 @@ const DesktopUpdatePrompt:React.FC<{audience:Audience}>=({audience})=>{
         }else setInfo(null);
       }catch(reason){
         if(active) console.warn('Could not check for a signed application update.',reason);
-      }finally{checking.current=false;}
+      }finally{checking=false;}
     };
     const onOpen=()=>{void checkForUpdate();};
     const manualEvent=audience==='owner'?'embroidery:owner-open-updates':'embroidery:check-updates';
