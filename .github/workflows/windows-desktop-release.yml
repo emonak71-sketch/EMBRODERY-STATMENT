@@ -68,6 +68,8 @@ jobs:
 
       - name: Type-check application
         run: npm run typecheck
+      - name: Test startup update popup and release notes
+        run: npm run test:updates
 
       - name: Test account controls and recovery
         run: npm run test:accounting
