@@ -8,56 +8,23 @@ import {
 } from './attendanceCore';
 import {desktopInvoke, desktopListen, isWindowsDesktop, navigateDesktop, DesktopNavigation} from './tauriBridge';
 import {readReminderPreferences} from '../components/DesktopSettings';
-
-type DesktopUpdateInfo = {
-  current_version:string; available_version:string|null; notes:string|null; portable:boolean; configured:boolean;
-};
+import DesktopUpdatePrompt from './DesktopUpdatePrompt';
 
 const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
   const {language} = useLanguage();
   const languageRef = useRef(language);
   const checkingRef = useRef(false);
   const lastCheckRef = useRef(0);
-  const updateCheckRef = useRef(false);
-  const lastUpdateCheckRef = useRef(0);
-  const updateCheckInterval = 6 * 60 * 60 * 1000;
   useEffect(()=>{languageRef.current=language;},[language]);
 
   useEffect(()=>{
     if (!isWindowsDesktop()) return;
     let mounted=true;
     const cleanups:Array<() => void>=[];
-    const checkUpdatesIfDue = async(force=false) => {
-      if (!mounted || updateCheckRef.current) return;
-      const now = Date.now();
-      const savedAt = Number(localStorage.getItem('desktop_last_update_check_at') || '0') || 0;
-      const lastChecked = Math.max(lastUpdateCheckRef.current, savedAt);
-      if (!force && now-lastChecked<updateCheckInterval) return;
-
-      updateCheckRef.current=true;
-      lastUpdateCheckRef.current=now;
-      try {
-        const info=await desktopInvoke<DesktopUpdateInfo>('desktop_check_update');
-        const checkedAt=Date.now();
-        localStorage.setItem('desktop_last_update_check_at',String(checkedAt));
-        localStorage.setItem('desktop_last_update_check',new Date(checkedAt).toLocaleString());
-        if(info.available_version && !info.portable && info.configured) {
-          window.dispatchEvent(new CustomEvent('embroidery:update-installing',{detail:info}));
-          await desktopInvoke('desktop_install_update');
-          return;
-        }
-      } catch(error) {
-        console.warn('Background update check failed; it will retry at the next scheduled check.',error);
-      } finally {
-        updateCheckRef.current=false;
-      }
-    };
-
     const fire = async(force=false) => {
       if (!mounted) return;
       // The native tray scheduler keeps this WebView alive while the window is
       // hidden. Check releases independently of attendance reminder preferences.
-      void checkUpdatesIfDue();
       if (checkingRef.current) return;
       const now = Date.now();
       if (!force && now-lastCheckRef.current<45000) return;
@@ -131,10 +98,6 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
       }
     };
 
-    // Run immediately at startup, then at most once every six hours. Native
-    // 20-second ticks continue while the main window is hidden in the system tray.
-    const checkStartupUpdates=()=>{ void checkUpdatesIfDue(true); };
-
     void desktopListen<DesktopNavigation>('desktop:navigate', target=>navigateDesktop(target))
       .then(unlisten=>cleanups.push(unlisten));
     void desktopListen('desktop:scheduler-tick',()=>void fire())
@@ -156,7 +119,6 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
     window.addEventListener('embroidery:reminder-preferences',checkAfterSave);
     window.addEventListener('storage',languageChanged);
     void fire(true);
-    void checkStartupUpdates();
 
     return ()=>{
       mounted=false;
@@ -169,7 +131,7 @@ const DesktopHost:React.FC<{children:React.ReactNode}> = ({children}) => {
     };
   },[]);
 
-  return <>{children}</>;
+  return <>{children}<DesktopUpdatePrompt audience="customer" /></>;
 };
 
 export default DesktopHost;
