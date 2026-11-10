@@ -189,6 +189,9 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $version = (Get-Content 'package.json' -Raw | ConvertFrom-Json).version
+          $releaseNotesPath = "RELEASE_NOTES_$version.md"
+          if (-not (Test-Path $releaseNotesPath)) { throw "Missing release notes: $releaseNotesPath" }
+          $releaseNotes = [System.IO.File]::ReadAllText($releaseNotesPath)
           $bundleDirectory = 'src-tauri/target/release/bundle/nsis'
           $installer = Get-ChildItem $bundleDirectory -Filter '*.exe' |
             Where-Object { $_.Name -match 'Owner' -and $_.Name -notmatch 'uninstall' } |
