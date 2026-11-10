@@ -1,5 +1,6 @@
-import React, {useEffect} from 'react';
+import React,{useEffect} from 'react';
 import {desktopListen,isWindowsDesktop} from './tauriBridge';
+import DesktopUpdatePrompt from './DesktopUpdatePrompt';
 
 const OwnerDesktopHost:React.FC<{children:React.ReactNode}>=({children})=>{
  useEffect(()=>{
@@ -11,6 +12,6 @@ const OwnerDesktopHost:React.FC<{children:React.ReactNode}>=({children})=>{
   }).then(fn=>{if(disposed)fn();else unlisten=fn;});
   return()=>{disposed=true;unlisten?.();};
  },[]);
- return <>{children}</>;
+ return <>{children}<DesktopUpdatePrompt audience="owner" /></>;
 };
 export default OwnerDesktopHost;
