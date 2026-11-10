@@ -45,7 +45,7 @@ export function detectDevice(
   }
   if (/Mac/i.test(platform) || /Macintosh/i.test(ua)) {
     const architecture = /arm/i.test(architectureHint || '') ? 'arm64' : /x86|intel/i.test(architectureHint || '') ? 'x64' : 'unknown';
-    return { name: architecture === 'arm64' ? 'Mac (Apple Silicon)' : architecture === 'x64' ? 'Mac (Intel)' : 'Mac', recommended: 'mac', apple: 'mac', architecture };
+    return { name: architecture === 'arm64' ? 'Mac (Apple Silicon)' : architecture === 'x64' ? 'Mac (Intel)' : 'Mac', recommended: 'web', apple: 'mac', architecture };
   }
   return { name: 'your device', recommended: 'web' };
 }
