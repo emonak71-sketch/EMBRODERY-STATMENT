@@ -20,7 +20,7 @@ assert.ok(ownerHost.includes('DesktopUpdatePrompt audience="owner"'));
 assert.ok(native.includes('desktop:app-opened'));
 assert.ok(ownerConfig.includes('releases/latest/download/latest-owner.json'));
 assert.equal((workflow.match(/notes = \$releaseNotes/g) || []).length, 2, 'Both updater manifests must include the full release notes.');
-assert.ok(workflow.includes('RELEASE_NOTES_$version.md'));
+assert.equal((workflow.match(/RELEASE_NOTES_\\$version\\.md/g) || []).length, 2, 'Both updater manifests must load the versioned release notes file.');
 assert.ok(notes.includes('## Customer application'));
 assert.ok(notes.includes('## Owner Control Center'));
 assert.ok(notes.includes('Later'));
